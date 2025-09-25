@@ -1,3 +1,5 @@
+"use client"
+
 import { notFound } from "next/navigation"
 import Link from "next/link"
 import { Navigation } from "@/components/navigation"
@@ -8,14 +10,12 @@ import { Badge } from "@/components/ui/badge"
 import { mockOracles } from "@/lib/mock-data"
 import { ArrowLeft, Zap, Clock, TrendingUp, Copy } from "lucide-react"
 
-interface OraclePageProps {
-  params: {
-    id: string
-  }
+interface InteractionClientProps {
+  oracleId: string
 }
 
-export default function OraclePage({ params }: OraclePageProps) {
-  const oracle = mockOracles.find((o) => o.id === params.id)
+export default function InteractionClient({ oracleId }: InteractionClientProps) {
+  const oracle = mockOracles.find((o) => o.id === oracleId)
 
   if (!oracle) {
     notFound()

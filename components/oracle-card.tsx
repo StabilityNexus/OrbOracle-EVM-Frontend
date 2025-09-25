@@ -10,7 +10,7 @@ interface OracleCardProps {
 
 export function OracleCard({ oracle }: OracleCardProps) {
   return (
-    <Link href={`/oracle/${oracle.id}`} className="group">
+    <Link href={`/${oracle.id}`} className="group">
       <Card className="border-border/50 bg-card/30 backdrop-blur-sm hover:bg-card/60 hover:border-primary/20 transition-all duration-300 group-hover:scale-[1.02] rounded-2xl">
         <CardHeader className="pb-4">
           <div className="flex items-start justify-between">
