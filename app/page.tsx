@@ -4,7 +4,6 @@ import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/ca
 import { Navigation } from "@/components/navigation"
 import { ArrowRight, Database, Shield, Zap } from "lucide-react"
 import Orb from "@/components/Orb"
-import SplashCursor from "@/components/SplashCursor"
 
 export default function HomePage() {
   return (
