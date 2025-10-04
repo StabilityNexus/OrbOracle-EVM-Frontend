@@ -1,24 +1,15 @@
 import { notFound } from 'next/navigation'
 import InteractionClient from './InteractionClient'
 import { Suspense } from 'react'
-import { mockOracles } from '@/lib/mock-data'
-
-interface OraclePageProps {
-  params: {
-    oracleId: string
-  }
-}
 
 export async function generateStaticParams() {
-  return mockOracles.map((oracle) => ({
-    oracleId: oracle.id,
-  }))
+  return [{ oracleId: 'o' }]
 }
 
-export default function VaultPage({ params }: OraclePageProps) {
+export default function OraclePage() {
   return (
     <Suspense>
-      <InteractionClient oracleId={params.oracleId} />
+      <InteractionClient />
     </Suspense>
   )
 }

@@ -7,7 +7,7 @@ import Orb from "@/components/Orb"
 
 export default function HomePage() {
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background font-[oblique] tracking-wide" style={{ fontStyle: 'oblique 12deg' }}>
       {/* <SplashCursor /> */}
       <Navigation />
 
@@ -41,7 +41,7 @@ export default function HomePage() {
         </div>
         <div className="container mx-auto px-4 text-center z-10 relative">
           <div className="max-w-4xl mx-auto">
-            <h1 className="text-4xl md:text-5xl font-bold mb-8 text-balance">
+            <h1 className="text-4xl md:text-5xl font-medium mb-8 text-balance tracking-wide" style={{ fontStyle: 'oblique 15deg' }}>
               Orb Oracle: 
               <div><span className="text-primary">The Price of Everything</span></div>
             </h1>
@@ -63,7 +63,7 @@ export default function HomePage() {
       <section className="h-screen flex items-center justify-center">
         <div className="container mx-auto px-4">
           <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">Why choose OracleNet?</h2>
+            <h2 className="text-3xl md:text-4xl font-bold mb-4 tracking-wide" style={{ fontStyle: 'oblique 15deg' }}>Why choose OracleNet?</h2>
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
               Enterprise-grade infrastructure for the next generation of decentralized applications
             </p>
@@ -137,7 +137,7 @@ export default function HomePage() {
       <section className="h-screen flex items-center justify-center">
         <div className="container mx-auto px-4 text-center">
           <div className="max-w-2xl mx-auto">
-            <h2 className="text-3xl md:text-4xl font-bold mb-6">Ready to build the future?</h2>
+            <h2 className="text-3xl md:text-4xl font-bold mb-6 tracking-wide" style={{ fontStyle: 'oblique 15deg' }}>Ready to build the future?</h2>
             <p className="text-xl text-muted-foreground mb-8">
               Join thousands of developers building the next generation of decentralized applications
             </p>
