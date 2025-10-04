@@ -70,14 +70,14 @@ export default function CreateOracleIntegrated() {
     return [
       name || "Unnamed Oracle",
       description || "No description provided",
-      weightToken || "0x0000000000000000000000000000000000000000",
+      (weightToken || "0x0000000000000000000000000000000000000000") as `0x${string}`,
       BigInt(Number(reward || 0)),
       BigInt(Number(halfLifeSeconds || 0)),
       BigInt(Number(quorumBps || 0)),
       BigInt(Number(depositLock || 0)),
       BigInt(Number(withdrawLock || 0)),
       BigInt(alpha || "0"),
-    ]
+    ] as const
   }, [name, description, weightToken, reward, halfLifeSeconds, quorumBps, depositLock, withdrawLock, alpha])
 
   const validateInputs = () => {
