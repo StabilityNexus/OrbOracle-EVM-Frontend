@@ -35,7 +35,7 @@ export default function ExplorerPage() {
       <div className="container mx-auto px-6 pt-24 pb-12">
         {/* Header */}
         <div className="mb-12 text-center">
-          <h1 className="text-5xl font-bold tracking-wide mb-6 bg-gradient-to-r from-white to-primary bg-clip-text text-transparent" style={{ fontStyle: 'oblique 15deg' }}>
+          <h1 className="text-5xl font-medium tracking-wide mb-6 bg-gradient-to-r from-white to-primary bg-clip-text text-transparent" style={{ fontStyle: 'oblique 15deg' }}>
             Orb Oracle Explorer
           </h1>
         </div>

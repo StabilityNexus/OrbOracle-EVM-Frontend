@@ -200,7 +200,7 @@ export default function OracleInteractionPage() {
             </Link>
 
             <div className="flex items-center gap-4">
-              <h1 className="text-4xl sm:text-5xl font-bold tracking-wide bg-gradient-to-r from-foreground to-primary bg-clip-text text-transparent" style={{ fontStyle: 'oblique 15deg' }}>
+              <h1 className="text-4xl sm:text-5xl font-medium tracking-wide bg-gradient-to-r from-foreground to-primary bg-clip-text text-transparent" style={{ fontStyle: 'oblique 15deg' }}>
                 {oracle.name ?? "Oracle Dashboard"}
               </h1>
               {oracle.status === "active" && (
@@ -234,7 +234,7 @@ export default function OracleInteractionPage() {
         <div className="max-w-7xl mx-auto space-y-12">
           
           {/* Price Chart Section */}
-          <Card className="border-border/50 bg-card/30 backdrop-blur-sm hover:bg-card/60 hover:border-primary/20 transition-all duration-300 rounded-2xl">
+          <Card className="border-border/50 bg-card/30 backdrop-blur-sm hover:bg-card/60 border-primary/20 hover:border-white transition-all duration-300 rounded-2xl">
             <CardHeader className="border-b border-border/30">
               <CardTitle className="text-foreground flex items-center gap-2 font-medium">
                 <TrendingUp className="h-5 w-5 text-primary" />
@@ -248,7 +248,7 @@ export default function OracleInteractionPage() {
 
           {/* Submit Value Section */}
           <div className="grid md:grid-cols-2 gap-6">
-            <Card className="border-border/50 bg-card/30 backdrop-blur-sm hover:bg-card/60 hover:border-primary/20 transition-all duration-300 rounded-2xl">
+            <Card className="border-border/50 bg-card/30 backdrop-blur-sm hover:bg-card/60 border-primary/20 hover:border-white transition-all duration-300 rounded-2xl">
               <CardHeader className="border-b border-border/30">
                 <CardTitle className="text-foreground flex items-center gap-2 font-medium">
                   <Send className="h-5 w-5 text-primary" />
@@ -258,9 +258,9 @@ export default function OracleInteractionPage() {
                   Submit a new price value to the oracle. You must have deposited tokens to participate.
                 </CardDescription>
               </CardHeader>
-              <CardContent className="p-6 space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="submitValue" className="text-foreground font-medium">Price Value</Label>
+              <CardContent>
+                <div className="mb-4">
+                  <Label htmlFor="submitValue" className="text-foreground font-medium mb-2">Price Value</Label>
                   <Input
                     id="submitValue"
                     type="number"
@@ -281,7 +281,7 @@ export default function OracleInteractionPage() {
               </CardContent>
             </Card>
 
-            <Card className="border-border/50 bg-card/30 backdrop-blur-sm hover:bg-card/60 hover:border-primary/20 transition-all duration-300 rounded-2xl">
+            <Card className="border-border/50 bg-card/30 backdrop-blur-sm hover:bg-card/60 border-primary/20 hover:border-white transition-all duration-300 rounded-2xl">
               <CardHeader className="border-b border-border/30">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-foreground flex items-center gap-2 font-medium">
@@ -297,9 +297,9 @@ export default function OracleInteractionPage() {
                   Latest submitted and aggregated oracle values.
                 </CardDescription>
               </CardHeader>
-              <CardContent className="p-6 space-y-4">
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between p-3 bg-card/50 border border-primary/30 rounded-xl transition-all duration-300">
+              <CardContent>
+                <div>
+                  <div className="flex items-center mb-4 justify-between p-3 bg-card/50 border border-primary/30 rounded-xl transition-all duration-300">
                     <div className="flex items-center gap-3">
                       <div className="w-2 h-2 bg-primary rounded-full animate-pulse"></div>
                       <span className="text-muted-foreground font-medium text-sm">Latest Value</span>
@@ -335,7 +335,7 @@ export default function OracleInteractionPage() {
 
           {/* Token Management Section */}
           <div className="grid md:grid-cols-2 gap-6">
-            <Card className="border-border/50 bg-card/30 backdrop-blur-sm hover:bg-card/60 hover:border-primary/20 transition-all duration-300 rounded-2xl">
+            <Card className="border-border/50 bg-card/30 backdrop-blur-sm hover:bg-card/60 border-primary/20 hover:border-white transition-all duration-300 rounded-2xl">
               <CardHeader className="border-b border-border/30">
                 <CardTitle className="text-foreground flex items-center gap-2 font-medium">
                   <Wallet className="h-5 w-5 text-primary" />
@@ -345,7 +345,7 @@ export default function OracleInteractionPage() {
                   Deposit weight tokens to participate in oracle governance and earn rewards.
                 </CardDescription>
               </CardHeader>
-              <CardContent className="p-6 space-y-4">
+              <CardContent>
                 <div className="space-y-2">
                   <Label htmlFor="depositAmount" className="text-foreground font-medium">Amount</Label>
                   <Input
@@ -354,7 +354,7 @@ export default function OracleInteractionPage() {
                     placeholder="Enter amount to deposit"
                     value={depositAmount}
                     onChange={(e) => setDepositAmount(e.target.value)}
-                    className="h-12 bg-card/50 border border-primary/30 rounded-xl font-light transition-all duration-300 focus:border-primary/50 focus:ring-2 focus:ring-primary/20 focus:bg-card/70"
+                    className="h-12 mb-4 bg-card/50 border border-primary/30 rounded-xl font-light transition-all duration-300 focus:border-primary/50 focus:ring-2 focus:ring-primary/20 focus:bg-card/70"
                   />
                 </div>
                 <Button 
@@ -368,7 +368,7 @@ export default function OracleInteractionPage() {
               </CardContent>
             </Card>
 
-            <Card className="border-border/50 bg-card/30 backdrop-blur-sm hover:bg-card/60 hover:border-primary/20 transition-all duration-300 rounded-2xl">
+            <Card className="border-border/50 bg-card/30 backdrop-blur-sm hover:bg-card/60 border-primary/20 hover:border-white transition-all duration-300 rounded-2xl">
               <CardHeader className="border-b border-border/30">
                 <CardTitle className="text-foreground flex items-center gap-2 font-medium">
                   <Wallet className="h-5 w-5 text-destructive" />
@@ -378,7 +378,7 @@ export default function OracleInteractionPage() {
                   Withdraw your deposited tokens. Note the withdrawal locking period.
                 </CardDescription>
               </CardHeader>
-              <CardContent className="p-6 space-y-4">
+              <CardContent>
                 <div className="space-y-2">
                   <Label htmlFor="withdrawAmount" className="text-foreground font-medium">Amount</Label>
                   <Input
@@ -387,7 +387,7 @@ export default function OracleInteractionPage() {
                     placeholder="Enter amount to withdraw"
                     value={withdrawAmount}
                     onChange={(e) => setWithdrawAmount(e.target.value)}
-                    className="h-12 bg-card/50 border border-primary/30 rounded-xl font-light transition-all duration-300 focus:border-primary/50 focus:ring-2 focus:ring-primary/20 focus:bg-card/70"
+                    className="h-12 mb-4 bg-card/50 border border-primary/30 rounded-xl font-light transition-all duration-300 focus:border-primary/50 focus:ring-2 focus:ring-primary/20 focus:bg-card/70"
                   />
                 </div>
                 <Button 
@@ -403,7 +403,7 @@ export default function OracleInteractionPage() {
           </div>
 
           {/* Governance Section */}
-          <Card className="border-border/50 bg-card/30 backdrop-blur-sm hover:bg-card/60 hover:border-primary/20 transition-all duration-300 rounded-2xl">
+          <Card className="border-border/50 bg-card/30 backdrop-blur-sm hover:bg-card/60 border-primary/20 hover:border-white transition-all duration-300 rounded-2xl">
             <CardHeader className="border-b border-border/30">
               <CardTitle className="text-foreground flex items-center gap-2 font-medium">
                 <Vote className="h-5 w-5 text-primary" />
@@ -413,7 +413,7 @@ export default function OracleInteractionPage() {
                 Vote to blacklist or whitelist addresses. Your voting power is based on your deposited tokens.
               </CardDescription>
             </CardHeader>
-            <CardContent className="p-6 space-y-4">
+            <CardContent>
               <div className="space-y-2">
                 <Label htmlFor="voteTarget" className="text-foreground font-medium">Target Address</Label>
                 <Input
@@ -421,7 +421,7 @@ export default function OracleInteractionPage() {
                   placeholder="0x..."
                   value={voteTarget}
                   onChange={(e) => setVoteTarget(e.target.value)}
-                  className="h-12 bg-card/50 border border-primary/30 rounded-xl font-light transition-all duration-300 focus:border-primary/50 focus:ring-2 focus:ring-primary/20 focus:bg-card/70"
+                  className="h-12 mb-4 bg-card/50 border border-primary/30 rounded-xl font-light transition-all duration-300 focus:border-primary/50 focus:ring-2 focus:ring-primary/20 focus:bg-card/70"
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
@@ -446,7 +446,7 @@ export default function OracleInteractionPage() {
           </Card>
 
           {/* Oracle Configuration */}
-          <Card className="border-border/50 bg-card/30 backdrop-blur-sm hover:bg-card/60 hover:border-primary/20 transition-all duration-300 rounded-2xl">
+          <Card className="border-border/50 bg-card/30 backdrop-blur-sm hover:bg-card/60 border-primary/20 hover:border-white transition-all duration-300 rounded-2xl">
             <CardHeader className="border-b border-border/30">
               <CardTitle className="text-foreground flex items-center gap-2 font-medium">
                 <Settings className="h-5 w-5 text-primary" />
@@ -491,7 +491,7 @@ export default function OracleInteractionPage() {
           </Card>
 
           {/* Price History */}
-          <Card className="border-border/50 bg-card/30 backdrop-blur-sm hover:bg-card/60 hover:border-primary/20 transition-all duration-300 rounded-2xl">
+          <Card className="border-border/50 bg-card/30 backdrop-blur-sm hover:bg-card/60 border-primary/20 hover:border-white transition-all duration-300 rounded-2xl">
             <CardHeader className="border-b border-border/30">
               <CardTitle className="text-foreground flex items-center gap-2 font-medium">
                 <History className="h-5 w-5 text-primary" />
