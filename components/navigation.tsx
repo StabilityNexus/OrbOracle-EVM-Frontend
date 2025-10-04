@@ -14,21 +14,27 @@ export function Navigation() {
   ]
 
   return (
-    <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-4">
-      <PillNav
-        logo="/logo.svg"
-        logoAlt="OracleNet Logo"
-        items={navItems}
-        activeHref={pathname}
-        ease="power3.easeOut"
-        baseColor="oklch(0.7 0.18 270)"
-        pillColor="oklch(0.05 0 0)"
-        hoveredPillTextColor="oklch(0.95 0 0)"
-        pillTextColor="oklch(0.95 0 0)"
-      />
-      <div className="ml-4">
+    <>
+      {/* Navigation in the center */}
+      <div className="fixed top-4 left-0 right-0 z-50 flex justify-center">
+        <PillNav
+          logo="/logo.svg"
+          logoAlt="OracleNet Logo"
+          items={navItems}
+          activeHref={pathname}
+          ease="power3.easeOut"
+          baseColor="oklch(0.7 0.18 270)"
+          pillColor="oklch(0.05 0 0)"
+          hoveredPillTextColor="oklch(0.95 0 0)"
+          pillTextColor="oklch(0.95 0 0)"
+          className="!relative !top-0 !left-0 !w-auto"
+        />
+      </div>
+      
+      {/* Connect button on the right */}
+      <div className="fixed top-4 right-6 z-50">
         <ConnectButton />
       </div>
-    </div>
+    </>
   )
 }
