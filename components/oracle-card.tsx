@@ -1,16 +1,24 @@
+"use client"
+
 import Link from "next/link"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import type { Oracle } from "@/lib/mock-data"
 import { ArrowUpRight } from "lucide-react"
+import { useChainId } from "wagmi"
+import { Oracle } from "@/hooks/useOracles"
 
 interface OracleCardProps {
   oracle: Oracle
 }
 
 export function OracleCard({ oracle }: OracleCardProps) {
+  const chainId = useChainId()
+  
+  // Construct the proper URL with oracle address and chainId
+  const oracleUrl = `/o?chainId=${chainId}&oracle=${oracle.address}`
+  
   return (
-    <Link href={`/${oracle.id}`} className="group">
+    <Link href={oracleUrl} className="group">
       <Card className="border-border/50 bg-card/30 backdrop-blur-sm hover:bg-card/60 hover:border-primary/20 transition-all duration-300 group-hover:scale-[1.02] rounded-2xl">
         <CardHeader className="pb-4">
           <div className="flex items-start justify-between">
@@ -28,18 +36,25 @@ export function OracleCard({ oracle }: OracleCardProps) {
 
         <CardContent className="pt-0">
           <div className="flex items-center justify-between mb-4">
-            <Badge variant="secondary" className="font-light bg-primary/10 text-primary border-primary/20">
+            <Badge
+              variant="secondary"
+              className="font-light bg-primary/10 text-primary border-primary/20"
+            >
               {oracle.category}
             </Badge>
-            <div className="text-sm font-medium text-foreground">{oracle.price}</div>
+            <div className="text-sm font-medium text-foreground">
+              {oracle.price}
+            </div>
           </div>
 
           <div className="flex items-center justify-between text-xs text-muted-foreground">
             <span>Updates {oracle.updateFrequency}</span>
-            <span className="font-medium text-primary/80">{oracle.accuracy} accuracy</span>
+            <span className="font-medium text-primary/80">
+              {oracle.accuracy} accuracy
+            </span>
           </div>
         </CardContent>
       </Card>
     </Link>
-  )
+  );
 }
