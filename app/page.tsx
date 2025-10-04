@@ -63,7 +63,7 @@ export default function HomePage() {
       <section className="h-screen flex items-center justify-center">
         <div className="container mx-auto px-4">
           <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4 tracking-wide" style={{ fontStyle: 'oblique 15deg' }}>Why choose OracleNet?</h2>
+            <h2 className="text-3xl md:text-4xl font-medium mb-4 tracking-wide" style={{ fontStyle: 'oblique 15deg' }}>Why choose OracleNet?</h2>
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
               Enterprise-grade infrastructure for the next generation of decentralized applications
             </p>
@@ -114,19 +114,19 @@ export default function HomePage() {
         <div className="container mx-auto px-4">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
             <div>
-              <div className="text-4xl font-bold text-primary mb-2">1,247</div>
+              <div className="text-4xl font-medium text-primary mb-2">1,247</div>
               <div className="text-muted-foreground">Active Oracles</div>
             </div>
             <div>
-              <div className="text-4xl font-bold text-primary mb-2">$2.4B</div>
+              <div className="text-4xl font-medium text-primary mb-2">$2.4B</div>
               <div className="text-muted-foreground">Total Value Secured</div>
             </div>
             <div>
-              <div className="text-4xl font-bold text-primary mb-2">99.9%</div>
+              <div className="text-4xl font-medium text-primary mb-2">99.9%</div>
               <div className="text-muted-foreground">Uptime</div>
             </div>
             <div>
-              <div className="text-4xl font-bold text-primary mb-2">50+</div>
+              <div className="text-4xl font-medium text-primary mb-2">50+</div>
               <div className="text-muted-foreground">Supported Chains</div>
             </div>
           </div>
@@ -137,7 +137,7 @@ export default function HomePage() {
       <section className="h-screen flex items-center justify-center">
         <div className="container mx-auto px-4 text-center">
           <div className="max-w-2xl mx-auto">
-            <h2 className="text-3xl md:text-4xl font-bold mb-6 tracking-wide" style={{ fontStyle: 'oblique 15deg' }}>Ready to build the future?</h2>
+            <h2 className="text-3xl md:text-4xl font-medium mb-6 tracking-wide" style={{ fontStyle: 'oblique 15deg' }}>Ready to build the future?</h2>
             <p className="text-xl text-muted-foreground mb-8">
               Join thousands of developers building the next generation of decentralized applications
             </p>

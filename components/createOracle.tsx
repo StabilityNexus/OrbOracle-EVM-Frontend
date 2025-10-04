@@ -228,7 +228,7 @@ export default function CreateOracleIntegrated() {
         <Card className="bg-background/95 backdrop-blur-sm border-primary/30 shadow-xl max-w-2xl mx-auto">
           <CardContent className="text-center space-y-6 py-8">
             <div className="space-y-3">
-              <h2 className="text-3xl font-bold text-slate-100" style={{ fontStyle: 'oblique 15deg' }}>
+              <h2 className="text-3xl font-medium text-slate-100" style={{ fontStyle: 'oblique 15deg' }}>
                 Oracle Created Successfully!
               </h2>
               <p className="text-base text-slate-200">
@@ -237,7 +237,7 @@ export default function CreateOracleIntegrated() {
               {oracleAddress && (
                 <div className="bg-slate-800/50 border border-blue-100 rounded-lg p-3 font-mono text-sm">
                   <div className="flex items-center justify-between">
-                    <span className="text-blue-300 font-bold">{formatAddress(oracleAddress)}</span>
+                    <span className="text-blue-300 font-medium">{formatAddress(oracleAddress)}</span>
                     <button
                       onClick={() => onCopy(oracleAddress)}
                       className="text-xs bg-blue-600/20 hover:bg-blue-600/30 px-2 py-1 rounded transition-colors"
@@ -280,7 +280,7 @@ export default function CreateOracleIntegrated() {
   return (
     <div className="font-[oblique] tracking-wide text-slate-100" style={{ fontStyle: "oblique 15deg" }}>
       <form onSubmit={(e) => { e.preventDefault(); createOracle(); }} className="space-y-8">
-        <Card className="border-2 border-blue-200 bg-card shadow-sm">
+        <Card className="border-2 border-blue-200 bg-card shadow-sm max-w-4xl mx-auto">
           <CardHeader className="border-b border-blue-100">
             <CardTitle className="text-slate-100 text-xl">
               Oracle Metadata
@@ -348,7 +348,7 @@ export default function CreateOracleIntegrated() {
           </CardContent>
         </Card>
 
-        <Card className="border-2 border-blue-200 bg-card shadow-sm">
+        <Card className="border-2 border-blue-200 bg-card shadow-sm max-w-4xl mx-auto">
           <CardHeader className="border-b border-blue-100">
             <CardTitle className="text-xl text-slate-100">
               Oracle Parameters
@@ -610,11 +610,11 @@ export default function CreateOracleIntegrated() {
           </CardContent>
         </Card>
 
-        <div className="flex justify-end border border-blue-100 p-4 rounded-md bg-slate-800/30">
+        <div className="justify-center flex  mx-auto">
           <Button
             type="submit"
             size="lg"
-            className="bg-blue-600 hover:bg-blue-700 border-blue-700 text-white"
+            className="bg-black border border-white hover:bg-primary max-w-4xl mx-auto border-slate-400 text-white"
             disabled={loadingCreation || !account.address}
           >
             {loadingCreation ? (
