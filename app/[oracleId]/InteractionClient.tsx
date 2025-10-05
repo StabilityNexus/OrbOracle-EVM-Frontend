@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { useSearchParams } from "next/navigation"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Navigation } from "@/components/navigation"
 import { PriceChart } from "@/components/price-chart"
 import { Badge } from "@/components/ui/badge"
@@ -11,6 +11,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useOracle } from "@/hooks/useOracles"
+import { useToast } from "@/hooks/use-toast"
+import { OracleAbi } from "@/utils/abi/Oracle"
 import { 
   ArrowLeft, 
   Zap, 
@@ -28,8 +30,11 @@ import {
   Shield,
   History,
   Activity,
-  Database
+  Database,
+  CheckCircle
 } from "lucide-react"
+import { useAccount, useWriteContract, useReadContract, useWaitForTransactionReceipt } from "wagmi"
+import { parseEther, formatEther, parseUnits, erc20Abi } from "viem"
 
 function isHexAddress(value: string | null): value is `0x${string}` {
   return !!value && /^0x[a-fA-F0-9]{40}$/.test(value)
@@ -39,17 +44,104 @@ export default function OracleInteractionPage() {
   const search = useSearchParams()
   const oracleParam = search.get("oracle")
   const chainIdParam = search.get("chainId")
+  const { toast } = useToast()
+  const { address: userAddress, isConnected } = useAccount()
 
   // Form states
   const [submitValue, setSubmitValue] = useState("")
   const [depositAmount, setDepositAmount] = useState("")
   const [withdrawAmount, setWithdrawAmount] = useState("")
   const [voteTarget, setVoteTarget] = useState("")
-  const [loading, setLoading] = useState(false)
+  
+  // Contract interaction states
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isDepositing, setIsDepositing] = useState(false)
+  const [isWithdrawing, setIsWithdrawing] = useState(false)
+  const [isVoting, setIsVoting] = useState(false)
+  const [isApproving, setIsApproving] = useState(false)
+
+  // Real-time oracle data
+  const [latestValue, setLatestValue] = useState<string>("0")
+  const [aggregatedValue, setAggregatedValue] = useState<string>("0")
+  const [lastUpdated, setLastUpdated] = useState<string>("Loading...")
+  const [userDepositedTokens, setUserDepositedTokens] = useState<string>("0")
+  const [userTokenBalance, setUserTokenBalance] = useState<string>("0")
+  const [tokenAllowance, setTokenAllowance] = useState<string>("0")
 
   const oracleAddress = isHexAddress(oracleParam) ? (oracleParam as `0x${string}`) : null
   const chainId = chainIdParam ? Number(chainIdParam) : undefined
   const chainIdValid = chainId !== undefined && Number.isFinite(chainId) && chainId > 0
+
+  // Contract write hook
+  const { writeContract, data: hash, error: contractError, isPending } = useWriteContract()
+  const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({
+    hash,
+  })
+
+  // Read contract data
+  const { data: weightTokenAddress } = useReadContract({
+    address: oracleAddress || undefined,
+    abi: OracleAbi,
+    functionName: 'WEIGHT_TOKEN',
+    query: { enabled: !!oracleAddress }
+  })
+
+  const { data: depositedTokensData } = useReadContract({
+    address: oracleAddress || undefined,
+    abi: OracleAbi,
+    functionName: 'depositedTokens',
+    args: userAddress ? [userAddress] : undefined,
+    query: { enabled: !!oracleAddress && !!userAddress }
+  })
+
+  const { data: lastSubmissionTimeData } = useReadContract({
+    address: oracleAddress || undefined,
+    abi: OracleAbi,
+    functionName: 'lastSubmissionTime',
+    query: { enabled: !!oracleAddress }
+  })
+
+  // Token balance and allowance
+  const { data: userTokenBalanceData } = useReadContract({
+    address: weightTokenAddress as `0x${string}` | undefined,
+    abi: erc20Abi,
+    functionName: 'balanceOf',
+    args: userAddress ? [userAddress] : undefined,
+    query: { enabled: !!weightTokenAddress && !!userAddress }
+  })
+
+  const { data: tokenAllowanceData } = useReadContract({
+    address: weightTokenAddress as `0x${string}` | undefined,
+    abi: erc20Abi,
+    functionName: 'allowance',
+    args: userAddress && oracleAddress ? [userAddress, oracleAddress] : undefined,
+    query: { enabled: !!weightTokenAddress && !!userAddress && !!oracleAddress }
+  })
+
+  // Update real-time data when contract data changes
+  useEffect(() => {
+    if (depositedTokensData) {
+      setUserDepositedTokens(formatEther(depositedTokensData as bigint))
+    }
+    if (userTokenBalanceData) {
+      setUserTokenBalance(formatEther(userTokenBalanceData as bigint))
+    }
+    if (tokenAllowanceData) {
+      setTokenAllowance(formatEther(tokenAllowanceData as bigint))
+    }
+    if (lastSubmissionTimeData) {
+      const timestamp = Number(lastSubmissionTimeData as bigint)
+      const now = Math.floor(Date.now() / 1000)
+      const diff = now - timestamp
+      if (diff < 60) {
+        setLastUpdated(`${diff}s ago`)
+      } else if (diff < 3600) {
+        setLastUpdated(`${Math.floor(diff / 60)}m ago`)
+      } else {
+        setLastUpdated(`${Math.floor(diff / 3600)}h ago`)
+      }
+    }
+  }, [depositedTokensData, userTokenBalanceData, tokenAllowanceData, lastSubmissionTimeData])
 
   // Early validation before calling the hook
   if (!oracleAddress || !chainIdValid) {
@@ -80,7 +172,356 @@ export default function OracleInteractionPage() {
     )
   }
 
-  const { oracle, loading: oracleLoading, error } = useOracle(oracleAddress, chainId)
+  const { oracle, loading: oracleLoading, error: oracleError } = useOracle(oracleAddress, chainId)
+
+  // Handle transaction success
+  useEffect(() => {
+    if (isConfirmed) {
+      toast({
+        title: "Transaction Confirmed",
+        description: "Your transaction has been successfully processed!",
+      })
+      // Reset loading states
+      setIsSubmitting(false)
+      setIsDepositing(false)
+      setIsWithdrawing(false)
+      setIsVoting(false)
+      setIsApproving(false)
+      // Clear form inputs
+      setSubmitValue("")
+      setDepositAmount("")
+      setWithdrawAmount("")
+      setVoteTarget("")
+    }
+  }, [isConfirmed, toast])
+
+  // Handle transaction errors
+  useEffect(() => {
+    if (contractError) {
+      toast({
+        title: "Transaction Failed",
+        description: contractError.message || "An error occurred during the transaction.",
+        variant: "destructive",
+      })
+      setIsSubmitting(false)
+      setIsDepositing(false)
+      setIsWithdrawing(false)
+      setIsVoting(false)
+      setIsApproving(false)
+    }
+  }, [contractError, toast])
+
+  const handleSubmitValue = async () => {
+    if (!isConnected || !userAddress) {
+      toast({
+        title: "Wallet Not Connected",
+        description: "Please connect your wallet to submit values.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    if (!submitValue || isNaN(parseFloat(submitValue))) {
+      toast({
+        title: "Invalid Value",
+        description: "Please enter a valid numeric value.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    try {
+      setIsSubmitting(true)
+      // Convert to int256 - the value should be a scaled integer
+      // For example, if submitting 2500, multiply by 1e18 to get proper precision
+      const valueAsFloat = parseFloat(submitValue)
+      const valueAsInt = BigInt(Math.floor(valueAsFloat * 1e18))
+      
+      console.log('Submitting value:', {
+        original: submitValue,
+        asFloat: valueAsFloat,
+        asInt: valueAsInt.toString(),
+        oracleAddress: oracleAddress,
+        userAddress: userAddress
+      })
+      
+      writeContract({
+        address: oracleAddress!,
+        abi: OracleAbi,
+        functionName: 'submitValue',
+        args: [valueAsInt],
+      })
+
+      toast({
+        title: "Transaction Submitted",
+        description: "Your price submission is being processed...",
+      })
+    } catch (err: any) {
+      console.error('Error submitting value:', err)
+      setIsSubmitting(false)
+      toast({
+        title: "Submission Failed",
+        description: err?.message || "Failed to submit value. Please try again.",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleApproveTokens = async () => {
+    if (!isConnected || !userAddress || !weightTokenAddress) {
+      toast({
+        title: "Wallet Not Connected",
+        description: "Please connect your wallet to approve tokens.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    if (!depositAmount || isNaN(parseFloat(depositAmount)) || parseFloat(depositAmount) <= 0) {
+      toast({
+        title: "Invalid Amount",
+        description: "Please enter a valid amount to approve.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    try {
+      setIsApproving(true)
+      const amount = parseEther(depositAmount)
+      
+      writeContract({
+        address: weightTokenAddress as `0x${string}`,
+        abi: erc20Abi,
+        functionName: 'approve',
+        args: [oracleAddress!, amount],
+      })
+
+      toast({
+        title: "Approval Submitted",
+        description: "Your token approval is being processed...",
+      })
+    } catch (err) {
+      console.error('Error approving tokens:', err)
+      setIsApproving(false)
+      toast({
+        title: "Approval Failed",
+        description: "Failed to approve tokens. Please try again.",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleDepositTokens = async () => {
+    if (!isConnected || !userAddress) {
+      toast({
+        title: "Wallet Not Connected",
+        description: "Please connect your wallet to deposit tokens.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    if (!depositAmount || isNaN(parseFloat(depositAmount)) || parseFloat(depositAmount) <= 0) {
+      toast({
+        title: "Invalid Amount",
+        description: "Please enter a valid amount to deposit.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    const amount = parseEther(depositAmount)
+    const allowance = parseEther(tokenAllowance)
+    
+    if (allowance < amount) {
+      toast({
+        title: "Insufficient Allowance",
+        description: "Please approve tokens first before depositing.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    try {
+      setIsDepositing(true)
+      
+      writeContract({
+        address: oracleAddress!,
+        abi: OracleAbi,
+        functionName: 'depositTokens',
+        args: [amount],
+      })
+
+      toast({
+        title: "Transaction Submitted",
+        description: "Your token deposit is being processed...",
+      })
+    } catch (err) {
+      console.error('Error depositing tokens:', err)
+      setIsDepositing(false)
+      toast({
+        title: "Deposit Failed",
+        description: "Failed to deposit tokens. Please try again.",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleWithdrawTokens = async () => {
+    if (!isConnected || !userAddress) {
+      toast({
+        title: "Wallet Not Connected",
+        description: "Please connect your wallet to withdraw tokens.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    if (!withdrawAmount || isNaN(parseFloat(withdrawAmount)) || parseFloat(withdrawAmount) <= 0) {
+      toast({
+        title: "Invalid Amount",
+        description: "Please enter a valid amount to withdraw.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    try {
+      setIsWithdrawing(true)
+      const amount = parseEther(withdrawAmount)
+      
+      console.log('Withdrawing tokens:', {
+        amount: amount.toString(),
+        withdrawAmount,
+        oracleAddress: oracleAddress,
+        userAddress: userAddress,
+        depositedTokens: userDepositedTokens
+      })
+      
+      writeContract({
+        address: oracleAddress!,
+        abi: OracleAbi,
+        functionName: 'withdrawTokens',
+        args: [amount],
+      })
+
+      toast({
+        title: "Transaction Submitted",
+        description: "Your token withdrawal is being processed...",
+      })
+    } catch (err: any) {
+      console.error('Error withdrawing tokens:', err)
+      setIsWithdrawing(false)
+      toast({
+        title: "Withdrawal Failed",
+        description: err?.message || "Failed to withdraw tokens. Please try again.",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleVoteBlacklist = async () => {
+    if (!isConnected || !userAddress) {
+      toast({
+        title: "Wallet Not Connected",
+        description: "Please connect your wallet to vote.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    if (!voteTarget || !isHexAddress(voteTarget)) {
+      toast({
+        title: "Invalid Address",
+        description: "Please enter a valid Ethereum address.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    try {
+      setIsVoting(true)
+      
+      console.log('Voting blacklist:', {
+        target: voteTarget,
+        oracleAddress: oracleAddress,
+        userAddress: userAddress,
+        depositedTokens: userDepositedTokens
+      })
+      
+      writeContract({
+        address: oracleAddress!,
+        abi: OracleAbi,
+        functionName: 'voteBlacklist',
+        args: [voteTarget as `0x${string}`],
+      })
+
+      toast({
+        title: "Transaction Submitted",
+        description: "Your blacklist vote is being processed...",
+      })
+    } catch (err: any) {
+      console.error('Error voting blacklist:', err)
+      setIsVoting(false)
+      toast({
+        title: "Vote Failed",
+        description: err?.message || "Failed to submit blacklist vote. Please try again.",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleVoteWhitelist = async () => {
+    if (!isConnected || !userAddress) {
+      toast({
+        title: "Wallet Not Connected",
+        description: "Please connect your wallet to vote.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    if (!voteTarget || !isHexAddress(voteTarget)) {
+      toast({
+        title: "Invalid Address",
+        description: "Please enter a valid Ethereum address.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    try {
+      setIsVoting(true)
+      
+      console.log('Voting whitelist:', {
+        target: voteTarget,
+        oracleAddress: oracleAddress,
+        userAddress: userAddress,
+        depositedTokens: userDepositedTokens
+      })
+      
+      writeContract({
+        address: oracleAddress!,
+        abi: OracleAbi,
+        functionName: 'voteWhitelist',
+        args: [voteTarget as `0x${string}`],
+      })
+
+      toast({
+        title: "Transaction Submitted",
+        description: "Your whitelist vote is being processed...",
+      })
+    } catch (err: any) {
+      console.error('Error voting whitelist:', err)
+      setIsVoting(false)
+      toast({
+        title: "Vote Failed",
+        description: err?.message || "Failed to submit whitelist vote. Please try again.",
+        variant: "destructive",
+      })
+    }
+  }
 
   if (oracleLoading) {
     return (
@@ -96,7 +537,7 @@ export default function OracleInteractionPage() {
     )
   }
 
-  if (error || !oracle) {
+  if (oracleError || !oracle) {
     return (
       <div className="min-h-screen bg-background font-[oblique] tracking-wide" style={{ fontStyle: 'oblique 12deg' }}>
         <Navigation />
@@ -105,7 +546,7 @@ export default function OracleInteractionPage() {
             <div className="text-red-400 mb-6">
               <TrendingUp className="h-16 w-16 mx-auto mb-4 opacity-50" />
             </div>
-            <p className="text-xl text-red-400 mb-2 font-medium">{error || "Oracle not found"}</p>
+            <p className="text-xl text-red-400 mb-2 font-medium">{oracleError || "Oracle not found"}</p>
             <p className="text-sm text-muted-foreground mb-8">
               The oracle at address {oracleAddress} on chain {chainId} could not be loaded.
             </p>
@@ -116,71 +557,6 @@ export default function OracleInteractionPage() {
         </div>
       </div>
     )
-  }
-
-  const handleSubmitValue = async () => {
-    setLoading(true)
-    try {
-      // TODO: Implement contract interaction
-      console.log("Submitting value:", submitValue)
-      // Add actual contract call here
-    } catch (error) {
-      console.error("Error submitting value:", error)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleDepositTokens = async () => {
-    setLoading(true)
-    try {
-      // TODO: Implement contract interaction
-      console.log("Depositing tokens:", depositAmount)
-      // Add actual contract call here
-    } catch (error) {
-      console.error("Error depositing tokens:", error)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleWithdrawTokens = async () => {
-    setLoading(true)
-    try {
-      // TODO: Implement contract interaction
-      console.log("Withdrawing tokens:", withdrawAmount)
-      // Add actual contract call here
-    } catch (error) {
-      console.error("Error withdrawing tokens:", error)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleVoteBlacklist = async () => {
-    setLoading(true)
-    try {
-      // TODO: Implement contract interaction
-      console.log("Voting to blacklist:", voteTarget)
-      // Add actual contract call here
-    } catch (error) {
-      console.error("Error voting:", error)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleVoteWhitelist = async () => {
-    setLoading(true)
-    try {
-      // TODO: Implement contract interaction
-      console.log("Voting to whitelist:", voteTarget)
-      // Add actual contract call here
-    } catch (error) {
-      console.error("Error voting:", error)
-    } finally {
-      setLoading(false)
-    }
   }
 
   return (
@@ -203,9 +579,6 @@ export default function OracleInteractionPage() {
               <h1 className="text-4xl sm:text-5xl font-medium tracking-wide bg-gradient-to-r from-foreground to-primary bg-clip-text text-transparent" style={{ fontStyle: 'oblique 15deg' }}>
                 {oracle.name ?? "Oracle Dashboard"}
               </h1>
-              {oracle.status === "active" && (
-                <Badge className="bg-primary/10 text-primary border-primary/20 font-medium">Active</Badge>
-              )}
             </div>
 
             <div className="w-24" />
@@ -252,34 +625,34 @@ export default function OracleInteractionPage() {
               <CardHeader className="border-b border-border/30">
                 <CardTitle className="text-foreground flex items-center gap-2 font-medium">
                   <Send className="h-5 w-5 text-primary" />
-                  Submit Price Value
-                </CardTitle>
+                Submit Price Value
+              </CardTitle>
                 <CardDescription className="text-muted-foreground">
-                  Submit a new price value to the oracle. You must have deposited tokens to participate.
-                </CardDescription>
-              </CardHeader>
+                Submit a new price value to the oracle. You must have deposited tokens to participate.
+              </CardDescription>
+            </CardHeader>
               <CardContent>
                 <div className="mb-4">
                   <Label htmlFor="submitValue" className="text-foreground font-medium mb-2">Price Value</Label>
-                  <Input
-                    id="submitValue"
-                    type="number"
-                    placeholder="Enter price value (e.g., 2500)"
-                    value={submitValue}
-                    onChange={(e) => setSubmitValue(e.target.value)}
+                <Input
+                  id="submitValue"
+                  type="number"
+                  placeholder="Enter price value (e.g., 2500)"
+                  value={submitValue}
+                  onChange={(e) => setSubmitValue(e.target.value)}
                     className="h-12 bg-card/50 border border-primary/30 rounded-xl font-light transition-all duration-300 focus:border-primary/50 focus:ring-2 focus:ring-primary/20 focus:bg-card/70"
-                  />
-                </div>
-                <Button 
-                  onClick={handleSubmitValue} 
-                  disabled={loading || !submitValue}
-                  className="w-full bg-primary hover:bg-primary/90 text-primary-foreground border-primary/50 h-12 rounded-xl transition-all duration-300"
-                >
-                  {loading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Send className="h-4 w-4 mr-2" />}
-                  Submit Value
-                </Button>
-              </CardContent>
-            </Card>
+                />
+              </div>
+              <Button 
+                onClick={handleSubmitValue} 
+                disabled={isSubmitting || isPending || isConfirming || !submitValue || !isConnected}
+                className="w-full bg-primary hover:bg-primary/90 text-primary-foreground border-primary/50 h-12 rounded-xl transition-all duration-300"
+              >
+                {(isSubmitting || isPending || isConfirming) ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Send className="h-4 w-4 mr-2" />}
+                {isSubmitting || isPending ? "Submitting..." : isConfirming ? "Confirming..." : "Submit Value"}
+              </Button>
+            </CardContent>
+          </Card>
 
             <Card className="border-border/50 bg-card/30 backdrop-blur-sm hover:bg-card/60 border-primary/20 hover:border-white transition-all duration-300 rounded-2xl">
               <CardHeader className="border-b border-border/30">
@@ -290,7 +663,7 @@ export default function OracleInteractionPage() {
                   </CardTitle>
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Clock className="h-4 w-4" />
-                    <span>2 min ago</span>
+                    <span>{lastUpdated}</span>
                   </div>
                 </div>
                 <CardDescription className="text-muted-foreground">
@@ -303,12 +676,18 @@ export default function OracleInteractionPage() {
                     <div className="flex items-center gap-3">
                       <div className="w-2 h-2 bg-primary rounded-full animate-pulse"></div>
                       <span className="text-muted-foreground font-medium text-sm">Latest Value</span>
-                      <span className="text-foreground font-light">{oracle.price ?? "$2,450"}</span>
+                      <span className="text-foreground font-light">{latestValue || "—"}</span>
                     </div>
                     <Button 
                       size="sm"
                       variant="outline"
                       className="h-8 px-3 text-xs border-primary/30 text-primary hover:bg-primary/10 hover:border-primary/50 transition-all duration-300"
+                      onClick={() => {
+                        toast({
+                          title: "Latest Value Details",
+                          description: `Current latest value: ${latestValue || "No data"}`,
+                        })
+                      }}
                     >
                       View
                     </Button>
@@ -318,16 +697,33 @@ export default function OracleInteractionPage() {
                     <div className="flex items-center gap-3">
                       <div className="w-2 h-2 bg-primary/60 rounded-full"></div>
                       <span className="text-muted-foreground font-medium text-sm">Aggregated</span>
-                      <span className="text-foreground font-light">{oracle.price ?? "$2,450"}</span>
+                      <span className="text-foreground font-light">{aggregatedValue || "—"}</span>
                     </div>
                     <Button 
                       size="sm"
                       variant="outline"
                       className="h-8 px-3 text-xs border-primary/30 text-primary hover:bg-primary/10 hover:border-primary/50 transition-all duration-300"
+                      onClick={() => {
+                        toast({
+                          title: "Aggregated Value Details",
+                          description: `Current aggregated value: ${aggregatedValue || "No data"}`,
+                        })
+                      }}
                     >
                       View
                     </Button>
                   </div>
+                  
+                  {/* User's deposited tokens info */}
+                  {isConnected && (
+                    <div className="flex items-center justify-between p-3 bg-card/50 border border-primary/30 rounded-xl transition-all duration-300">
+                      <div className="flex items-center gap-3">
+                        <Wallet className="h-4 w-4 text-primary" />
+                        <span className="text-muted-foreground font-medium text-sm">Your Deposited</span>
+                        <span className="text-foreground font-light">{parseFloat(userDepositedTokens).toFixed(4)} ETH</span>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -346,6 +742,26 @@ export default function OracleInteractionPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
+                {/* Token Balance Display */}
+                {isConnected && (
+                  <div className="space-y-3 mb-4">
+                    <div className="grid grid-cols-3 gap-3 p-3 bg-card/50 border border-primary/30 rounded-xl">
+                      <div className="text-center">
+                        <div className="text-xs text-muted-foreground mb-1">Balance</div>
+                        <div className="text-sm font-light text-foreground">{parseFloat(userTokenBalance).toFixed(4)}</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-xs text-muted-foreground mb-1">Approved</div>
+                        <div className="text-sm font-light text-foreground">{parseFloat(tokenAllowance).toFixed(4)}</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-xs text-muted-foreground mb-1">Deposited</div>
+                        <div className="text-sm font-light text-primary font-medium">{parseFloat(userDepositedTokens).toFixed(4)}</div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
                 <div className="space-y-2">
                   <Label htmlFor="depositAmount" className="text-foreground font-medium">Amount</Label>
                   <Input
@@ -357,14 +773,37 @@ export default function OracleInteractionPage() {
                     className="h-12 mb-4 bg-card/50 border border-primary/30 rounded-xl font-light transition-all duration-300 focus:border-primary/50 focus:ring-2 focus:ring-primary/20 focus:bg-card/70"
                   />
                 </div>
+                
+                {/* Conditional Buttons based on allowance */}
+                {(() => {
+                  const amount = depositAmount ? parseEther(depositAmount) : BigInt(0)
+                  const allowance = tokenAllowance ? parseEther(tokenAllowance) : BigInt(0)
+                  const needsApproval = amount > allowance
+
+                  if (needsApproval) {
+                    return (
+                      <Button 
+                        onClick={handleApproveTokens} 
+                        disabled={isApproving || isPending || isConfirming || !depositAmount || !isConnected}
+                        className="w-full bg-secondary hover:bg-secondary/90 text-secondary-foreground h-12 rounded-xl transition-all duration-300"
+                      >
+                        {(isApproving || isPending || isConfirming) ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <CheckCircle className="h-4 w-4 mr-2" />}
+                        {isApproving || isPending ? "Approving..." : isConfirming ? "Confirming..." : "Approve Tokens"}
+                      </Button>
+                    )
+                  } else {
+                    return (
                 <Button 
                   onClick={handleDepositTokens} 
-                  disabled={loading || !depositAmount}
-                  className="w-full bg-primary hover:bg-primary/90 text-primary-foreground h-12 rounded-xl transition-all duration-300"
+                        disabled={isDepositing || isPending || isConfirming || !depositAmount || !isConnected}
+                        className="w-full bg-primary hover:bg-primary/90 text-primary-foreground h-12 rounded-xl transition-all duration-300"
                 >
-                  {loading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Wallet className="h-4 w-4 mr-2" />}
-                  Deposit Tokens
+                        {(isDepositing || isPending || isConfirming) ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Wallet className="h-4 w-4 mr-2" />}
+                        {isDepositing || isPending ? "Depositing..." : isConfirming ? "Confirming..." : "Deposit Tokens"}
                 </Button>
+                    )
+                  }
+                })()}
               </CardContent>
             </Card>
 
@@ -379,6 +818,16 @@ export default function OracleInteractionPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
+                {/* Show deposited tokens */}
+                {isConnected && (
+                  <div className="p-3 bg-card/50 border border-primary/30 rounded-xl mb-4">
+                    <div className="flex items-center justify-between">
+                      <div className="text-sm text-muted-foreground">Your Deposited Tokens</div>
+                      <div className="text-lg font-light text-primary font-medium">{parseFloat(userDepositedTokens).toFixed(4)} ETH</div>
+                    </div>
+                  </div>
+                )}
+                
                 <div className="space-y-2">
                   <Label htmlFor="withdrawAmount" className="text-foreground font-medium">Amount</Label>
                   <Input
@@ -392,11 +841,11 @@ export default function OracleInteractionPage() {
                 </div>
                 <Button 
                   onClick={handleWithdrawTokens} 
-                  disabled={loading || !withdrawAmount}
+                  disabled={isWithdrawing || isPending || isConfirming || !withdrawAmount || !isConnected}
                   className="w-full bg-destructive hover:bg-destructive/90 text-destructive-foreground h-12 rounded-xl transition-all duration-300"
                 >
-                  {loading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Wallet className="h-4 w-4 mr-2" />}
-                  Withdraw Tokens
+                  {(isWithdrawing || isPending || isConfirming) ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Wallet className="h-4 w-4 mr-2" />}
+                  {isWithdrawing || isPending ? "Withdrawing..." : isConfirming ? "Confirming..." : "Withdraw Tokens"}
                 </Button>
               </CardContent>
             </Card>
@@ -427,19 +876,19 @@ export default function OracleInteractionPage() {
               <div className="grid grid-cols-2 gap-4">
                 <Button 
                   onClick={handleVoteBlacklist} 
-                  disabled={loading || !voteTarget}
+                  disabled={isVoting || isPending || isConfirming || !voteTarget || !isConnected}
                   className="bg-destructive hover:bg-destructive/90 text-destructive-foreground h-12 rounded-xl transition-all duration-300"
                 >
-                  {loading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Shield className="h-4 w-4 mr-2" />}
-                  Vote Blacklist
+                  {(isVoting || isPending || isConfirming) ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Shield className="h-4 w-4 mr-2" />}
+                  {isVoting || isPending ? "Voting..." : isConfirming ? "Confirming..." : "Vote Blacklist"}
                 </Button>
                 <Button 
                   onClick={handleVoteWhitelist} 
-                  disabled={loading || !voteTarget}
+                  disabled={isVoting || isPending || isConfirming || !voteTarget || !isConnected}
                   className="bg-primary hover:bg-primary/90 text-primary-foreground h-12 rounded-xl transition-all duration-300"
                 >
-                  {loading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Shield className="h-4 w-4 mr-2" />}
-                  Vote Whitelist
+                  {(isVoting || isPending || isConfirming) ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Shield className="h-4 w-4 mr-2" />}
+                  {isVoting || isPending ? "Voting..." : isConfirming ? "Confirming..." : "Vote Whitelist"}
                 </Button>
               </div>
             </CardContent>
