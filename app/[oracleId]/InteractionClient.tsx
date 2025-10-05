@@ -86,10 +86,29 @@ export default function OracleInteractionPage() {
     query: { enabled: !!oracleAddress }
   })
 
-  const { data: depositedTokensData } = useReadContract({
+  // Read user's locked tokens (for governance operations)
+  const { data: lockedTokensData } = useReadContract({
     address: oracleAddress || undefined,
     abi: OracleAbi,
-    functionName: 'depositedTokens',
+    functionName: 'lockedTokens',
+    args: userAddress ? [userAddress] : undefined,
+    query: { enabled: !!oracleAddress && !!userAddress }
+  })
+
+  // Read user's unlocked tokens (available for withdrawal)
+  const { data: unlockedTokensData } = useReadContract({
+    address: oracleAddress || undefined,
+    abi: OracleAbi,
+    functionName: 'unlockedTokens',
+    args: userAddress ? [userAddress] : undefined,
+    query: { enabled: !!oracleAddress && !!userAddress }
+  })
+
+  // Read user's tokens locked for withdrawal (after operations)
+  const { data: lockedForWithdrawalData } = useReadContract({
+    address: oracleAddress || undefined,
+    abi: OracleAbi,
+    functionName: 'lockedForWithdrawal',
     args: userAddress ? [userAddress] : undefined,
     query: { enabled: !!oracleAddress && !!userAddress }
   })
@@ -120,8 +139,13 @@ export default function OracleInteractionPage() {
 
   // Update real-time data when contract data changes
   useEffect(() => {
-    if (depositedTokensData) {
-      setUserDepositedTokens(formatEther(depositedTokensData as bigint))
+    // Calculate total deposited tokens (sum of all three token states)
+    if (lockedTokensData !== undefined || unlockedTokensData !== undefined || lockedForWithdrawalData !== undefined) {
+      const locked = lockedTokensData ? BigInt(lockedTokensData as bigint) : BigInt(0)
+      const unlocked = unlockedTokensData ? BigInt(unlockedTokensData as bigint) : BigInt(0)
+      const lockedForWithdrawal = lockedForWithdrawalData ? BigInt(lockedForWithdrawalData as bigint) : BigInt(0)
+      const total = locked + unlocked + lockedForWithdrawal
+      setUserDepositedTokens(formatEther(total))
     }
     if (userTokenBalanceData) {
       setUserTokenBalance(formatEther(userTokenBalanceData as bigint))
@@ -141,7 +165,7 @@ export default function OracleInteractionPage() {
         setLastUpdated(`${Math.floor(diff / 3600)}h ago`)
       }
     }
-  }, [depositedTokensData, userTokenBalanceData, tokenAllowanceData, lastSubmissionTimeData])
+  }, [lockedTokensData, unlockedTokensData, lockedForWithdrawalData, userTokenBalanceData, tokenAllowanceData, lastSubmissionTimeData])
 
   // Early validation before calling the hook
   if (!oracleAddress || !chainIdValid) {
@@ -755,8 +779,24 @@ export default function OracleInteractionPage() {
                         <div className="text-sm font-light text-foreground">{parseFloat(tokenAllowance).toFixed(4)}</div>
                       </div>
                       <div className="text-center">
-                        <div className="text-xs text-muted-foreground mb-1">Deposited</div>
+                        <div className="text-xs text-muted-foreground mb-1">Total Deposited</div>
                         <div className="text-sm font-light text-primary font-medium">{parseFloat(userDepositedTokens).toFixed(4)}</div>
+                      </div>
+                    </div>
+                    
+                    {/* Detailed Token State Breakdown */}
+                    <div className="grid grid-cols-3 gap-2 p-2 bg-card/30 border border-primary/20 rounded-lg text-xs">
+                      <div className="text-center">
+                        <div className="text-muted-foreground/80 mb-0.5">🔒 Locked</div>
+                        <div className="text-foreground/90 font-light">{lockedTokensData ? parseFloat(formatEther(lockedTokensData as bigint)).toFixed(2) : '0.00'}</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-muted-foreground/80 mb-0.5">✓ Unlocked</div>
+                        <div className="text-foreground/90 font-light">{unlockedTokensData ? parseFloat(formatEther(unlockedTokensData as bigint)).toFixed(2) : '0.00'}</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-muted-foreground/80 mb-0.5">⏳ Pending</div>
+                        <div className="text-foreground/90 font-light">{lockedForWithdrawalData ? parseFloat(formatEther(lockedForWithdrawalData as bigint)).toFixed(2) : '0.00'}</div>
                       </div>
                     </div>
                   </div>
