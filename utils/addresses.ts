@@ -1,5 +1,5 @@
 export const OracleFactories = {
-  534351: '0xE23dfD4404789b8f37FD6C3F5a07E20d0E715806',
+  534351: '0x9C6c0aC27d7ccacB79c1a1432DcfF84387421C63',
 } as {
   [key: number]: `0x${string}`
 }
