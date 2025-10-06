@@ -28,7 +28,7 @@ import {
   CheckCircle,
 } from "lucide-react"
 import { useAccount, useWriteContract, useReadContract, useWaitForTransactionReceipt } from "wagmi"
-import { parseEther, formatEther, formatUnits, erc20Abi } from "viem"
+import { parseUnits, formatUnits, erc20Abi } from "viem"
 
 function isHexAddress(value: string | null): value is `0x${string}` {
   return !!value && /^0x[a-fA-F0-9]{40}$/.test(value)
@@ -150,6 +150,20 @@ export default function OracleInteractionPage() {
     abi: OracleAbi,
     functionName: 'WEIGHT_TOKEN',
     query: { enabled: !!oracleAddress }
+  })
+
+  const { data: weightTokenSymbolData } = useReadContract({
+    address: (weightTokenAddress as `0x${string}`) || undefined,
+    abi: erc20Abi,
+    functionName: 'symbol',
+    query: { enabled: !!weightTokenAddress }
+  })
+
+  const { data: weightTokenDecimalsData } = useReadContract({
+    address: (weightTokenAddress as `0x${string}`) || undefined,
+    abi: erc20Abi,
+    functionName: 'decimals',
+    query: { enabled: !!weightTokenAddress }
   })
 
   // Read user's locked tokens (for governance operations)
@@ -305,6 +319,42 @@ export default function OracleInteractionPage() {
     query: { enabled: !!weightTokenAddress && !!userAddress && !!oracleAddress }
   })
 
+  const weightTokenSymbol = useMemo(() => (weightTokenSymbolData ? String(weightTokenSymbolData) : "WEIGHT"), [weightTokenSymbolData])
+  const weightTokenDecimals = useMemo(() => {
+    if (weightTokenDecimalsData === undefined || weightTokenDecimalsData === null) {
+      return 18
+    }
+    const value = Number(weightTokenDecimalsData)
+    return Number.isFinite(value) ? value : 18
+  }, [weightTokenDecimalsData])
+  const weightTokenAddressString = useMemo(() => (weightTokenAddress ? String(weightTokenAddress) : "—"), [weightTokenAddress])
+  const canCopyWeightTokenAddress = useMemo(
+    () => weightTokenAddressString.startsWith("0x") && weightTokenAddressString.length === 42,
+    [weightTokenAddressString]
+  )
+  const formatTokenAmount = useCallback(
+    (value?: bigint | null, fractionDigits = 2) => {
+      try {
+        const normalized = formatUnits(value ?? BigInt(0), weightTokenDecimals)
+        const numeric = Number.parseFloat(normalized)
+        if (!Number.isFinite(numeric)) {
+          return "0.00"
+        }
+        return numeric.toFixed(fractionDigits)
+      } catch {
+        return "0.00"
+      }
+    },
+    [weightTokenDecimals]
+  )
+  const walletTokenBalanceDisplay = useMemo(
+    () => {
+      const numeric = Number.parseFloat(userTokenBalance || "0")
+      return Number.isFinite(numeric) ? numeric.toFixed(2) : "0.00"
+    },
+    [userTokenBalance]
+  )
+
   // Update real-time data when contract data changes
   useEffect(() => {
     // Calculate total deposited tokens (sum of locked and unlocked tokens)
@@ -312,13 +362,13 @@ export default function OracleInteractionPage() {
       const locked = lockedTokensData ? BigInt(lockedTokensData as bigint) : BigInt(0)
       const unlocked = unlockedTokensData ? BigInt(unlockedTokensData as bigint) : BigInt(0)
       const total = locked + unlocked
-      setUserDepositedTokens(formatEther(total))
+      setUserDepositedTokens(formatTokenAmount(total, 4))
     }
-    if (userTokenBalanceData) {
-      setUserTokenBalance(formatEther(userTokenBalanceData as bigint))
+    if (userTokenBalanceData !== undefined) {
+      setUserTokenBalance(formatTokenAmount(userTokenBalanceData as bigint, 4))
     }
-    if (tokenAllowanceData) {
-      setTokenAllowance(formatEther(tokenAllowanceData as bigint))
+    if (tokenAllowanceData !== undefined) {
+      setTokenAllowance(formatTokenAmount(tokenAllowanceData as bigint, 4))
     }
     if (lastSubmissionTimeData) {
       const timestamp = Number(lastSubmissionTimeData as bigint)
@@ -379,7 +429,7 @@ export default function OracleInteractionPage() {
       }
     }
 
-  }, [lockedTokensData, unlockedTokensData, userTokenBalanceData, tokenAllowanceData, lastSubmissionTimeData, rewardData, halfLifeSecondsData, quorumData, operationLockingPeriodData, withdrawalLockingPeriodData, alphaData, depositTimestampData, lastOperationTimestampData])
+  }, [lockedTokensData, unlockedTokensData, userTokenBalanceData, tokenAllowanceData, formatTokenAmount, weightTokenDecimals, lastSubmissionTimeData, rewardData, halfLifeSecondsData, quorumData, operationLockingPeriodData, withdrawalLockingPeriodData, alphaData, depositTimestampData, lastOperationTimestampData])
 
   // Early validation before calling the hook
   if (!oracleAddress || !chainIdValid) {
@@ -568,7 +618,7 @@ export default function OracleInteractionPage() {
 
     try {
       setIsApproving(true)
-      const amount = parseEther(depositAmount)
+      const amount = parseUnits(depositAmount, weightTokenDecimals)
       
       writeContract({
         address: weightTokenAddress as `0x${string}`,
@@ -611,8 +661,8 @@ export default function OracleInteractionPage() {
       return
     }
 
-    const amount = parseEther(depositAmount)
-    const allowance = parseEther(tokenAllowance)
+    const amount = parseUnits(depositAmount, weightTokenDecimals)
+    const allowance = tokenAllowanceData ? BigInt(tokenAllowanceData as bigint) : BigInt(0)
     
     if (allowance < amount) {
       toast({
@@ -669,7 +719,7 @@ export default function OracleInteractionPage() {
 
     try {
       setIsWithdrawing(true)
-      const amount = parseEther(withdrawAmount)
+      const amount = parseUnits(withdrawAmount, weightTokenDecimals)
       
       console.log('Withdrawing tokens:', {
         amount: amount.toString(),
@@ -984,18 +1034,45 @@ export default function OracleInteractionPage() {
             <p className="text-lg text-muted-foreground mb-6 max-w-3xl mx-auto font-light">{oracle.description}</p>
           )}
 
-          {/* Oracle Address */}
-          <div className="flex items-center gap-2 justify-center mb-8">
-            <code className="text-sm bg-card/50 border border-primary/30 px-4 py-2 rounded-xl text-primary font-mono">
-              {oracle.address}
-            </code>
-            <button
-              onClick={() => navigator.clipboard.writeText(oracle.address)}
-              className="text-muted-foreground hover:text-primary transition-colors p-2 hover:bg-card/50 rounded-lg border border-transparent hover:border-primary/30"
-              title="Copy address"
-            >
-              <Copy className="h-4 w-4" />
-            </button>
+          {/* Addresses */}
+          <div className="grid gap-4 md:grid-cols-2 mb-8">
+            <div className="bg-card/40 border border-primary/25 rounded-xl p-4 text-left">
+              <div className="text-xs uppercase tracking-wide text-muted-foreground/70 mb-2">Oracle Address</div>
+              <div className="flex items-center justify-between gap-3">
+                <code className="flex-1 text-xs sm:text-sm bg-card/60 border border-primary/30 px-3 py-2 rounded-lg text-primary font-mono break-all">
+                  {oracle.address}
+                </code>
+                <button
+                  onClick={() => navigator.clipboard.writeText(oracle.address)}
+                  className="text-muted-foreground hover:text-primary transition-colors p-2 hover:bg-card/50 rounded-lg border border-transparent hover:border-primary/30"
+                  title="Copy oracle address"
+                >
+                  <Copy className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+
+            <div className="bg-card/40 border border-primary/25 rounded-xl p-4 text-left">
+              <div className="flex items-center justify-between mb-2">
+                <div className="text-xs uppercase tracking-wide text-muted-foreground/70">Weight Token</div>
+                <span className="text-xs font-medium text-primary/80">{weightTokenSymbol}</span>
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <code className="flex-1 text-xs sm:text-sm bg-card/60 border border-primary/30 px-3 py-2 rounded-lg text-primary font-mono break-all">
+                  {weightTokenAddressString}
+                </code>
+                <button
+                  onClick={() =>
+                    canCopyWeightTokenAddress && navigator.clipboard.writeText(weightTokenAddressString)
+                  }
+                  disabled={!canCopyWeightTokenAddress}
+                  className="text-muted-foreground hover:text-primary transition-colors p-2 hover:bg-card/50 rounded-lg border border-transparent hover:border-primary/30 disabled:opacity-40 disabled:cursor-not-allowed"
+                  title="Copy weight token address"
+                >
+                  <Copy className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -1124,17 +1201,25 @@ export default function OracleInteractionPage() {
                   <div className="space-y-3 mb-4">
                     
                     {/* Detailed Token State Breakdown */}
-                    <div className="grid grid-cols-2 gap-2 p-2 bg-card/30 border border-primary/20 rounded-lg text-xs">
-                      <div className="text-center">
-                        <div className="text-muted-foreground/80 mb-0.5">🔒 Locked</div>
-                        <div className="text-foreground/90 font-light">{lockedTokensData ? parseFloat(formatEther(lockedTokensData as bigint)).toFixed(2) : '0.00'}</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="text-muted-foreground/80 mb-0.5">📅 Deposit Time</div>
-                        <div className="text-foreground/90 font-light text-xs">{depositTimestamp}</div>
-                      </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 p-2 bg-card/30 border border-primary/20 rounded-lg text-xs">
+                  <div className="text-center">
+                    <div className="text-muted-foreground/80 mb-0.5">🔒 Locked</div>
+                    <div className="text-foreground/90 font-light">
+                      {formatTokenAmount(lockedTokensData ? (lockedTokensData as bigint) : undefined)} {weightTokenSymbol}
                     </div>
                   </div>
+                  <div className="text-center">
+                    <div className="text-muted-foreground/80 mb-0.5">📅 Deposit Time</div>
+                    <div className="text-foreground/90 font-light text-xs">{depositTimestamp}</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-muted-foreground/80 mb-0.5">💼 Wallet Balance</div>
+                    <div className="text-foreground/90 font-light">
+                      {walletTokenBalanceDisplay} {weightTokenSymbol}
+                    </div>
+                  </div>
+                </div>
+              </div>
                 )}
                 
                 <div className="space-y-2">
@@ -1151,8 +1236,8 @@ export default function OracleInteractionPage() {
                 
                 {/* Conditional Buttons based on allowance */}
                 {(() => {
-                  const amount = depositAmount ? parseEther(depositAmount) : BigInt(0)
-                  const allowance = tokenAllowance ? parseEther(tokenAllowance) : BigInt(0)
+                  const amount = depositAmount ? parseUnits(depositAmount, weightTokenDecimals) : BigInt(0)
+                  const allowance = tokenAllowanceData ? BigInt(tokenAllowanceData as bigint) : BigInt(0)
                   const needsApproval = amount > allowance
 
                   if (needsApproval) {
@@ -1203,7 +1288,9 @@ export default function OracleInteractionPage() {
                   </div>
                   <div className="text-center">
                     <div className="text-muted-foreground/80 mb-0.5">✓ Unlocked</div>
-                    <div className="text-foreground/90 font-light">{unlockedTokensData ? parseFloat(formatEther(unlockedTokensData as bigint)).toFixed(2) : '0.00'}</div>
+                    <div className="text-foreground/90 font-light">
+                      {formatTokenAmount(unlockedTokensData ? (unlockedTokensData as bigint) : undefined)} {weightTokenSymbol}
+                    </div>
                   </div>
                 </div>
                 )}
