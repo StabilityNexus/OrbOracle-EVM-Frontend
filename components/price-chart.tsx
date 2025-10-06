@@ -88,15 +88,15 @@ const TooltipContent = (props: ChartTooltipProps) => {
   return (
     <div className="space-y-3 rounded-xl border border-primary/20 bg-card/90 px-4 py-3 shadow-lg backdrop-blur">
       <div className="space-y-1 text-xs text-muted-foreground">
-        <div className="font-semibold uppercase tracking-wide text-primary">Aggregated</div>
         <div>Date: <span className="text-foreground/90">{datum.dateLabel}</span></div>
         <div>Time: <span className="text-foreground/90">{datum.timeLabel}</span></div>
+      </div>
+      <div className="space-y-1 text-xs text-muted-foreground">
+        <div className="font-semibold uppercase tracking-wide text-primary">Aggregated</div>
         <div className="text-sm font-medium text-foreground">Value: {formatNumber(datum.aggregated)}</div>
       </div>
       <div className="space-y-1 border-t border-border/60 pt-2 text-xs text-muted-foreground">
         <div className="font-semibold uppercase tracking-wide text-foreground">Latest</div>
-        <div>Date: <span className="text-foreground/90">{datum.dateLabel}</span></div>
-        <div>Time: <span className="text-foreground/90">{datum.timeLabel}</span></div>
         <div className="text-sm font-medium text-foreground">Latest: {formatNumber(datum.latest)}</div>
       </div>
     </div>
