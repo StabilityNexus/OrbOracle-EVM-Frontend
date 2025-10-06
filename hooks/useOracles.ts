@@ -7,6 +7,19 @@ import { OracleFactoryAbi } from '@/utils/abi/OracleFactory'
 import { OracleAbi } from '@/utils/abi/Oracle'
 import { OracleFactories } from '@/utils/addresses'
 
+const formatTimestamp = (value: bigint | undefined | null) => {
+  if (!value || value === BigInt(0)) {
+    return '—'
+  }
+
+  const millis = Number(value) * 1000
+  if (!Number.isFinite(millis)) {
+    return '—'
+  }
+
+  return new Date(millis).toLocaleString()
+}
+
 export interface Oracle {
   id: string
   name: string
@@ -16,10 +29,11 @@ export interface Oracle {
   creator: string
   category: string
   status: 'active' | 'inactive' | 'maintenance'
-  price: string
   updateFrequency: string
   accuracy: string
   lastUpdate: string
+  lastSubmissionTime: string
+  lastTimestamp: string
 }
 
 export function useOracles() {
@@ -60,7 +74,7 @@ export function useOracles() {
         const oraclePromises = oracleInfos.map(async (info: any, index: number) => {
           try {
             // Read oracle name and description from the contract
-            const [name, description] = await Promise.all([
+            const [name, description, lastSubmissionTime, lastTimestamp] = await Promise.all([
               readContract(config, {
                 address: info.oracle as `0x${string}`,
                 abi: OracleAbi,
@@ -71,6 +85,16 @@ export function useOracles() {
                 abi: OracleAbi,
                 functionName: 'description',
               }).catch(() => 'No description available'),
+              readContract(config, {
+                address: info.oracle as `0x${string}`,
+                abi: OracleAbi,
+                functionName: 'lastSubmissionTime',
+              }).catch(() => BigInt(0)),
+              readContract(config, {
+                address: info.oracle as `0x${string}`,
+                abi: OracleAbi,
+                functionName: 'lastTimestamp',
+              }).catch(() => BigInt(0)),
             ])
 
             return {
@@ -82,10 +106,11 @@ export function useOracles() {
               creator: info.creator,
               category: 'Price Feed',
               status: 'active' as const,
-              price: '$0.00',
               updateFrequency: '1min',
               accuracy: '99.9%',
               lastUpdate: new Date().toISOString(),
+              lastSubmissionTime: formatTimestamp(lastSubmissionTime as bigint),
+              lastTimestamp: formatTimestamp(lastTimestamp as bigint),
             }
           } catch (err) {
             console.error(`Error fetching details for oracle ${info.oracle}:`, err)
@@ -98,10 +123,11 @@ export function useOracles() {
               creator: info.creator,
               category: 'Price Feed',
               status: 'inactive' as const,
-              price: '$0.00',
               updateFrequency: 'Unknown',
               accuracy: 'Unknown',
               lastUpdate: new Date().toISOString(),
+              lastSubmissionTime: '—',
+              lastTimestamp: '—',
             }
           }
         })
@@ -159,7 +185,7 @@ export function useOracle(oracleAddress: string, targetChainId?: number) {
 
       try {
         // Read oracle details from the contract
-        const [name, description] = await Promise.all([
+        const [name, description, lastSubmissionTime, lastTimestamp] = await Promise.all([
           readContract(config, {
             address: oracleAddress as `0x${string}`,
             abi: OracleAbi,
@@ -170,6 +196,16 @@ export function useOracle(oracleAddress: string, targetChainId?: number) {
             abi: OracleAbi,
             functionName: 'description',
           }).catch(() => 'No description available'),
+          readContract(config, {
+            address: oracleAddress as `0x${string}`,
+            abi: OracleAbi,
+            functionName: 'lastSubmissionTime',
+          }).catch(() => BigInt(0)),
+          readContract(config, {
+            address: oracleAddress as `0x${string}`,
+            abi: OracleAbi,
+            functionName: 'lastTimestamp',
+          }).catch(() => BigInt(0)),
         ])
 
         setOracle({
@@ -181,14 +217,30 @@ export function useOracle(oracleAddress: string, targetChainId?: number) {
           creator: '0x0000000000000000000000000000000000000000',
           category: 'Price Feed',
           status: 'active',
-          price: '$0.00',
           updateFrequency: '1min',
           accuracy: '99.9%',
           lastUpdate: new Date().toISOString(),
+          lastSubmissionTime: formatTimestamp(lastSubmissionTime as bigint),
+          lastTimestamp: formatTimestamp(lastTimestamp as bigint),
         })
       } catch (err) {
         console.error('Error fetching oracle details:', err)
         setError('Failed to fetch oracle details')
+        setOracle({
+          id: oracleAddress,
+          name: 'Unknown Oracle',
+          description: 'Failed to load details',
+          address: oracleAddress,
+          token: '0x0000000000000000000000000000000000000000',
+          creator: '0x0000000000000000000000000000000000000000',
+          category: 'Price Feed',
+          status: 'inactive',
+          updateFrequency: 'Unknown',
+          accuracy: 'Unknown',
+          lastUpdate: new Date().toISOString(),
+          lastSubmissionTime: '—',
+          lastTimestamp: '—',
+        })
       } finally {
         setLoading(false)
       }

@@ -311,7 +311,7 @@ export default function CreateOracleIntegrated() {
                 placeholder="ETH/USD Oracle"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className={`border-0 bg-slate-800/50 text-slate-100 placeholder:text-slate-400 border border-blue-100 ${errors.name ? 'border-red-500' : ''}`}
+                className={`border-0 bg-slate-800/50  text-slate-100 placeholder:text-slate-400 border border-blue-100 max-w-full ${errors.name ? 'border-red-500' : ''}`}
                 required
               />
               {errors.name && <p className="text-red-400 text-xs">{errors.name}</p>}

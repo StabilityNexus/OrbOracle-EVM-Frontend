@@ -28,7 +28,7 @@ import {
   CheckCircle,
 } from "lucide-react"
 import { useAccount, useWriteContract, useReadContract, useWaitForTransactionReceipt } from "wagmi"
-import { parseEther, formatEther, parseUnits, formatUnits, erc20Abi } from "viem"
+import { parseEther, formatEther, formatUnits, erc20Abi } from "viem"
 
 function isHexAddress(value: string | null): value is `0x${string}` {
   return !!value && /^0x[a-fA-F0-9]{40}$/.test(value)
@@ -38,11 +38,12 @@ type PriceHistoryResult = readonly [readonly bigint[], readonly bigint[], readon
 
 const PRICE_DECIMALS = 18
 const DISPLAY_PRECISION = 6
+const MAX_PRICE_POINTS = 20
 
 const formatPriceFromWei = (value: bigint) => {
   const numeric = Number.parseFloat(formatUnits(value, PRICE_DECIMALS))
   if (Number.isNaN(numeric)) {
-    return "0.000000"
+    return "—"
   }
   return numeric.toFixed(DISPLAY_PRECISION)
 }
@@ -79,61 +80,7 @@ export default function OracleInteractionPage() {
   const [tokenAllowance, setTokenAllowance] = useState<string>("0")
 
   const [priceHistoryPoints, setPriceHistoryPoints] = useState<PriceChartPoint[]>([])
-
-  const buildPriceHistoryPoints = useCallback((data?: PriceHistoryResult) => {
-    if (!data) {
-      return []
-    }
-
-    const [timestamps, aggregatedPrices, latestValues] = data
-    if (timestamps.length !== aggregatedPrices.length || aggregatedPrices.length !== latestValues.length) {
-      console.warn('Mismatched price history array lengths received from contract', {
-        timestampsLength: timestamps.length,
-        aggregatedLength: aggregatedPrices.length,
-        latestLength: latestValues.length,
-      })
-    }
-
-    return timestamps
-      .map((timestamp, index) => {
-        const aggregatedRaw = aggregatedPrices[index] ?? BigInt(0)
-        const latestRaw = latestValues[index] ?? BigInt(0)
-
-        return {
-          timestamp: Number(timestamp),
-          aggregated: Number(formatUnits(aggregatedRaw, PRICE_DECIMALS)) || 0,
-          latest: Number(formatUnits(latestRaw, PRICE_DECIMALS)) || 0,
-        }
-      })
-      .sort((a, b) => a.timestamp - b.timestamp)
-  }, [])
-
-  const updatePriceDisplays = useCallback((data?: PriceHistoryResult) => {
-    if (!data) {
-      setAggregatedValue("—")
-      setLatestValue("—")
-      setPriceHistoryPoints([])
-      return
-    }
-
-    const [, aggregatedPrices, latestValues] = data
-
-    setPriceHistoryPoints(buildPriceHistoryPoints(data))
-
-    if (aggregatedPrices.length > 0) {
-      const latestAggregated = aggregatedPrices[aggregatedPrices.length - 1]
-      setAggregatedValue(formatPriceFromWei(latestAggregated))
-    } else {
-      setAggregatedValue("—")
-    }
-
-    if (latestValues.length > 0) {
-      const latestSubmitted = latestValues[latestValues.length - 1]
-      setLatestValue(formatPriceFromWei(latestSubmitted))
-    } else {
-      setLatestValue("—")
-    }
-  }, [buildPriceHistoryPoints])
+  const [pendingRead, setPendingRead] = useState<"aggregated" | "latest" | null>(null)
 
   // Oracle configuration display values
   const [rewardRate, setRewardRate] = useState<string>("Loading...")
@@ -146,14 +93,53 @@ export default function OracleInteractionPage() {
   // Timestamp display values
   const [depositTimestamp, setDepositTimestamp] = useState<string>("Never")
   const [lastOperationTimestamp, setLastOperationTimestamp] = useState<string>("Never")
-  const [pendingRead, setPendingRead] = useState<"aggregated" | "latest" | null>(null)
+
+  const buildPriceHistoryPoints = useCallback((data?: PriceHistoryResult) => {
+    if (!data) {
+      return [] as PriceChartPoint[]
+    }
+
+    const [timestamps, aggregatedPrices, latestValues] = data
+    return timestamps
+      .map((timestamp, index) => {
+        const aggregatedRaw = aggregatedPrices[index] ?? BigInt(0)
+        const latestRaw = latestValues[index] ?? BigInt(0)
+
+        return {
+          timestamp: Number(timestamp),
+          aggregated: Number(formatUnits(aggregatedRaw, PRICE_DECIMALS)) || 0,
+          latest: Number(formatUnits(latestRaw, PRICE_DECIMALS)) || 0,
+        }
+      })
+      .sort((a, b) => a.timestamp - b.timestamp)
+      .slice(-MAX_PRICE_POINTS)
+  }, [])
+
+  const updatePriceDisplays = useCallback((data?: PriceHistoryResult) => {
+    if (!data) {
+      setAggregatedValue("—")
+      setLatestValue("—")
+      setPriceHistoryPoints([])
+      return
+    }
+
+    const points = buildPriceHistoryPoints(data)
+    setPriceHistoryPoints(points)
+
+    if (points.length > 0) {
+      const latestPoint = points[points.length - 1]
+      setAggregatedValue(latestPoint.aggregated.toFixed(DISPLAY_PRECISION))
+      setLatestValue(latestPoint.latest.toFixed(DISPLAY_PRECISION))
+      setLastUpdated("Just now")
+    }
+  }, [buildPriceHistoryPoints])
 
   const oracleAddress = isHexAddress(oracleParam) ? (oracleParam as `0x${string}`) : null
   const chainId = chainIdParam ? Number(chainIdParam) : undefined
   const chainIdValid = chainId !== undefined && Number.isFinite(chainId) && chainId > 0
 
   // Contract write hook
-  const { writeContractAsync, data: hash, error: contractError, isPending } = useWriteContract()
+  const { writeContract, writeContractAsync, data: hash, error: contractError, isPending } = useWriteContract()
   const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({
     hash,
   })
@@ -252,9 +238,9 @@ export default function OracleInteractionPage() {
     query: { enabled: !!oracleAddress }
   })
 
-  // Read current oracle values for display — the on-chain functions mutate state, so we
-  // rely on price history for snapshots and trigger full transactions when the user
-  // explicitly requests a fresh read.
+  // Read current oracle values for display (using view functions or public variables)
+  // Note: Since readValue/readLatestValue are not view functions, we need to find the storage variables
+  // Let's try to read from events or use a different approach
 
   // Read the latest price history to get current values
   const { data: priceHistoryLengthData } = useReadContract({
@@ -276,7 +262,7 @@ export default function OracleInteractionPage() {
     }
 
     const end = length
-    const maxPoints = BigInt(50)
+    const maxPoints = BigInt(MAX_PRICE_POINTS)
     const start = length > maxPoints ? length - maxPoints : zero
     return [start, end] as const
   }, [priceHistoryLengthData])
@@ -294,6 +280,7 @@ export default function OracleInteractionPage() {
 
   useEffect(() => {
     if (!latestPriceHistoryData) {
+      setPriceHistoryPoints([])
       return
     }
 
@@ -327,65 +314,53 @@ export default function OracleInteractionPage() {
       const total = locked + unlocked
       setUserDepositedTokens(formatEther(total))
     }
-
-    if (userTokenBalanceData !== undefined) {
+    if (userTokenBalanceData) {
       setUserTokenBalance(formatEther(userTokenBalanceData as bigint))
     }
-
-    if (tokenAllowanceData !== undefined) {
+    if (tokenAllowanceData) {
       setTokenAllowance(formatEther(tokenAllowanceData as bigint))
     }
-
-    if (lastSubmissionTimeData !== undefined) {
+    if (lastSubmissionTimeData) {
       const timestamp = Number(lastSubmissionTimeData as bigint)
-      if (timestamp > 0) {
-        const now = Math.floor(Date.now() / 1000)
-        const diff = now - timestamp
-        if (diff < 60) {
-          setLastUpdated(`${diff}s ago`)
-        } else if (diff < 3600) {
-          setLastUpdated(`${Math.floor(diff / 60)}m ago`)
-        } else {
-          setLastUpdated(`${Math.floor(diff / 3600)}h ago`)
-        }
+      const now = Math.floor(Date.now() / 1000)
+      const diff = now - timestamp
+      if (diff < 60) {
+        setLastUpdated(`${diff}s ago`)
+      } else if (diff < 3600) {
+        setLastUpdated(`${Math.floor(diff / 60)}m ago`)
       } else {
-        setLastUpdated("No submissions yet")
+        setLastUpdated(`${Math.floor(diff / 3600)}h ago`)
       }
     }
 
     // Update oracle configuration values
-    if (rewardData !== undefined) {
+    if (rewardData) {
       const reward = Number(rewardData as bigint)
-      setRewardRate(`${(reward / 1000).toFixed(3)}%`)
+      setRewardRate(`${(reward / 1000).toFixed(3)}%`) // Convert from basis points to percentage 
     }
-
-    if (halfLifeSecondsData !== undefined) {
+    if (halfLifeSecondsData) {
       const halfLife = Number(halfLifeSecondsData as bigint)
       setHalfLifeSeconds(`${halfLife}s`)
     }
-
-    if (quorumData !== undefined) {
+    if (quorumData) {
       const quorum = Number(quorumData as bigint)
-      setQuorumPercentage(`${(quorum / 100).toFixed(1)}%`)
+      setQuorumPercentage(`${(quorum / 100).toFixed(1)}%`) // Convert from basis points to percentage
     }
-
-    if (operationLockingPeriodData !== undefined) {
+    if (operationLockingPeriodData) {
       const operationLock = Number(operationLockingPeriodData as bigint)
       setOperationLockPeriod(`${operationLock}s`)
     }
-
-    if (withdrawalLockingPeriodData !== undefined) {
+    if (withdrawalLockingPeriodData) {
       const withdrawalLock = Number(withdrawalLockingPeriodData as bigint)
       setWithdrawalLockPeriod(`${withdrawalLock}s`)
     }
-
-    if (alphaData !== undefined) {
+    if (alphaData) {
       const alpha = Number(alphaData as bigint)
       setAlphaValue(alpha.toString())
     }
 
     // Update timestamp values
-    if (depositTimestampData !== undefined) {
+    if (depositTimestampData) {
       const timestamp = Number(depositTimestampData as bigint)
       if (timestamp === 0) {
         setDepositTimestamp("Never")
@@ -394,8 +369,7 @@ export default function OracleInteractionPage() {
         setDepositTimestamp(date.toLocaleString())
       }
     }
-
-    if (lastOperationTimestampData !== undefined) {
+    if (lastOperationTimestampData) {
       const timestamp = Number(lastOperationTimestampData as bigint)
       if (timestamp === 0) {
         setLastOperationTimestamp("Never")
@@ -404,6 +378,7 @@ export default function OracleInteractionPage() {
         setLastOperationTimestamp(date.toLocaleString())
       }
     }
+
   }, [lockedTokensData, unlockedTokensData, userTokenBalanceData, tokenAllowanceData, lastSubmissionTimeData, rewardData, halfLifeSecondsData, quorumData, operationLockingPeriodData, withdrawalLockingPeriodData, alphaData, depositTimestampData, lastOperationTimestampData])
 
   // Early validation before calling the hook
@@ -448,46 +423,38 @@ export default function OracleInteractionPage() {
       description: "Your transaction has been successfully processed!",
     })
 
-    if (pendingRead) {
-      ;(async () => {
-        try {
-          const history = await refetchPriceHistory()
-          if (history?.data) {
-            const data = history.data as PriceHistoryResult
-            updatePriceDisplays(data)
+    const refreshValues = async () => {
+      try {
+        const result = await refetchPriceHistory()
+        if (pendingRead && result?.data) {
+          const data = result.data as PriceHistoryResult
+          updatePriceDisplays(data)
 
+          const points = buildPriceHistoryPoints(data)
+          if (points.length > 0) {
+            const latestPoint = points[points.length - 1]
             if (pendingRead === "aggregated") {
-              const [, aggregatedPrices] = data
-              const aggregated = aggregatedPrices.length ? formatPriceFromWei(aggregatedPrices[aggregatedPrices.length - 1]) : null
-              if (aggregated) {
-                setAggregatedValue(aggregated)
-                setLastUpdated("Just now")
-                toast({
-                  title: "Aggregated Value",
-                  description: `Current aggregated price: ${aggregated}`,
-                })
-              }
+              toast({
+                title: "Aggregated Value",
+                description: `Current aggregated value: ${latestPoint.aggregated.toFixed(DISPLAY_PRECISION)}`,
+              })
             }
-
             if (pendingRead === "latest") {
-              const [, , latestValues] = data
-              const latest = latestValues.length ? formatPriceFromWei(latestValues[latestValues.length - 1]) : null
-              if (latest) {
-                setLatestValue(latest)
-                toast({
-                  title: "Latest Value",
-                  description: `Most recent submission: ${latest}`,
-                })
-              }
+              toast({
+                title: "Latest Submission",
+                description: `Latest submitted value: ${latestPoint.latest.toFixed(DISPLAY_PRECISION)}`,
+              })
             }
           }
-        } catch (err) {
-          console.error('Error refreshing price data after read:', err)
-        } finally {
-          setPendingRead(null)
         }
-      })()
+      } catch (err) {
+        console.error('Error updating price data after confirmation:', err)
+      } finally {
+        setPendingRead(null)
+      }
     }
+
+    refreshValues()
 
     // Reset loading states
     setIsSubmitting(false)
@@ -503,7 +470,7 @@ export default function OracleInteractionPage() {
     setDepositAmount("")
     setWithdrawAmount("")
     setVoteTarget("")
-  }, [isConfirmed, pendingRead, toast, refetchPriceHistory, updatePriceDisplays])
+  }, [isConfirmed, pendingRead, refetchPriceHistory, updatePriceDisplays, buildPriceHistoryPoints, toast])
 
   // Handle transaction errors
   useEffect(() => {
@@ -545,9 +512,20 @@ export default function OracleInteractionPage() {
 
     try {
       setIsSubmitting(true)
-      const valueAsInt = parseUnits(submitValue, PRICE_DECIMALS)
-
-      await writeContractAsync({
+      // Convert to int256 - the value should be a scaled integer
+      // For example, if submitting 2500, multiply by 1e18 to get proper precision
+      const valueAsFloat = parseFloat(submitValue)
+      const valueAsInt = BigInt(Math.floor(valueAsFloat * 1e18))
+      
+      console.log('Submitting value:', {
+        original: submitValue,
+        asFloat: valueAsFloat,
+        asInt: valueAsInt.toString(),
+        oracleAddress: oracleAddress,
+        userAddress: userAddress
+      })
+      
+      writeContract({
         address: oracleAddress!,
         abi: OracleAbi,
         functionName: 'submitValue',
@@ -591,8 +569,8 @@ export default function OracleInteractionPage() {
     try {
       setIsApproving(true)
       const amount = parseEther(depositAmount)
-
-      await writeContractAsync({
+      
+      writeContract({
         address: weightTokenAddress as `0x${string}`,
         abi: erc20Abi,
         functionName: 'approve',
@@ -648,7 +626,7 @@ export default function OracleInteractionPage() {
     try {
       setIsDepositing(true)
       
-      await writeContractAsync({
+      writeContract({
         address: oracleAddress!,
         abi: OracleAbi,
         functionName: 'depositTokens',
@@ -693,7 +671,15 @@ export default function OracleInteractionPage() {
       setIsWithdrawing(true)
       const amount = parseEther(withdrawAmount)
       
-      await writeContractAsync({
+      console.log('Withdrawing tokens:', {
+        amount: amount.toString(),
+        withdrawAmount,
+        oracleAddress: oracleAddress,
+        userAddress: userAddress,
+        depositedTokens: userDepositedTokens
+      })
+      
+      writeContract({
         address: oracleAddress!,
         abi: OracleAbi,
         functionName: 'withdrawTokens',
@@ -736,8 +722,15 @@ export default function OracleInteractionPage() {
 
     try {
       setIsVoting(true)
-
-      await writeContractAsync({
+      
+      console.log('Voting blacklist:', {
+        target: voteTarget,
+        oracleAddress: oracleAddress,
+        userAddress: userAddress,
+        depositedTokens: userDepositedTokens
+      })
+      
+      writeContract({
         address: oracleAddress!,
         abi: OracleAbi,
         functionName: 'voteBlacklist',
@@ -780,8 +773,15 @@ export default function OracleInteractionPage() {
 
     try {
       setIsVoting(true)
-
-      await writeContractAsync({
+      
+      console.log('Voting whitelist:', {
+        target: voteTarget,
+        oracleAddress: oracleAddress,
+        userAddress: userAddress,
+        depositedTokens: userDepositedTokens
+      })
+      
+      writeContract({
         address: oracleAddress!,
         abi: OracleAbi,
         functionName: 'voteWhitelist',
@@ -815,8 +815,13 @@ export default function OracleInteractionPage() {
 
     try {
       setIsUpdatingVoteWeights(true)
-
-      await writeContractAsync({
+      
+      console.log('Updating vote weights:', {
+        oracleAddress: oracleAddress,
+        userAddress: userAddress
+      })
+      
+      writeContract({
         address: oracleAddress!,
         abi: OracleAbi,
         functionName: 'updateUserVoteWeights',
@@ -857,7 +862,6 @@ export default function OracleInteractionPage() {
         abi: OracleAbi,
         functionName: 'readValue',
         args: [],
-        account: userAddress,
       })
 
       toast({
@@ -896,7 +900,6 @@ export default function OracleInteractionPage() {
         abi: OracleAbi,
         functionName: 'readLatestValue',
         args: [],
-        account: userAddress,
       })
 
       toast({

@@ -2,7 +2,6 @@
 
 import Link from "next/link"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 import { ArrowUpRight } from "lucide-react"
 import { useChainId } from "wagmi"
 import { Oracle } from "@/hooks/useOracles"
@@ -18,12 +17,12 @@ export function OracleCard({ oracle }: OracleCardProps) {
   const oracleUrl = `/o?chainId=${chainId}&oracle=${oracle.address}`
   
   return (
-    <Link href={oracleUrl} className="group">
-      <Card className="border-border/50 bg-card/30 backdrop-blur-sm hover:bg-card/60 hover:border-primary/20 transition-all duration-300 group-hover:scale-[1.02] rounded-2xl">
-        <CardHeader className="pb-4">
+    <Link href={oracleUrl} className="group block">
+      <Card className="border border-primary/15 bg-card/40 backdrop-blur-sm rounded-2xl transition-all duration-300 hover:border-primary/40 hover:bg-card/60 hover:shadow-lg group-hover:-translate-y-1">
+        <CardHeader className="pb-4 transition-colors duration-300 group-hover:text-primary">
           <div className="flex items-start justify-between">
             <div className="flex-1">
-              <CardTitle className="text-xl font-medium group-hover:text-primary transition-colors mb-2">
+              <CardTitle className="text-xl font-medium transition-colors mb-2">
                 {oracle.name}
               </CardTitle>
               <CardDescription className="text-sm text-muted-foreground/80 leading-relaxed">
@@ -35,23 +34,16 @@ export function OracleCard({ oracle }: OracleCardProps) {
         </CardHeader>
 
         <CardContent className="pt-0">
-          <div className="flex items-center justify-between mb-4">
-            <Badge
-              variant="secondary"
-              className="font-light bg-primary/10 text-primary border-primary/20"
-            >
-              {oracle.category}
-            </Badge>
-            <div className="text-sm font-medium text-foreground">
-              {oracle.price}
-            </div>
-          </div>
 
-          <div className="flex items-center justify-between text-xs text-muted-foreground">
-            <span>Updates {oracle.updateFrequency}</span>
-            <span className="font-medium text-primary/80">
-              {oracle.accuracy} accuracy
-            </span>
+          <div className="space-y-3 text-xs text-muted-foreground">
+            <div className="flex items-center justify-between">
+              <span className="uppercase tracking-wide text-muted-foreground/70">Last Submission</span>
+              <span className="text-foreground/90 font-medium">{oracle.lastSubmissionTime}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="uppercase tracking-wide text-muted-foreground/70">Last Activity</span>
+              <span className="text-foreground/90 font-medium">{oracle.lastTimestamp}</span>
+            </div>
           </div>
         </CardContent>
       </Card>
