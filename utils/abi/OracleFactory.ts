@@ -35,7 +35,7 @@ const OracleFactory = {
                 {"name": "reward", "type": "uint256", "internalType": "uint256"},
                 {"name": "halfLifeSeconds", "type": "uint256", "internalType": "uint256"},
                 {"name": "quorum", "type": "uint256", "internalType": "uint256"},
-                {"name": "depositLockingPeriod", "type": "uint256", "internalType": "uint256"},
+                {"name": "operationLockingPeriod", "type": "uint256", "internalType": "uint256"},
                 {"name": "withdrawalLockingPeriod", "type": "uint256", "internalType": "uint256"},
                 {"name": "alpha", "type": "uint256", "internalType": "uint256"}
             ],

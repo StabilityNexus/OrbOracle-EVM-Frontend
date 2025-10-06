@@ -68,15 +68,15 @@ export default function CreateOracleIntegrated() {
 
   const constructorArgs = useMemo(() => {
     return [
-      name || "Unnamed Oracle",
-      description || "No description provided",
-      (weightToken || "0x0000000000000000000000000000000000000000") as `0x${string}`,
-      BigInt(Number(reward || 0)),
-      BigInt(Number(halfLifeSeconds || 0)),
-      BigInt(Number(quorumBps || 0)),
-      BigInt(Number(depositLock || 0)),
-      BigInt(Number(withdrawLock || 0)),
-      BigInt(alpha || "0"),
+      name || "Unnamed Oracle",                                                    // name
+      description || "No description provided",                                   // description
+      (weightToken || "0x0000000000000000000000000000000000000000") as `0x${string}`, // weightToken
+      BigInt(Number(reward || 0)),                                                // reward
+      BigInt(Number(halfLifeSeconds || 0)),                                       // halfLifeSeconds
+      BigInt(Number(quorumBps || 0)),                                             // quorum
+      BigInt(Number(depositLock || 0)),                                           // operationLockingPeriod
+      BigInt(Number(withdrawLock || 0)),                                          // withdrawalLockingPeriod
+      BigInt(alpha || "0"),                                                       // alpha
     ] as const
   }, [name, description, weightToken, reward, halfLifeSeconds, quorumBps, depositLock, withdrawLock, alpha])
 

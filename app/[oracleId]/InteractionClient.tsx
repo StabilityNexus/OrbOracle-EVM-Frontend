@@ -2,10 +2,9 @@
 
 import Link from "next/link"
 import { useSearchParams } from "next/navigation"
-import { useState, useEffect } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { Navigation } from "@/components/navigation"
-import { PriceChart } from "@/components/price-chart"
-import { Badge } from "@/components/ui/badge"
+import { PriceChart, type PriceChartPoint } from "@/components/price-chart"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -13,31 +12,39 @@ import { Label } from "@/components/ui/label"
 import { useOracle } from "@/hooks/useOracles"
 import { useToast } from "@/hooks/use-toast"
 import { OracleAbi } from "@/utils/abi/Oracle"
-import { 
-  ArrowLeft, 
-  Zap, 
-  Clock, 
-  TrendingUp, 
-  Copy, 
-  Loader2, 
+import {
+  ArrowLeft,
+  Clock,
+  TrendingUp,
+  Copy,
+  Loader2,
   Send,
   Wallet,
   Vote,
   Settings,
-  Info,
-  DollarSign,
-  Users,
   Shield,
   History,
-  Activity,
   Database,
-  CheckCircle
+  CheckCircle,
 } from "lucide-react"
 import { useAccount, useWriteContract, useReadContract, useWaitForTransactionReceipt } from "wagmi"
-import { parseEther, formatEther, parseUnits, erc20Abi } from "viem"
+import { parseEther, formatEther, parseUnits, formatUnits, erc20Abi } from "viem"
 
 function isHexAddress(value: string | null): value is `0x${string}` {
   return !!value && /^0x[a-fA-F0-9]{40}$/.test(value)
+}
+
+type PriceHistoryResult = readonly [readonly bigint[], readonly bigint[], readonly bigint[]]
+
+const PRICE_DECIMALS = 18
+const DISPLAY_PRECISION = 6
+
+const formatPriceFromWei = (value: bigint) => {
+  const numeric = Number.parseFloat(formatUnits(value, PRICE_DECIMALS))
+  if (Number.isNaN(numeric)) {
+    return "0.000000"
+  }
+  return numeric.toFixed(DISPLAY_PRECISION)
 }
 
 export default function OracleInteractionPage() {
@@ -59,21 +66,94 @@ export default function OracleInteractionPage() {
   const [isWithdrawing, setIsWithdrawing] = useState(false)
   const [isVoting, setIsVoting] = useState(false)
   const [isApproving, setIsApproving] = useState(false)
+  const [isUpdatingVoteWeights, setIsUpdatingVoteWeights] = useState(false)
+  const [isReadingValue, setIsReadingValue] = useState(false)
+  const [isReadingLatestValue, setIsReadingLatestValue] = useState(false)
 
   // Real-time oracle data
-  const [latestValue, setLatestValue] = useState<string>("0")
-  const [aggregatedValue, setAggregatedValue] = useState<string>("0")
+  const [latestValue, setLatestValue] = useState<string>("—")
+  const [aggregatedValue, setAggregatedValue] = useState<string>("—")
   const [lastUpdated, setLastUpdated] = useState<string>("Loading...")
   const [userDepositedTokens, setUserDepositedTokens] = useState<string>("0")
   const [userTokenBalance, setUserTokenBalance] = useState<string>("0")
   const [tokenAllowance, setTokenAllowance] = useState<string>("0")
+
+  const [priceHistoryPoints, setPriceHistoryPoints] = useState<PriceChartPoint[]>([])
+
+  const buildPriceHistoryPoints = useCallback((data?: PriceHistoryResult) => {
+    if (!data) {
+      return []
+    }
+
+    const [timestamps, aggregatedPrices, latestValues] = data
+    if (timestamps.length !== aggregatedPrices.length || aggregatedPrices.length !== latestValues.length) {
+      console.warn('Mismatched price history array lengths received from contract', {
+        timestampsLength: timestamps.length,
+        aggregatedLength: aggregatedPrices.length,
+        latestLength: latestValues.length,
+      })
+    }
+
+    return timestamps
+      .map((timestamp, index) => {
+        const aggregatedRaw = aggregatedPrices[index] ?? BigInt(0)
+        const latestRaw = latestValues[index] ?? BigInt(0)
+
+        return {
+          timestamp: Number(timestamp),
+          aggregated: Number(formatUnits(aggregatedRaw, PRICE_DECIMALS)) || 0,
+          latest: Number(formatUnits(latestRaw, PRICE_DECIMALS)) || 0,
+        }
+      })
+      .sort((a, b) => a.timestamp - b.timestamp)
+  }, [])
+
+  const updatePriceDisplays = useCallback((data?: PriceHistoryResult) => {
+    if (!data) {
+      setAggregatedValue("—")
+      setLatestValue("—")
+      setPriceHistoryPoints([])
+      return
+    }
+
+    const [, aggregatedPrices, latestValues] = data
+
+    setPriceHistoryPoints(buildPriceHistoryPoints(data))
+
+    if (aggregatedPrices.length > 0) {
+      const latestAggregated = aggregatedPrices[aggregatedPrices.length - 1]
+      setAggregatedValue(formatPriceFromWei(latestAggregated))
+    } else {
+      setAggregatedValue("—")
+    }
+
+    if (latestValues.length > 0) {
+      const latestSubmitted = latestValues[latestValues.length - 1]
+      setLatestValue(formatPriceFromWei(latestSubmitted))
+    } else {
+      setLatestValue("—")
+    }
+  }, [buildPriceHistoryPoints])
+
+  // Oracle configuration display values
+  const [rewardRate, setRewardRate] = useState<string>("Loading...")
+  const [halfLifeSeconds, setHalfLifeSeconds] = useState<string>("Loading...")
+  const [quorumPercentage, setQuorumPercentage] = useState<string>("Loading...")
+  const [operationLockPeriod, setOperationLockPeriod] = useState<string>("Loading...")
+  const [withdrawalLockPeriod, setWithdrawalLockPeriod] = useState<string>("Loading...")
+  const [alphaValue, setAlphaValue] = useState<string>("Loading...")
+
+  // Timestamp display values
+  const [depositTimestamp, setDepositTimestamp] = useState<string>("Never")
+  const [lastOperationTimestamp, setLastOperationTimestamp] = useState<string>("Never")
+  const [pendingRead, setPendingRead] = useState<"aggregated" | "latest" | null>(null)
 
   const oracleAddress = isHexAddress(oracleParam) ? (oracleParam as `0x${string}`) : null
   const chainId = chainIdParam ? Number(chainIdParam) : undefined
   const chainIdValid = chainId !== undefined && Number.isFinite(chainId) && chainId > 0
 
   // Contract write hook
-  const { writeContract, data: hash, error: contractError, isPending } = useWriteContract()
+  const { writeContractAsync, data: hash, error: contractError, isPending } = useWriteContract()
   const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({
     hash,
   })
@@ -104,11 +184,20 @@ export default function OracleInteractionPage() {
     query: { enabled: !!oracleAddress && !!userAddress }
   })
 
-  // Read user's tokens locked for withdrawal (after operations)
-  const { data: lockedForWithdrawalData } = useReadContract({
+  // Read user's deposit timestamp
+  const { data: depositTimestampData } = useReadContract({
     address: oracleAddress || undefined,
     abi: OracleAbi,
-    functionName: 'lockedForWithdrawal',
+    functionName: 'depositTimestamp',
+    args: userAddress ? [userAddress] : undefined,
+    query: { enabled: !!oracleAddress && !!userAddress }
+  })
+
+  // Read user's last operation timestamp
+  const { data: lastOperationTimestampData } = useReadContract({
+    address: oracleAddress || undefined,
+    abi: OracleAbi,
+    functionName: 'lastOperationTimestamp',
     args: userAddress ? [userAddress] : undefined,
     query: { enabled: !!oracleAddress && !!userAddress }
   })
@@ -119,6 +208,98 @@ export default function OracleInteractionPage() {
     functionName: 'lastSubmissionTime',
     query: { enabled: !!oracleAddress }
   })
+
+  // Read oracle configuration parameters
+  const { data: rewardData } = useReadContract({
+    address: oracleAddress || undefined,
+    abi: OracleAbi,
+    functionName: 'REWARD',
+    query: { enabled: !!oracleAddress }
+  })
+
+  const { data: halfLifeSecondsData } = useReadContract({
+    address: oracleAddress || undefined,
+    abi: OracleAbi,
+    functionName: 'HALF_LIFE_SECONDS',
+    query: { enabled: !!oracleAddress }
+  })
+
+  const { data: quorumData } = useReadContract({
+    address: oracleAddress || undefined,
+    abi: OracleAbi,
+    functionName: 'QUORUM',
+    query: { enabled: !!oracleAddress }
+  })
+
+  const { data: operationLockingPeriodData } = useReadContract({
+    address: oracleAddress || undefined,
+    abi: OracleAbi,
+    functionName: 'OPERATION_LOCKING_PERIOD',
+    query: { enabled: !!oracleAddress }
+  })
+
+  const { data: withdrawalLockingPeriodData } = useReadContract({
+    address: oracleAddress || undefined,
+    abi: OracleAbi,
+    functionName: 'WITHDRAWAL_LOCKING_PERIOD',
+    query: { enabled: !!oracleAddress }
+  })
+
+  const { data: alphaData } = useReadContract({
+    address: oracleAddress || undefined,
+    abi: OracleAbi,
+    functionName: 'ALPHA',
+    query: { enabled: !!oracleAddress }
+  })
+
+  // Read current oracle values for display — the on-chain functions mutate state, so we
+  // rely on price history for snapshots and trigger full transactions when the user
+  // explicitly requests a fresh read.
+
+  // Read the latest price history to get current values
+  const { data: priceHistoryLengthData } = useReadContract({
+    address: oracleAddress || undefined,
+    abi: OracleAbi,
+    functionName: 'getPriceHistoryLength',
+    query: { enabled: !!oracleAddress }
+  })
+
+  const priceHistoryRangeArgs = useMemo(() => {
+    if (!priceHistoryLengthData) {
+      return undefined
+    }
+
+    const length = priceHistoryLengthData as bigint
+    const zero = BigInt(0)
+    if (length === zero) {
+      return undefined
+    }
+
+    const end = length
+    const maxPoints = BigInt(50)
+    const start = length > maxPoints ? length - maxPoints : zero
+    return [start, end] as const
+  }, [priceHistoryLengthData])
+
+  // Read the latest price entry if history exists
+  const { data: latestPriceHistoryData, refetch: refetchPriceHistory, isFetching: isFetchingPriceHistory } = useReadContract({
+    address: oracleAddress || undefined,
+    abi: OracleAbi,
+    functionName: 'getPriceHistoryRange',
+    args: priceHistoryRangeArgs,
+    query: { 
+      enabled: !!oracleAddress && !!priceHistoryRangeArgs
+    }
+  })
+
+  useEffect(() => {
+    if (!latestPriceHistoryData) {
+      return
+    }
+
+    const history = buildPriceHistoryPoints(latestPriceHistoryData as PriceHistoryResult)
+    setPriceHistoryPoints(history)
+  }, [latestPriceHistoryData, buildPriceHistoryPoints])
 
   // Token balance and allowance
   const { data: userTokenBalanceData } = useReadContract({
@@ -139,33 +320,91 @@ export default function OracleInteractionPage() {
 
   // Update real-time data when contract data changes
   useEffect(() => {
-    // Calculate total deposited tokens (sum of all three token states)
-    if (lockedTokensData !== undefined || unlockedTokensData !== undefined || lockedForWithdrawalData !== undefined) {
+    // Calculate total deposited tokens (sum of locked and unlocked tokens)
+    if (lockedTokensData !== undefined || unlockedTokensData !== undefined) {
       const locked = lockedTokensData ? BigInt(lockedTokensData as bigint) : BigInt(0)
       const unlocked = unlockedTokensData ? BigInt(unlockedTokensData as bigint) : BigInt(0)
-      const lockedForWithdrawal = lockedForWithdrawalData ? BigInt(lockedForWithdrawalData as bigint) : BigInt(0)
-      const total = locked + unlocked + lockedForWithdrawal
+      const total = locked + unlocked
       setUserDepositedTokens(formatEther(total))
     }
-    if (userTokenBalanceData) {
+
+    if (userTokenBalanceData !== undefined) {
       setUserTokenBalance(formatEther(userTokenBalanceData as bigint))
     }
-    if (tokenAllowanceData) {
+
+    if (tokenAllowanceData !== undefined) {
       setTokenAllowance(formatEther(tokenAllowanceData as bigint))
     }
-    if (lastSubmissionTimeData) {
+
+    if (lastSubmissionTimeData !== undefined) {
       const timestamp = Number(lastSubmissionTimeData as bigint)
-      const now = Math.floor(Date.now() / 1000)
-      const diff = now - timestamp
-      if (diff < 60) {
-        setLastUpdated(`${diff}s ago`)
-      } else if (diff < 3600) {
-        setLastUpdated(`${Math.floor(diff / 60)}m ago`)
+      if (timestamp > 0) {
+        const now = Math.floor(Date.now() / 1000)
+        const diff = now - timestamp
+        if (diff < 60) {
+          setLastUpdated(`${diff}s ago`)
+        } else if (diff < 3600) {
+          setLastUpdated(`${Math.floor(diff / 60)}m ago`)
+        } else {
+          setLastUpdated(`${Math.floor(diff / 3600)}h ago`)
+        }
       } else {
-        setLastUpdated(`${Math.floor(diff / 3600)}h ago`)
+        setLastUpdated("No submissions yet")
       }
     }
-  }, [lockedTokensData, unlockedTokensData, lockedForWithdrawalData, userTokenBalanceData, tokenAllowanceData, lastSubmissionTimeData])
+
+    // Update oracle configuration values
+    if (rewardData !== undefined) {
+      const reward = Number(rewardData as bigint)
+      setRewardRate(`${(reward / 1000).toFixed(3)}%`)
+    }
+
+    if (halfLifeSecondsData !== undefined) {
+      const halfLife = Number(halfLifeSecondsData as bigint)
+      setHalfLifeSeconds(`${halfLife}s`)
+    }
+
+    if (quorumData !== undefined) {
+      const quorum = Number(quorumData as bigint)
+      setQuorumPercentage(`${(quorum / 100).toFixed(1)}%`)
+    }
+
+    if (operationLockingPeriodData !== undefined) {
+      const operationLock = Number(operationLockingPeriodData as bigint)
+      setOperationLockPeriod(`${operationLock}s`)
+    }
+
+    if (withdrawalLockingPeriodData !== undefined) {
+      const withdrawalLock = Number(withdrawalLockingPeriodData as bigint)
+      setWithdrawalLockPeriod(`${withdrawalLock}s`)
+    }
+
+    if (alphaData !== undefined) {
+      const alpha = Number(alphaData as bigint)
+      setAlphaValue(alpha.toString())
+    }
+
+    // Update timestamp values
+    if (depositTimestampData !== undefined) {
+      const timestamp = Number(depositTimestampData as bigint)
+      if (timestamp === 0) {
+        setDepositTimestamp("Never")
+      } else {
+        const date = new Date(timestamp * 1000)
+        setDepositTimestamp(date.toLocaleString())
+      }
+    }
+
+    if (lastOperationTimestampData !== undefined) {
+      const timestamp = Number(lastOperationTimestampData as bigint)
+      if (timestamp === 0) {
+        setLastOperationTimestamp("Never")
+      } else {
+        const date = new Date(timestamp * 1000)
+        setLastOperationTimestamp(date.toLocaleString())
+      }
+    }
+  }, [lockedTokensData, unlockedTokensData, userTokenBalanceData, tokenAllowanceData, lastSubmissionTimeData, rewardData, halfLifeSecondsData, quorumData, operationLockingPeriodData, withdrawalLockingPeriodData, alphaData, depositTimestampData, lastOperationTimestampData])
 
   // Early validation before calling the hook
   if (!oracleAddress || !chainIdValid) {
@@ -200,24 +439,71 @@ export default function OracleInteractionPage() {
 
   // Handle transaction success
   useEffect(() => {
-    if (isConfirmed) {
-      toast({
-        title: "Transaction Confirmed",
-        description: "Your transaction has been successfully processed!",
-      })
-      // Reset loading states
-      setIsSubmitting(false)
-      setIsDepositing(false)
-      setIsWithdrawing(false)
-      setIsVoting(false)
-      setIsApproving(false)
-      // Clear form inputs
-      setSubmitValue("")
-      setDepositAmount("")
-      setWithdrawAmount("")
-      setVoteTarget("")
+    if (!isConfirmed) {
+      return
     }
-  }, [isConfirmed, toast])
+
+    toast({
+      title: "Transaction Confirmed",
+      description: "Your transaction has been successfully processed!",
+    })
+
+    if (pendingRead) {
+      ;(async () => {
+        try {
+          const history = await refetchPriceHistory()
+          if (history?.data) {
+            const data = history.data as PriceHistoryResult
+            updatePriceDisplays(data)
+
+            if (pendingRead === "aggregated") {
+              const [, aggregatedPrices] = data
+              const aggregated = aggregatedPrices.length ? formatPriceFromWei(aggregatedPrices[aggregatedPrices.length - 1]) : null
+              if (aggregated) {
+                setAggregatedValue(aggregated)
+                setLastUpdated("Just now")
+                toast({
+                  title: "Aggregated Value",
+                  description: `Current aggregated price: ${aggregated}`,
+                })
+              }
+            }
+
+            if (pendingRead === "latest") {
+              const [, , latestValues] = data
+              const latest = latestValues.length ? formatPriceFromWei(latestValues[latestValues.length - 1]) : null
+              if (latest) {
+                setLatestValue(latest)
+                toast({
+                  title: "Latest Value",
+                  description: `Most recent submission: ${latest}`,
+                })
+              }
+            }
+          }
+        } catch (err) {
+          console.error('Error refreshing price data after read:', err)
+        } finally {
+          setPendingRead(null)
+        }
+      })()
+    }
+
+    // Reset loading states
+    setIsSubmitting(false)
+    setIsDepositing(false)
+    setIsWithdrawing(false)
+    setIsVoting(false)
+    setIsApproving(false)
+    setIsUpdatingVoteWeights(false)
+    setIsReadingValue(false)
+    setIsReadingLatestValue(false)
+    // Clear form inputs
+    setSubmitValue("")
+    setDepositAmount("")
+    setWithdrawAmount("")
+    setVoteTarget("")
+  }, [isConfirmed, pendingRead, toast, refetchPriceHistory, updatePriceDisplays])
 
   // Handle transaction errors
   useEffect(() => {
@@ -232,6 +518,9 @@ export default function OracleInteractionPage() {
       setIsWithdrawing(false)
       setIsVoting(false)
       setIsApproving(false)
+      setIsUpdatingVoteWeights(false)
+      setIsReadingValue(false)
+      setIsReadingLatestValue(false)
     }
   }, [contractError, toast])
 
@@ -256,20 +545,9 @@ export default function OracleInteractionPage() {
 
     try {
       setIsSubmitting(true)
-      // Convert to int256 - the value should be a scaled integer
-      // For example, if submitting 2500, multiply by 1e18 to get proper precision
-      const valueAsFloat = parseFloat(submitValue)
-      const valueAsInt = BigInt(Math.floor(valueAsFloat * 1e18))
-      
-      console.log('Submitting value:', {
-        original: submitValue,
-        asFloat: valueAsFloat,
-        asInt: valueAsInt.toString(),
-        oracleAddress: oracleAddress,
-        userAddress: userAddress
-      })
-      
-      writeContract({
+      const valueAsInt = parseUnits(submitValue, PRICE_DECIMALS)
+
+      await writeContractAsync({
         address: oracleAddress!,
         abi: OracleAbi,
         functionName: 'submitValue',
@@ -313,8 +591,8 @@ export default function OracleInteractionPage() {
     try {
       setIsApproving(true)
       const amount = parseEther(depositAmount)
-      
-      writeContract({
+
+      await writeContractAsync({
         address: weightTokenAddress as `0x${string}`,
         abi: erc20Abi,
         functionName: 'approve',
@@ -370,7 +648,7 @@ export default function OracleInteractionPage() {
     try {
       setIsDepositing(true)
       
-      writeContract({
+      await writeContractAsync({
         address: oracleAddress!,
         abi: OracleAbi,
         functionName: 'depositTokens',
@@ -415,15 +693,7 @@ export default function OracleInteractionPage() {
       setIsWithdrawing(true)
       const amount = parseEther(withdrawAmount)
       
-      console.log('Withdrawing tokens:', {
-        amount: amount.toString(),
-        withdrawAmount,
-        oracleAddress: oracleAddress,
-        userAddress: userAddress,
-        depositedTokens: userDepositedTokens
-      })
-      
-      writeContract({
+      await writeContractAsync({
         address: oracleAddress!,
         abi: OracleAbi,
         functionName: 'withdrawTokens',
@@ -466,15 +736,8 @@ export default function OracleInteractionPage() {
 
     try {
       setIsVoting(true)
-      
-      console.log('Voting blacklist:', {
-        target: voteTarget,
-        oracleAddress: oracleAddress,
-        userAddress: userAddress,
-        depositedTokens: userDepositedTokens
-      })
-      
-      writeContract({
+
+      await writeContractAsync({
         address: oracleAddress!,
         abi: OracleAbi,
         functionName: 'voteBlacklist',
@@ -517,15 +780,8 @@ export default function OracleInteractionPage() {
 
     try {
       setIsVoting(true)
-      
-      console.log('Voting whitelist:', {
-        target: voteTarget,
-        oracleAddress: oracleAddress,
-        userAddress: userAddress,
-        depositedTokens: userDepositedTokens
-      })
-      
-      writeContract({
+
+      await writeContractAsync({
         address: oracleAddress!,
         abi: OracleAbi,
         functionName: 'voteWhitelist',
@@ -544,6 +800,119 @@ export default function OracleInteractionPage() {
         description: err?.message || "Failed to submit whitelist vote. Please try again.",
         variant: "destructive",
       })
+    }
+  }
+
+  const handleUpdateVoteWeights = async () => {
+    if (!isConnected || !userAddress) {
+      toast({
+        title: "Wallet Not Connected",
+        description: "Please connect your wallet to update vote weights.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    try {
+      setIsUpdatingVoteWeights(true)
+
+      await writeContractAsync({
+        address: oracleAddress!,
+        abi: OracleAbi,
+        functionName: 'updateUserVoteWeights',
+        args: [],
+      })
+
+      toast({
+        title: "Transaction Submitted",
+        description: "Your vote weights are being updated...",
+      })
+    } catch (err: any) {
+      console.error('Error updating vote weights:', err)
+      setIsUpdatingVoteWeights(false)
+      toast({
+        title: "Update Failed",
+        description: err?.message || "Failed to update vote weights. Please try again.",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleReadValue = async () => {
+    if (!isConnected || !userAddress) {
+      toast({
+        title: "Wallet Not Connected",
+        description: "Please connect your wallet to read values.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    try {
+      setIsReadingValue(true)
+      setPendingRead("aggregated")
+
+      await writeContractAsync({
+        address: oracleAddress!,
+        abi: OracleAbi,
+        functionName: 'readValue',
+        args: [],
+        account: userAddress,
+      })
+
+      toast({
+        title: "Transaction Submitted",
+        description: "Awaiting confirmation to retrieve the aggregated value.",
+      })
+    } catch (err: any) {
+      console.error('Error reading value:', err)
+      toast({
+        title: "Read Failed",
+        description: err?.message || "Failed to read aggregated value. Please try again.",
+        variant: "destructive",
+      })
+      setPendingRead(null)
+    } finally {
+      setIsReadingValue(false)
+    }
+  }
+
+  const handleReadLatestValue = async () => {
+    if (!isConnected || !userAddress) {
+      toast({
+        title: "Wallet Not Connected",
+        description: "Please connect your wallet to read values.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    try {
+      setIsReadingLatestValue(true)
+      setPendingRead("latest")
+
+      await writeContractAsync({
+        address: oracleAddress!,
+        abi: OracleAbi,
+        functionName: 'readLatestValue',
+        args: [],
+        account: userAddress,
+      })
+
+      toast({
+        title: "Transaction Submitted",
+        description: "Awaiting confirmation to retrieve the latest value.",
+      })
+    } catch (err: any) {
+      console.error('Error reading latest value:', err)
+      toast({
+        title: "Read Failed",
+        description: err?.message || "Failed to read latest value. Please try again.",
+        variant: "destructive",
+      })
+      setPendingRead(null)
+    } finally {
+      setIsReadingLatestValue(false)
     }
   }
 
@@ -639,7 +1008,7 @@ export default function OracleInteractionPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="p-6">
-              <PriceChart />
+              <PriceChart data={priceHistoryPoints} loading={pendingRead !== null || isFetchingPriceHistory} />
             </CardContent>
           </Card>
 
@@ -706,14 +1075,10 @@ export default function OracleInteractionPage() {
                       size="sm"
                       variant="outline"
                       className="h-8 px-3 text-xs border-primary/30 text-primary hover:bg-primary/10 hover:border-primary/50 transition-all duration-300"
-                      onClick={() => {
-                        toast({
-                          title: "Latest Value Details",
-                          description: `Current latest value: ${latestValue || "No data"}`,
-                        })
-                      }}
+                      onClick={handleReadLatestValue}
+                      disabled={isReadingLatestValue || isPending || isConfirming || !isConnected}
                     >
-                      View
+                      {isReadingLatestValue || isPending || isConfirming ? <Loader2 className="h-3 w-3 animate-spin" /> : "Read"}
                     </Button>
                   </div>
                   
@@ -727,27 +1092,12 @@ export default function OracleInteractionPage() {
                       size="sm"
                       variant="outline"
                       className="h-8 px-3 text-xs border-primary/30 text-primary hover:bg-primary/10 hover:border-primary/50 transition-all duration-300"
-                      onClick={() => {
-                        toast({
-                          title: "Aggregated Value Details",
-                          description: `Current aggregated value: ${aggregatedValue || "No data"}`,
-                        })
-                      }}
+                      onClick={handleReadValue}
+                      disabled={isReadingValue || isPending || isConfirming || !isConnected}
                     >
-                      View
+                      {isReadingValue || isPending || isConfirming ? <Loader2 className="h-3 w-3 animate-spin" /> : "Read"}
                     </Button>
                   </div>
-                  
-                  {/* User's deposited tokens info */}
-                  {isConnected && (
-                    <div className="flex items-center justify-between p-3 bg-card/50 border border-primary/30 rounded-xl transition-all duration-300">
-                      <div className="flex items-center gap-3">
-                        <Wallet className="h-4 w-4 text-primary" />
-                        <span className="text-muted-foreground font-medium text-sm">Your Deposited</span>
-                        <span className="text-foreground font-light">{parseFloat(userDepositedTokens).toFixed(4)} ETH</span>
-                      </div>
-                    </div>
-                  )}
                 </div>
               </CardContent>
             </Card>
@@ -769,34 +1119,16 @@ export default function OracleInteractionPage() {
                 {/* Token Balance Display */}
                 {isConnected && (
                   <div className="space-y-3 mb-4">
-                    <div className="grid grid-cols-3 gap-3 p-3 bg-card/50 border border-primary/30 rounded-xl">
-                      <div className="text-center">
-                        <div className="text-xs text-muted-foreground mb-1">Balance</div>
-                        <div className="text-sm font-light text-foreground">{parseFloat(userTokenBalance).toFixed(4)}</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="text-xs text-muted-foreground mb-1">Approved</div>
-                        <div className="text-sm font-light text-foreground">{parseFloat(tokenAllowance).toFixed(4)}</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="text-xs text-muted-foreground mb-1">Total Deposited</div>
-                        <div className="text-sm font-light text-primary font-medium">{parseFloat(userDepositedTokens).toFixed(4)}</div>
-                      </div>
-                    </div>
                     
                     {/* Detailed Token State Breakdown */}
-                    <div className="grid grid-cols-3 gap-2 p-2 bg-card/30 border border-primary/20 rounded-lg text-xs">
+                    <div className="grid grid-cols-2 gap-2 p-2 bg-card/30 border border-primary/20 rounded-lg text-xs">
                       <div className="text-center">
                         <div className="text-muted-foreground/80 mb-0.5">🔒 Locked</div>
                         <div className="text-foreground/90 font-light">{lockedTokensData ? parseFloat(formatEther(lockedTokensData as bigint)).toFixed(2) : '0.00'}</div>
                       </div>
                       <div className="text-center">
-                        <div className="text-muted-foreground/80 mb-0.5">✓ Unlocked</div>
-                        <div className="text-foreground/90 font-light">{unlockedTokensData ? parseFloat(formatEther(unlockedTokensData as bigint)).toFixed(2) : '0.00'}</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="text-muted-foreground/80 mb-0.5">⏳ Pending</div>
-                        <div className="text-foreground/90 font-light">{lockedForWithdrawalData ? parseFloat(formatEther(lockedForWithdrawalData as bigint)).toFixed(2) : '0.00'}</div>
+                        <div className="text-muted-foreground/80 mb-0.5">📅 Deposit Time</div>
+                        <div className="text-foreground/90 font-light text-xs">{depositTimestamp}</div>
                       </div>
                     </div>
                   </div>
@@ -825,7 +1157,8 @@ export default function OracleInteractionPage() {
                       <Button 
                         onClick={handleApproveTokens} 
                         disabled={isApproving || isPending || isConfirming || !depositAmount || !isConnected}
-                        className="w-full bg-secondary hover:bg-secondary/90 text-secondary-foreground h-12 rounded-xl transition-all duration-300"
+                  className="w-full bg-primary hover:bg-primary/90 text-primary-foreground border-primary/50 h-12 rounded-xl transition-all duration-300"
+
                       >
                         {(isApproving || isPending || isConfirming) ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <CheckCircle className="h-4 w-4 mr-2" />}
                         {isApproving || isPending ? "Approving..." : isConfirming ? "Confirming..." : "Approve Tokens"}
@@ -860,12 +1193,16 @@ export default function OracleInteractionPage() {
               <CardContent>
                 {/* Show deposited tokens */}
                 {isConnected && (
-                  <div className="p-3 bg-card/50 border border-primary/30 rounded-xl mb-4">
-                    <div className="flex items-center justify-between">
-                      <div className="text-sm text-muted-foreground">Your Deposited Tokens</div>
-                      <div className="text-lg font-light text-primary font-medium">{parseFloat(userDepositedTokens).toFixed(4)} ETH</div>
-                    </div>
+                  <div className="grid grid-cols-2 gap-2 p-2 bg-card/30 border border-primary/20 rounded-lg text-xs mb-4">
+                  <div className="text-center">
+                    <div className="text-muted-foreground/80 mb-0.5">⏰ Last Operation</div>
+                    <div className="text-foreground/90 font-light text-xs">{lastOperationTimestamp}</div>
                   </div>
+                  <div className="text-center">
+                    <div className="text-muted-foreground/80 mb-0.5">✓ Unlocked</div>
+                    <div className="text-foreground/90 font-light">{unlockedTokensData ? parseFloat(formatEther(unlockedTokensData as bigint)).toFixed(2) : '0.00'}</div>
+                  </div>
+                </div>
                 )}
                 
                 <div className="space-y-2">
@@ -892,47 +1229,81 @@ export default function OracleInteractionPage() {
           </div>
 
           {/* Governance Section */}
-          <Card className="border-border/50 bg-card/30 backdrop-blur-sm hover:bg-card/60 border-primary/20 hover:border-white transition-all duration-300 rounded-2xl">
-            <CardHeader className="border-b border-border/30">
-              <CardTitle className="text-foreground flex items-center gap-2 font-medium">
-                <Vote className="h-5 w-5 text-primary" />
-                Governance Voting
-              </CardTitle>
-              <CardDescription className="text-muted-foreground">
-                Vote to blacklist or whitelist addresses. Your voting power is based on your deposited tokens.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                <Label htmlFor="voteTarget" className="text-foreground font-medium">Target Address</Label>
-                <Input
-                  id="voteTarget"
-                  placeholder="0x..."
-                  value={voteTarget}
-                  onChange={(e) => setVoteTarget(e.target.value)}
-                  className="h-12 mb-4 bg-card/50 border border-primary/30 rounded-xl font-light transition-all duration-300 focus:border-primary/50 focus:ring-2 focus:ring-primary/20 focus:bg-card/70"
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
+          <div className="grid md:grid-cols-2 gap-6">
+            <Card className="border-border/50 bg-card/30 backdrop-blur-sm hover:bg-card/60 border-primary/20 hover:border-white transition-all duration-300 rounded-2xl">
+              <CardHeader className="border-b border-border/30">
+                <CardTitle className="text-foreground flex items-center gap-2 font-medium">
+                  <Vote className="h-5 w-5 text-primary" />
+                  Governance Voting
+                </CardTitle>
+                <CardDescription className="text-muted-foreground">
+                  Vote to blacklist or whitelist addresses. Your voting power is based on your deposited tokens.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <Label htmlFor="voteTarget" className="text-foreground font-medium">Target Address</Label>
+                  <Input
+                    id="voteTarget"
+                    placeholder="0x..."
+                    value={voteTarget}
+                    onChange={(e) => setVoteTarget(e.target.value)}
+                    className="h-12 mb-4 bg-card/50 border border-primary/30 rounded-xl font-light transition-all duration-300 focus:border-primary/50 focus:ring-2 focus:ring-primary/20 focus:bg-card/70"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <Button 
+                    onClick={handleVoteBlacklist} 
+                    disabled={isVoting || isPending || isConfirming || !voteTarget || !isConnected}
+                    className="bg-destructive hover:bg-destructive/90 text-destructive-foreground h-12 rounded-xl transition-all duration-300"
+                  >
+                    {(isVoting || isPending || isConfirming) ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Shield className="h-4 w-4 mr-2" />}
+                    {isVoting || isPending ? "Voting..." : isConfirming ? "Confirming..." : "Vote Blacklist"}
+                  </Button>
+                  <Button 
+                    onClick={handleVoteWhitelist} 
+                    disabled={isVoting || isPending || isConfirming || !voteTarget || !isConnected}
+                    className="bg-primary hover:bg-primary/90 text-primary-foreground h-12 rounded-xl transition-all duration-300"
+                  >
+                    {(isVoting || isPending || isConfirming) ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Shield className="h-4 w-4 mr-2" />}
+                    {isVoting || isPending ? "Voting..." : isConfirming ? "Confirming..." : "Vote Whitelist"}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-border/50 bg-card/30 backdrop-blur-sm hover:bg-card/60 border-primary/20 hover:border-white transition-all duration-300 rounded-2xl">
+              <CardHeader className="border-b border-border/30">
+                <CardTitle className="text-foreground flex items-center gap-2 font-medium" >
+                  <Settings className="h-5 w-5 text-primary" />
+                  Update Vote Weights
+                </CardTitle>
+                <CardDescription className="text-muted-foreground">
+                  Update your vote weights to reflect your current token balance. Required after depositing new tokens.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {/* Current voting power display */}
+                {isConnected && (
+                  <div className="p-3 bg-card/50 border border-primary/30 rounded-xl mb-4">
+                    <div className="flex items-center justify-between">
+                      <div className="text-sm text-muted-foreground">Current Voting Power</div>
+                      <div className="text-lg font-light text-primary font-medium">{parseFloat(userDepositedTokens).toFixed(4)}</div>
+                    </div>
+                  </div>
+                )}
+                
                 <Button 
-                  onClick={handleVoteBlacklist} 
-                  disabled={isVoting || isPending || isConfirming || !voteTarget || !isConnected}
-                  className="bg-destructive hover:bg-destructive/90 text-destructive-foreground h-12 rounded-xl transition-all duration-300"
+                  onClick={handleUpdateVoteWeights} 
+                  disabled={isUpdatingVoteWeights || isPending || isConfirming || !isConnected}
+                  className="w-full bg-primary hover:bg-primary/90 text-primary-foreground border-primary/50 h-12 rounded-xl transition-all duration-300"
                 >
-                  {(isVoting || isPending || isConfirming) ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Shield className="h-4 w-4 mr-2" />}
-                  {isVoting || isPending ? "Voting..." : isConfirming ? "Confirming..." : "Vote Blacklist"}
+                  {(isUpdatingVoteWeights || isPending || isConfirming) ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Settings className="h-4 w-4 mr-2" />}
+                  {isUpdatingVoteWeights || isPending ? "Updating..." : isConfirming ? "Confirming..." : "Update Vote Weights"}
                 </Button>
-                <Button 
-                  onClick={handleVoteWhitelist} 
-                  disabled={isVoting || isPending || isConfirming || !voteTarget || !isConnected}
-                  className="bg-primary hover:bg-primary/90 text-primary-foreground h-12 rounded-xl transition-all duration-300"
-                >
-                  {(isVoting || isPending || isConfirming) ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Shield className="h-4 w-4 mr-2" />}
-                  {isVoting || isPending ? "Voting..." : isConfirming ? "Confirming..." : "Vote Whitelist"}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </div>
 
           {/* Oracle Configuration */}
           <Card className="border-border/50 bg-card/30 backdrop-blur-sm hover:bg-card/60 border-primary/20 hover:border-white transition-all duration-300 rounded-2xl">
@@ -950,29 +1321,29 @@ export default function OracleInteractionPage() {
                 <div className="space-y-4">
                   <div className="flex justify-between items-center p-3 bg-card/50 border border-primary/30 rounded-xl transition-all duration-300">
                     <span className="text-muted-foreground font-medium">Reward Rate</span>
-                    <span className="text-foreground font-light">1.5%</span>
+                    <span className="text-foreground font-light">{rewardRate}</span>
                   </div>
                   <div className="flex justify-between items-center p-3 bg-card/50 border border-primary/30 rounded-xl transition-all duration-300">
                     <span className="text-muted-foreground font-medium">Half Life</span>
-                    <span className="text-foreground font-light">3600s</span>
+                    <span className="text-foreground font-light">{halfLifeSeconds}</span>
                   </div>
                   <div className="flex justify-between items-center p-3 bg-card/50 border border-primary/30 rounded-xl transition-all duration-300">
                     <span className="text-muted-foreground font-medium">Quorum</span>
-                    <span className="text-foreground font-light">20%</span>
+                    <span className="text-foreground font-light">{quorumPercentage}</span>
                   </div>
                 </div>
                 <div className="space-y-4">
                   <div className="flex justify-between items-center p-3 bg-card/50 border border-primary/30 rounded-xl transition-all duration-300">
-                    <span className="text-muted-foreground font-medium">Deposit Lock</span>
-                    <span className="text-foreground font-light">3600s</span>
+                    <span className="text-muted-foreground font-medium">Operation Locking Period</span>
+                    <span className="text-foreground font-light">{operationLockPeriod}</span>
                   </div>
                   <div className="flex justify-between items-center p-3 bg-card/50 border border-primary/30 rounded-xl transition-all duration-300">
-                    <span className="text-muted-foreground font-medium">Withdrawal Lock</span>
-                    <span className="text-foreground font-light">3600s</span>
+                    <span className="text-muted-foreground font-medium">Withdrawal Locking Period</span>
+                    <span className="text-foreground font-light">{withdrawalLockPeriod}</span>
                   </div>
                   <div className="flex justify-between items-center p-3 bg-card/50 border border-primary/30 rounded-xl transition-all duration-300">
                     <span className="text-muted-foreground font-medium">Alpha</span>
-                    <span className="text-foreground font-light">1.0</span>
+                    <span className="text-foreground font-light">{alphaValue}</span>
                   </div>
                 </div>
               </div>

@@ -19,7 +19,7 @@ export const OracleAbi = [
 
   // Immutable/public config
   { "type": "function", "name": "ALPHA", "inputs": [], "outputs": [{ "type": "uint256", "internalType": "uint256" }], "stateMutability": "view" },
-  { "type": "function", "name": "DEPOSIT_LOCKING_PERIOD", "inputs": [], "outputs": [{ "type": "uint256", "internalType": "uint256" }], "stateMutability": "view" },
+  { "type": "function", "name": "OPERATION_LOCKING_PERIOD", "inputs": [], "outputs": [{ "type": "uint256", "internalType": "uint256" }], "stateMutability": "view" },
   { "type": "function", "name": "WITHDRAWAL_LOCKING_PERIOD", "inputs": [], "outputs": [{ "type": "uint256", "internalType": "uint256" }], "stateMutability": "view" },
   { "type": "function", "name": "REWARD", "inputs": [], "outputs": [{ "type": "uint256", "internalType": "uint256" }], "stateMutability": "view" },
   { "type": "function", "name": "HALF_LIFE_SECONDS", "inputs": [], "outputs": [{ "type": "uint256", "internalType": "uint256" }], "stateMutability": "view" },
@@ -37,7 +37,6 @@ export const OracleAbi = [
   // Token deposit/lock state (public mappings)
   { "type": "function", "name": "lockedTokens", "inputs": [{ "name": "", "type": "address", "internalType": "address" }], "outputs": [{ "type": "uint256", "internalType": "uint256" }], "stateMutability": "view" },
   { "type": "function", "name": "unlockedTokens", "inputs": [{ "name": "", "type": "address", "internalType": "address" }], "outputs": [{ "type": "uint256", "internalType": "uint256" }], "stateMutability": "view" },
-  { "type": "function", "name": "lockedForWithdrawal", "inputs": [{ "name": "", "type": "address", "internalType": "address" }], "outputs": [{ "type": "uint256", "internalType": "uint256" }], "stateMutability": "view" },
   { "type": "function", "name": "depositTimestamp", "inputs": [{ "name": "", "type": "address", "internalType": "address" }], "outputs": [{ "type": "uint256", "internalType": "uint256" }], "stateMutability": "view" },
   { "type": "function", "name": "lastOperationTimestamp", "inputs": [{ "name": "", "type": "address", "internalType": "address" }], "outputs": [{ "type": "uint256", "internalType": "uint256" }], "stateMutability": "view" },
 
@@ -99,11 +98,13 @@ export const OracleAbi = [
     "inputs": [{ "name": "user", "type": "address", "internalType": "address" }],
     "outputs": [
       { "name": "locked", "type": "uint256", "internalType": "uint256" },
-      { "name": "unlocked", "type": "uint256", "internalType": "uint256" },
-      { "name": "lockedForWithdrawalAmount", "type": "uint256", "internalType": "uint256" }
+      { "name": "unlocked", "type": "uint256", "internalType": "uint256" }
     ],
     "stateMutability": "view"
   },
+
+  // Update vote weights
+  { "type": "function", "name": "updateUserVoteWeights", "inputs": [], "outputs": [], "stateMutability": "nonpayable" },
 
   // Submitter info
   {
@@ -126,12 +127,12 @@ export const OracleAbi = [
   // Events
   {
     "type": "event",
-    "name": "PriceSubmitted",
+    "name": "ValueSubmitted",
     "inputs": [
       { "name": "submitter", "type": "address", "indexed": true, "internalType": "address" },
       { "name": "timestamp", "type": "uint256", "indexed": true, "internalType": "uint256" },
       { "name": "submittedValue", "type": "int256", "indexed": false, "internalType": "int256" },
-      { "name": "aggregatedPrice", "type": "int256", "indexed": false, "internalType": "int256" },
+      { "name": "aggregatedValue", "type": "int256", "indexed": false, "internalType": "int256" },
       { "name": "weight", "type": "uint256", "indexed": false, "internalType": "uint256" },
       { "name": "rewardWei", "type": "uint256", "indexed": false, "internalType": "uint256" }
     ],
