@@ -27,8 +27,8 @@ import {
   Database,
   CheckCircle,
 } from "lucide-react"
-import { useAccount, useWriteContract, useReadContract, useWaitForTransactionReceipt } from "wagmi"
-import { parseUnits, formatUnits, erc20Abi } from "viem"
+import { useAccount, useWriteContract, useReadContract, useWaitForTransactionReceipt, usePublicClient } from "wagmi"
+import { parseUnits, formatUnits, erc20Abi, BaseError } from "viem"
 
 function isHexAddress(value: string | null): value is `0x${string}` {
   return !!value && /^0x[a-fA-F0-9]{40}$/.test(value)
@@ -80,7 +80,6 @@ export default function OracleInteractionPage() {
   const [tokenAllowance, setTokenAllowance] = useState<string>("0")
 
   const [priceHistoryPoints, setPriceHistoryPoints] = useState<PriceChartPoint[]>([])
-  const [pendingRead, setPendingRead] = useState<"aggregated" | "latest" | null>(null)
 
   // Oracle configuration display values
   const [rewardRate, setRewardRate] = useState<string>("Loading...")
@@ -137,6 +136,7 @@ export default function OracleInteractionPage() {
   const oracleAddress = isHexAddress(oracleParam) ? (oracleParam as `0x${string}`) : null
   const chainId = chainIdParam ? Number(chainIdParam) : undefined
   const chainIdValid = chainId !== undefined && Number.isFinite(chainId) && chainId > 0
+  const publicClient = usePublicClient({ chainId })
 
   // Contract write hook
   const { writeContract, writeContractAsync, data: hash, error: contractError, isPending } = useWriteContract()
@@ -355,6 +355,16 @@ export default function OracleInteractionPage() {
     [userTokenBalance]
   )
 
+  const lockedTokensRaw = lockedTokensData ? BigInt(lockedTokensData as bigint) : BigInt(0)
+  const unlockedTokensRaw = unlockedTokensData ? BigInt(unlockedTokensData as bigint) : BigInt(0)
+  const totalDepositedTokensRaw = lockedTokensRaw + unlockedTokensRaw
+  const userTokenBalanceRaw = userTokenBalanceData ? BigInt(userTokenBalanceData as bigint) : BigInt(0)
+
+  const isTokenHolder = userTokenBalanceRaw > BigInt(0)
+  const isActiveOperator = totalDepositedTokensRaw > BigInt(0)
+  const hasUnlockedTokens = unlockedTokensRaw > BigInt(0)
+  const operatorActionsDisabled = isActiveOperator && !hasUnlockedTokens
+
   // Update real-time data when contract data changes
   useEffect(() => {
     // Calculate total deposited tokens (sum of locked and unlocked tokens)
@@ -476,31 +486,12 @@ export default function OracleInteractionPage() {
     const refreshValues = async () => {
       try {
         const result = await refetchPriceHistory()
-        if (pendingRead && result?.data) {
+        if (result?.data) {
           const data = result.data as PriceHistoryResult
           updatePriceDisplays(data)
-
-          const points = buildPriceHistoryPoints(data)
-          if (points.length > 0) {
-            const latestPoint = points[points.length - 1]
-            if (pendingRead === "aggregated") {
-              toast({
-                title: "Aggregated Value",
-                description: `Current aggregated value: ${latestPoint.aggregated.toFixed(DISPLAY_PRECISION)}`,
-              })
-            }
-            if (pendingRead === "latest") {
-              toast({
-                title: "Latest Submission",
-                description: `Latest submitted value: ${latestPoint.latest.toFixed(DISPLAY_PRECISION)}`,
-              })
-            }
-          }
         }
       } catch (err) {
         console.error('Error updating price data after confirmation:', err)
-      } finally {
-        setPendingRead(null)
       }
     }
 
@@ -520,7 +511,7 @@ export default function OracleInteractionPage() {
     setDepositAmount("")
     setWithdrawAmount("")
     setVoteTarget("")
-  }, [isConfirmed, pendingRead, refetchPriceHistory, updatePriceDisplays, buildPriceHistoryPoints, toast])
+  }, [isConfirmed, refetchPriceHistory, updatePriceDisplays, toast])
 
   // Handle transaction errors
   useEffect(() => {
@@ -893,77 +884,118 @@ export default function OracleInteractionPage() {
     }
   }
 
-  const handleReadValue = async () => {
-    if (!isConnected || !userAddress) {
-      toast({
-        title: "Wallet Not Connected",
-        description: "Please connect your wallet to read values.",
-        variant: "destructive",
-      })
-      return
-    }
+  const simulateRead = useCallback(
+    async (fnName: "readValue" | "readLatestValue") => {
+      if (!oracleAddress || !publicClient) {
+        throw new Error("Oracle client not ready")
+      }
 
+      const attempt = async (account?: `0x${string}`) => {
+        const { result } = await publicClient.simulateContract({
+          address: oracleAddress,
+          abi: OracleAbi,
+          functionName: fnName,
+          args: [],
+          account,
+        })
+        return result as bigint
+      }
+
+      let lastError: unknown
+
+      if (userAddress) {
+        try {
+          const result = await attempt(userAddress as `0x${string}`)
+          return { result, usedFallback: false }
+        } catch (err) {
+          lastError = err
+        }
+      }
+
+      try {
+        const result = await attempt(undefined)
+        if (userAddress) {
+          console.warn(`[OracleInteraction] Falling back to neutral account for ${fnName} due to address restrictions.`)
+        }
+        return { result, usedFallback: !!userAddress }
+      } catch (err) {
+        if (err instanceof Error) {
+          throw err
+        }
+        if (lastError instanceof Error) {
+          throw lastError
+        }
+        throw new Error("Failed to simulate read call")
+      }
+    },
+    [oracleAddress, publicClient, userAddress]
+  )
+
+  const handleReadValue = async () => {
     try {
       setIsReadingValue(true)
-      setPendingRead("aggregated")
 
-      await writeContractAsync({
-        address: oracleAddress!,
-        abi: OracleAbi,
-        functionName: 'readValue',
-        args: [],
-      })
+      const { result, usedFallback } = await simulateRead("readValue")
+      const formatted = formatPriceFromWei(result)
+
+      setAggregatedValue(formatted)
+      setLastUpdated("Just now")
 
       toast({
-        title: "Transaction Submitted",
-        description: "Awaiting confirmation to retrieve the aggregated value.",
+        title: "Aggregated Value",
+        description: usedFallback
+          ? `Current aggregated value: ${formatted}. Retrieved via neutral simulation.`
+          : `Current aggregated value: ${formatted}`,
       })
-    } catch (err: any) {
-      console.error('Error reading value:', err)
+    } catch (err: unknown) {
+      console.error('Error reading aggregated value:', err)
+      const description =
+        err instanceof BaseError
+          ? err.shortMessage
+          : err instanceof Error
+            ? err.message
+            : "Failed to read aggregated value. Please try again."
+
       toast({
         title: "Read Failed",
-        description: err?.message || "Failed to read aggregated value. Please try again.",
+        description,
         variant: "destructive",
       })
-      setPendingRead(null)
     } finally {
       setIsReadingValue(false)
     }
   }
 
   const handleReadLatestValue = async () => {
-    if (!isConnected || !userAddress) {
-      toast({
-        title: "Wallet Not Connected",
-        description: "Please connect your wallet to read values.",
-        variant: "destructive",
-      })
-      return
-    }
-
     try {
       setIsReadingLatestValue(true)
-      setPendingRead("latest")
 
-      await writeContractAsync({
-        address: oracleAddress!,
-        abi: OracleAbi,
-        functionName: 'readLatestValue',
-        args: [],
-      })
+      const { result, usedFallback } = await simulateRead("readLatestValue")
+      const formatted = formatPriceFromWei(result)
+
+      setLatestValue(formatted)
+      setLastUpdated("Just now")
 
       toast({
-        title: "Transaction Submitted",
-        description: "Awaiting confirmation to retrieve the latest value.",
+        title: "Latest Submission",
+        description: usedFallback
+          ? `Latest submitted value: ${formatted}. Retrieved via neutral simulation.`
+          : `Latest submitted value: ${formatted}`,
       })
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error reading latest value:', err)
+      const description =
+        err instanceof BaseError
+          ? err.shortMessage
+          : err instanceof Error
+            ? err.message
+            : "Failed to read latest value. Please try again."
+
       toast({
         title: "Read Failed",
-        description: err?.message || "Failed to read latest value. Please try again.",
+        description,
         variant: "destructive",
       })
-      setPendingRead(null)
     } finally {
       setIsReadingLatestValue(false)
     }
@@ -1088,7 +1120,7 @@ export default function OracleInteractionPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="p-6">
-              <PriceChart data={priceHistoryPoints} loading={pendingRead !== null || isFetchingPriceHistory} />
+              <PriceChart data={priceHistoryPoints} loading={isFetchingPriceHistory || isReadingValue || isReadingLatestValue} />
             </CardContent>
           </Card>
 
