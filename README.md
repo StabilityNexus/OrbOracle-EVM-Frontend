@@ -48,10 +48,12 @@
 ---
 
 <div align="center">
-<h1>TODO: Project Name</h1>
+<h1>OrbOracle-EVM-Frontend</h1>
 </div>
 
-[TODO](https://TODO.stability.nexus/) is a ... TODO: Project Description.
+OrbOracle-EVM-Frontend is a modern, high‑performance interface built to interact with the Orb Oracle smart‑contract system deployed across EVM-compatible blockchains. The application allows users to query oracle data, visualize on‑chain metrics, interact with oracle requests, and perform wallet-driven blockchain operations through an intuitive UI.
+
+Designed with Next.js, Wagmi, RainbowKit, and Viem, the frontend provides a seamless Web3 experience—fast, responsive, and secure. Whether you're a developer integrating oracle feeds, a validator, or a user monitoring on‑chain activity, this frontend delivers a clean and reliable dashboard to work with the Orb Oracle ecosystem.
 
 ---
 
