@@ -57,76 +57,81 @@
 
 ## Tech Stack
 
-TODO:
+**Frontend**
 
-### Frontend
+* Next.js v14 (React 18 + TypeScript)
+* Tailwind CSS (v4) with tailwindcss-animate
+* shadcn/ui (Radix primitives + component library)
 
-TODO:
+**Web3 / Blockchain**
 
-- Next.js 14+ (React)
-- TypeScript
-- TailwindCSS
-- shadcn/ui
+* RainbowKit (wallet UI)
+* Wagmi (connectors + hooks)
+* Viem (Ethereum client)
+* Solidity smart contracts (back end)
 
-### Blockchain
+**State & Forms**
 
-TODO:
+* TanStack React Query (data fetching)
+* React Hook Form + Zod (form validation)
 
-- Wagmi
-- Solidity Smart Contracts
-- Ethers.js
-- Rainbow-Kit Wallet Integration
+**Other**
+
+* GSAP (animations)
+* Recharts (charts)
+* Lucide React (icons), Sonner (toasts), date-fns, clsx, tailwind-merge, etc.
 
 ---
 
 ## Getting Started
 
-### Prerequisites
+## Requirements
 
-TODO
+* Node.js 18+
+* npm / yarn / pnpm
+* A browser wallet extension (MetaMask or compatible) for local interactions
 
-- Node.js 18+
-- npm/yarn/pnpm
-- MetaMask or any other web3 wallet browser extension
+## Quickstart — Local Development
 
-### Installation
-
-TODO
-
-#### 1. Clone the Repository
+1. **Clone the repository**
 
 ```bash
-git clone https://github.com/StabilityNexus/TODO.git
-cd TODO
+git clone https://github.com/StabilityNexus/OrbOracle-EVM-Frontend.git
+cd OrbOracle-EVM-Frontend
 ```
 
-#### 2. Install Dependencies
-
-Using your preferred package manager:
+2. **Install dependencies**
 
 ```bash
 npm install
 # or
-yarn install
+# yarn install
 # or
-pnpm install
+# pnpm install
 ```
 
-#### 3. Run the Development Server
+3. **Environment variables**
 
-Start the app locally:
+Create a `.env.local` in the project root and add required values. Minimal example used by the frontend:
+
+```env
+NEXT_PUBLIC_PROJECT_ID=your_walletconnect_project_id_here
+# Add any additional env vars your local setup requires
+```
+
+> **How to get a WalletConnect Project ID**: create a project at [https://cloud.walletconnect.com](https://cloud.walletconnect.com) and copy the `projectId` into `NEXT_PUBLIC_PROJECT_ID`. RainbowKit requires this for WalletConnect v2.
+
+4. **Start the dev server**
 
 ```bash
 npm run dev
 # or
-yarn dev
+# yarn dev
 # or
-pnpm dev
+# pnpm dev
 ```
 
-#### 4. Open your Browser
-
-Navigate to [http://localhost:3000](http://localhost:3000) to see the application.
+Open [http://localhost:3000](http://localhost:3000)
 
 ---
 
