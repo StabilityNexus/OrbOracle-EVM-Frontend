@@ -13,6 +13,7 @@ import { useAccount, useChainId, useConfig } from 'wagmi'
 import { writeContract, simulateContract, readContract } from '@wagmi/core'
 import { OracleFactories } from '@/utils/addresses'
 import { OracleFactoryAbi } from '@/utils/abi/OracleFactory'
+import TokenSelector from '@/components/TokenSelector'
 
 export default function CreateOracleIntegrated() {
   const account = useAccount()
@@ -400,19 +401,18 @@ export default function CreateOracleIntegrated() {
                 </button>
                 {showTooltip === 'weightToken' && (
                   <div className="absolute z-10 bg-slate-800 text-slate-100 text-xs p-2 rounded shadow-lg mt-6">
-                    ERC20 token address used for voting weight calculation
+                    ERC20 token address used for voting weight calculation. You can select from supported tokens or enter a custom address.
                   </div>
                 )}
               </div>
-              <Input
-                id="weightToken"
-                placeholder="0x..."
+              <TokenSelector
                 value={weightToken}
-                onChange={(e) => setWeightToken(e.target.value)}
-                required
-                className={`border-0 bg-slate-800/50 text-slate-100 placeholder:text-slate-400 font-mono text-md border border-blue-100 ${errors.weightToken ? 'border-red-500' : ''}`}
+                onChange={(address) => setWeightToken(address)}
+                error={errors.weightToken}
+                placeholder="0x..."
+                label=""
+                required={true}
               />
-              {errors.weightToken && <p className="text-red-400 text-xs">{errors.weightToken}</p>}
             </div>
 
             <div className="space-y-1">
