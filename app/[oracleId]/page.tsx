@@ -3,7 +3,7 @@ import InteractionClient from './InteractionClient'
 import { Suspense } from 'react'
 
 export async function generateStaticParams() {
-  return [{ oracleId: 'o' }]
+  return []
 }
 
 export default function OraclePage() {
