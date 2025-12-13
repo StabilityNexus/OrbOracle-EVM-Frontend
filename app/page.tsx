@@ -41,11 +41,11 @@ export default function HomePage() {
         </div>
         <div className="container mx-auto px-4 text-center z-10 relative">
           <div className="max-w-4xl mx-auto">
-            <h1 className="text-4xl md:text-5xl font-medium mb-8 text-balance tracking-wide" style={{ fontStyle: 'oblique 15deg' }}>
+            <h1 className="text-3xl sm:text-4xl md:text-5xl font-medium mb-6 sm:mb-8 text-balance tracking-wide px-4" style={{ fontStyle: 'oblique 15deg' }}>
               Orb Oracle: 
               <div><span className="text-primary">The Price of Everything</span></div>
             </h1>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center px-4">
               <Button asChild size="lg" className="text-lg px-8 bg-white text-black hover:bg-gray-100">
                 <Link href="/create">
                   Get Started
@@ -62,14 +62,14 @@ export default function HomePage() {
       {/* Features Section */}
       <section className="h-screen flex items-center justify-center">
         <div className="container mx-auto px-4">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-medium mb-4 tracking-wide" style={{ fontStyle: 'oblique 15deg' }}>Why choose OracleNet?</h2>
-            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+          <div className="text-center mb-12 sm:mb-16 px-4">
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-medium mb-4 tracking-wide" style={{ fontStyle: 'oblique 15deg' }}>Why choose OracleNet?</h2>
+            <p className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto">
               Enterprise-grade infrastructure for the next generation of decentralized applications
             </p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 sm:gap-8 max-w-5xl mx-auto px-4">
             <Card className="border-border bg-card">
               <CardHeader>
                 <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4">
@@ -112,7 +112,7 @@ export default function HomePage() {
       {/* Stats Section */}
       <section className="h-screen flex items-center justify-center">
         <div className="container mx-auto px-4">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-8 text-center px-4">
             <div>
               <div className="text-4xl font-medium text-primary mb-2">1,247</div>
               <div className="text-muted-foreground">Active Oracles</div>
@@ -136,9 +136,9 @@ export default function HomePage() {
       {/* CTA Section */}
       <section className="h-screen flex items-center justify-center">
         <div className="container mx-auto px-4 text-center">
-          <div className="max-w-2xl mx-auto">
-            <h2 className="text-3xl md:text-4xl font-medium mb-6 tracking-wide" style={{ fontStyle: 'oblique 15deg' }}>Ready to build the future?</h2>
-            <p className="text-xl text-muted-foreground mb-8">
+          <div className="max-w-2xl mx-auto px-4">
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-medium mb-4 sm:mb-6 tracking-wide" style={{ fontStyle: 'oblique 15deg' }}>Ready to build the future?</h2>
+            <p className="text-lg sm:text-xl text-muted-foreground mb-6 sm:mb-8">
               Join thousands of developers building the next generation of decentralized applications
             </p>
             <Button asChild size="lg" className="text-lg px-8">
