@@ -1,8 +1,8 @@
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardDescription, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Navigation } from "@/components/navigation"
-import { ArrowRight, Database, Shield, Zap } from "lucide-react"
+import { ArrowRight, Database, Shield, Zap, Users, TrendingUp, Lock, Coins, CheckCircle2, XCircle } from "lucide-react"
 import Orb from "@/components/Orb"
 
 export default function HomePage() {
@@ -59,25 +59,25 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Features Section */}
-      <section className="h-screen flex items-center justify-center">
+      {/* How It Works Section */}
+      <section className="min-h-screen flex items-center justify-center py-20">
         <div className="container mx-auto px-4">
           <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-medium mb-4 tracking-wide" style={{ fontStyle: 'oblique 15deg' }}>Why choose OracleNet?</h2>
+            <h2 className="text-3xl md:text-4xl font-medium mb-4 tracking-wide" style={{ fontStyle: 'oblique 15deg' }}>How Does Our Protocol Work?</h2>
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              Enterprise-grade infrastructure for the next generation of decentralized applications
+              A decentralized oracle network powered by token-weighted consensus and time-decay mechanisms
             </p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto mb-12">
             <Card className="border-border bg-card">
               <CardHeader>
                 <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4">
-                  <Zap className="h-6 w-6 text-primary" />
+                  <Users className="h-6 w-6 text-primary" />
                 </div>
-                <CardTitle>Lightning Fast</CardTitle>
+                <CardTitle>1. Token-Weighted Voting</CardTitle>
                 <CardDescription>
-                  Sub-second data feeds with 99.9% uptime guarantee for mission-critical applications
+                  Participants stake ERC20 tokens to gain voting weight. More tokens = more influence on oracle outcomes.
                 </CardDescription>
               </CardHeader>
             </Card>
@@ -85,11 +85,11 @@ export default function HomePage() {
             <Card className="border-border bg-card">
               <CardHeader>
                 <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4">
-                  <Shield className="h-6 w-6 text-primary" />
+                  <TrendingUp className="h-6 w-6 text-primary" />
                 </div>
-                <CardTitle>Secure & Reliable</CardTitle>
+                <CardTitle>2. EWMA Consensus</CardTitle>
                 <CardDescription>
-                  Multi-signature validation and cryptographic proofs ensure data integrity
+                  Exponentially Weighted Moving Average with configurable half-life ensures recent data has more weight than old data.
                 </CardDescription>
               </CardHeader>
             </Card>
@@ -97,38 +97,187 @@ export default function HomePage() {
             <Card className="border-border bg-card">
               <CardHeader>
                 <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4">
-                  <Database className="h-6 w-6 text-primary" />
+                  <Lock className="h-6 w-6 text-primary" />
                 </div>
-                <CardTitle>Rich Data Sources</CardTitle>
+                <CardTitle>3. Quorum & Locking</CardTitle>
                 <CardDescription>
-                  Connect to thousands of APIs, IoT devices, and real-world data providers
+                  Minimum participation thresholds and time-locked deposits prevent manipulation and ensure security.
                 </CardDescription>
               </CardHeader>
+            </Card>
+
+            <Card className="border-border bg-card">
+              <CardHeader>
+                <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4">
+                  <Coins className="h-6 w-6 text-primary" />
+                </div>
+                <CardTitle>4. Reward Distribution</CardTitle>
+                <CardDescription>
+                  Participants are rewarded based on their contribution and accuracy, incentivizing honest reporting.
+                </CardDescription>
+              </CardHeader>
+            </Card>
+          </div>
+
+          <div className="max-w-4xl mx-auto">
+            <Card className="border-border bg-card/50">
+              <CardContent className="p-8">
+                <h3 className="text-2xl font-medium mb-4 tracking-wide" style={{ fontStyle: 'oblique 12deg' }}>The Complete Flow</h3>
+                <div className="space-y-4 text-muted-foreground">
+                  <p>
+                    <strong className="text-foreground">Step 1:</strong> Oracle creators deploy contracts with custom parameters (quorum, reward rate, half-life, etc.)
+                  </p>
+                  <p>
+                    <strong className="text-foreground">Step 2:</strong> Data providers stake tokens and submit price/value data to the oracle
+                  </p>
+                  <p>
+                    <strong className="text-foreground">Step 3:</strong> The protocol aggregates submissions using EWMA, weighted by token stake
+                  </p>
+                  <p>
+                    <strong className="text-foreground">Step 4:</strong> Once quorum is reached, the consensus value is finalized on-chain
+                  </p>
+                  <p>
+                    <strong className="text-foreground">Step 5:</strong> Accurate participants receive rewards from the oracle's reward pool
+                  </p>
+                </div>
+              </CardContent>
             </Card>
           </div>
         </div>
       </section>
 
-      {/* Stats Section */}
-      <section className="h-screen flex items-center justify-center">
+      {/* Why Better Section */}
+      <section className="min-h-screen flex items-center justify-center py-20 bg-muted/30">
         <div className="container mx-auto px-4">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
-            <div>
-              <div className="text-4xl font-medium text-primary mb-2">1,247</div>
-              <div className="text-muted-foreground">Active Oracles</div>
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-4xl font-medium mb-4 tracking-wide" style={{ fontStyle: 'oblique 15deg' }}>Why Is Our Protocol Better?</h2>
+            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+              Comparing OrbOracle to traditional oracle solutions
+            </p>
+          </div>
+
+          <div className="max-w-5xl mx-auto">
+            <div className="grid md:grid-cols-2 gap-8 mb-12">
+              <Card className="border-border bg-card">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <CheckCircle2 className="h-5 w-5 text-green-500" />
+                    OrbOracle Advantages
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="flex items-start gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-green-500 mt-1 flex-shrink-0" />
+                    <div>
+                      <strong>Decentralized Governance:</strong> Token-weighted voting ensures no single point of control
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-green-500 mt-1 flex-shrink-0" />
+                    <div>
+                      <strong>Time-Decay Mechanism:</strong> EWMA automatically reduces weight of stale data
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-green-500 mt-1 flex-shrink-0" />
+                    <div>
+                      <strong>Configurable Parameters:</strong> Each oracle can be customized for specific use cases
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-green-500 mt-1 flex-shrink-0" />
+                    <div>
+                      <strong>Economic Security:</strong> Locking periods and quorum requirements prevent attacks
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-green-500 mt-1 flex-shrink-0" />
+                    <div>
+                      <strong>Multi-Chain Support:</strong> Deploy on Ethereum, Base, BSC, Scroll, and more
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-green-500 mt-1 flex-shrink-0" />
+                    <div>
+                      <strong>Permissionless:</strong> Anyone can create an oracle or participate as a data provider
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="border-border bg-card">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <XCircle className="h-5 w-5 text-red-500" />
+                    Traditional Oracle Limitations
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="flex items-start gap-2">
+                    <XCircle className="h-4 w-4 text-red-500 mt-1 flex-shrink-0" />
+                    <div>
+                      <strong>Centralized Control:</strong> Single entities or small groups control data feeds
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <XCircle className="h-4 w-4 text-red-500 mt-1 flex-shrink-0" />
+                    <div>
+                      <strong>Static Data:</strong> No mechanism to reduce weight of outdated information
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <XCircle className="h-4 w-4 text-red-500 mt-1 flex-shrink-0" />
+                    <div>
+                      <strong>One-Size-Fits-All:</strong> Limited customization options for different use cases
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <XCircle className="h-4 w-4 text-red-500 mt-1 flex-shrink-0" />
+                    <div>
+                      <strong>Vulnerable to Manipulation:</strong> Lack of economic security mechanisms
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <XCircle className="h-4 w-4 text-red-500 mt-1 flex-shrink-0" />
+                    <div>
+                      <strong>Chain-Specific:</strong> Often limited to single blockchain networks
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <XCircle className="h-4 w-4 text-red-500 mt-1 flex-shrink-0" />
+                    <div>
+                      <strong>Permissioned:</strong> Requires approval or whitelisting to participate
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
-            <div>
-              <div className="text-4xl font-medium text-primary mb-2">$2.4B</div>
-              <div className="text-muted-foreground">Total Value Secured</div>
-            </div>
-            <div>
-              <div className="text-4xl font-medium text-primary mb-2">99.9%</div>
-              <div className="text-muted-foreground">Uptime</div>
-            </div>
-            <div>
-              <div className="text-4xl font-medium text-primary mb-2">50+</div>
-              <div className="text-muted-foreground">Supported Chains</div>
-            </div>
+
+            <Card className="border-primary/30 bg-card/50">
+              <CardContent className="p-8">
+                <h3 className="text-2xl font-medium mb-4 tracking-wide" style={{ fontStyle: 'oblique 12deg' }}>Key Differentiators</h3>
+                <div className="grid md:grid-cols-3 gap-6">
+                  <div>
+                    <div className="text-3xl font-medium text-primary mb-2">EWMA</div>
+                    <p className="text-sm text-muted-foreground">
+                      Our Exponentially Weighted Moving Average automatically handles time-decay, ensuring recent data has more influence than outdated information.
+                    </p>
+                  </div>
+                  <div>
+                    <div className="text-3xl font-medium text-primary mb-2">Quorum</div>
+                    <p className="text-sm text-muted-foreground">
+                      Configurable participation thresholds ensure consensus is reached with sufficient stakeholder engagement.
+                    </p>
+                  </div>
+                  <div>
+                    <div className="text-3xl font-medium text-primary mb-2">Flexible</div>
+                    <p className="text-sm text-muted-foreground">
+                      Every oracle can be customized with its own parameters, making it suitable for any data type or use case.
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </section>
