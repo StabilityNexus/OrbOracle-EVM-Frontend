@@ -109,26 +109,115 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Stats Section */}
+      {/* How Orb Oracle Works Section */}
       <section className="h-screen flex items-center justify-center">
         <div className="container mx-auto px-4">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
-            <div>
-              <div className="text-4xl font-medium text-primary mb-2">1,247</div>
-              <div className="text-muted-foreground">Active Oracles</div>
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-4xl font-medium mb-4 tracking-wide" style={{ fontStyle: 'oblique 15deg' }}>How Orb Oracle Works</h2>
+            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+              Orb Oracle securely bridges real-world data to the blockchain through a decentralized process.
+            </p>
+          </div>
+          <div className="max-w-4xl mx-auto">
+            <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-8">
+              <div className="text-center">
+                <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4 mx-auto">
+                  <span className="text-primary font-bold">1</span>
+                </div>
+                <h3 className="text-lg font-medium mb-2">Data Fetching</h3>
+                <p className="text-sm text-muted-foreground">Off-chain data is collected from reliable sources.</p>
+              </div>
+              <div className="text-center">
+                <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4 mx-auto">
+                  <span className="text-primary font-bold">2</span>
+                </div>
+                <h3 className="text-lg font-medium mb-2">Validation</h3>
+                <p className="text-sm text-muted-foreground">Decentralized validators verify data integrity.</p>
+              </div>
+              <div className="text-center">
+                <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4 mx-auto">
+                  <span className="text-primary font-bold">3</span>
+                </div>
+                <h3 className="text-lg font-medium mb-2">Aggregation</h3>
+                <p className="text-sm text-muted-foreground">Validated data is aggregated for consensus.</p>
+              </div>
+              <div className="text-center">
+                <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4 mx-auto">
+                  <span className="text-primary font-bold">4</span>
+                </div>
+                <h3 className="text-lg font-medium mb-2">Publishing</h3>
+                <p className="text-sm text-muted-foreground">Data is published on-chain for smart contracts.</p>
+              </div>
+              <div className="text-center">
+                <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4 mx-auto">
+                  <span className="text-primary font-bold">5</span>
+                </div>
+                <h3 className="text-lg font-medium mb-2">Consumption</h3>
+                <p className="text-sm text-muted-foreground">Smart contracts consume the data for automated actions.</p>
+              </div>
             </div>
-            <div>
-              <div className="text-4xl font-medium text-primary mb-2">$2.4B</div>
-              <div className="text-muted-foreground">Total Value Secured</div>
-            </div>
-            <div>
-              <div className="text-4xl font-medium text-primary mb-2">99.9%</div>
-              <div className="text-muted-foreground">Uptime</div>
-            </div>
-            <div>
-              <div className="text-4xl font-medium text-primary mb-2">50+</div>
-              <div className="text-muted-foreground">Supported Chains</div>
-            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Why Orb Oracle Section */}
+      <section className="h-screen flex items-center justify-center">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-4xl font-medium mb-4 tracking-wide" style={{ fontStyle: 'oblique 15deg' }}>Why Orb Oracle?</h2>
+            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+              Built for the decentralized future with key advantages that set it apart.
+            </p>
+          </div>
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-5xl mx-auto">
+            <Card className="border-border bg-card">
+              <CardHeader>
+                <CardTitle>Decentralization</CardTitle>
+                <CardDescription>
+                  Eliminates single points of failure with a network of independent validators.
+                </CardDescription>
+              </CardHeader>
+            </Card>
+            <Card className="border-border bg-card">
+              <CardHeader>
+                <CardTitle>Transparency</CardTitle>
+                <CardDescription>
+                  All data submissions and validations are publicly verifiable on-chain.
+                </CardDescription>
+              </CardHeader>
+            </Card>
+            <Card className="border-border bg-card">
+              <CardHeader>
+                <CardTitle>EVM Compatibility</CardTitle>
+                <CardDescription>
+                  Seamlessly integrates with Ethereum and all EVM-compatible blockchains.
+                </CardDescription>
+              </CardHeader>
+            </Card>
+            <Card className="border-border bg-card">
+              <CardHeader>
+                <CardTitle>Developer-Friendly</CardTitle>
+                <CardDescription>
+                  Simple APIs and tools make integration easy for any developer.
+                </CardDescription>
+              </CardHeader>
+            </Card>
+            <Card className="border-border bg-card">
+              <CardHeader>
+                <CardTitle>DeFi Ready</CardTitle>
+                <CardDescription>
+                  Optimized for decentralized finance applications requiring reliable price feeds.
+                </CardDescription>
+              </CardHeader>
+            </Card>
+            <Card className="border-border bg-card">
+              <CardHeader>
+                <CardTitle>Automation Support</CardTitle>
+                <CardDescription>
+                  Enables smart contracts to trigger actions based on real-world data automatically.
+                </CardDescription>
+              </CardHeader>
+            </Card>
           </div>
         </div>
       </section>
