@@ -20,10 +20,11 @@ export default function KyaModal({ isOpen, onClose, onUnderstand }: KyaModalProp
       onClick={onClose}
     >
       <div
-        className="bg-slate-900 border-2 border-blue-200 rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-xl"
+        className="rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-xl"
+        style={{ backgroundColor: '#1A1B1F' }}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex justify-between items-center p-6 border-b border-blue-100">
+        <div className="flex justify-between items-center p-6">
           <h2 className="text-xl font-bold text-slate-100">Know Your Assumptions</h2>
           <button
             onClick={onClose}

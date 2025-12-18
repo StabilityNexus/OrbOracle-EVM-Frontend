@@ -51,10 +51,11 @@ const ShareModal: FC<ShareModalProps> = ({ isOpen, onClose }) => {
       onClick={onClose}
     >
       <div
-        className="bg-slate-900 rounded-lg max-w-md w-full shadow-xl border border-blue-200"
+        className="rounded-lg max-w-md w-full shadow-xl"
+        style={{ backgroundColor: '#1A1B1F' }}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex justify-between items-center p-6 border-b border-blue-200">
+        <div className="flex justify-between items-center p-6">
           <h2 className="text-xl font-bold text-slate-100">Share OrbOracle</h2>
           <button
             onClick={onClose}
