@@ -9,7 +9,7 @@ export default function HomePage() {
   return (
     <div
       className="min-h-screen bg-background font-[oblique] tracking-wide"
-      style={{ fontStyle: "oblique 12deg" }}
+      style={{ fontStyle: "oblique" }}
     >
       <Navigation />
 
@@ -50,7 +50,7 @@ export default function HomePage() {
           <div className="max-w-4xl mx-auto">
             <h1
               className="text-3xl sm:text-4xl md:text-5xl font-medium mb-6 sm:mb-8 text-balance tracking-wide px-4"
-              style={{ fontStyle: "oblique 15deg" }}
+              style={{ fontStyle: "oblique" }}
             >
               Orb Oracle:
               <div>
@@ -86,9 +86,9 @@ export default function HomePage() {
           <div className="text-center mb-12 sm:mb-16 px-4">
             <h2
               className="text-2xl sm:text-3xl md:text-4xl font-medium mb-4 tracking-wide"
-              style={{ fontStyle: "oblique 15deg" }}
+              style={{ fontStyle: "oblique" }}
             >
-              Why choose OracleNet?
+              Why choose OrbOracle?
             </h2>
             <p className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto">
               Enterprise-grade infrastructure for the next generation of decentralized applications
@@ -135,7 +135,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Protocol Overview Section (Replaces Hard-coded Stats) */}
+      {/* Protocol Overview Section */}
       <section className="h-screen flex items-center justify-center">
         <div className="container mx-auto px-4">
           <div className="max-w-5xl mx-auto grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 sm:gap-8 px-4">
@@ -172,7 +172,7 @@ export default function HomePage() {
           <div className="max-w-2xl mx-auto px-4">
             <h2
               className="text-2xl sm:text-3xl md:text-4xl font-medium mb-4 sm:mb-6 tracking-wide"
-              style={{ fontStyle: "oblique 15deg" }}
+              style={{ fontStyle: "oblique" }}
             >
               Ready to build the future?
             </h2>
@@ -190,4 +190,3 @@ export default function HomePage() {
     </div>
   )
 }
-
