@@ -11,9 +11,18 @@ import Link from 'next/link'
 import { useState, useEffect, useMemo } from 'react'
 import { useAccount, useChainId, useConfig } from 'wagmi'
 import { writeContract, simulateContract, readContract } from '@wagmi/core'
-import { OracleFactories } from '@/utils/addresses'
+import { OracleFactories, getOracleChainLabel, supportedOracleChainIds } from '@/utils/addresses'
 import { OracleFactoryAbi } from '@/utils/abi/OracleFactory'
 import TokenSelector from '@/components/TokenSelector'
+import { isAddress } from 'viem'
+
+function isWholeNumber(value: string) {
+  return /^\d+$/.test(value.trim())
+}
+
+function toBigIntOrZero(value: string) {
+  return isWholeNumber(value) ? BigInt(value) : BigInt(0)
+}
 
 export default function CreateOracleIntegrated() {
   const account = useAccount()
@@ -67,40 +76,101 @@ export default function CreateOracleIntegrated() {
     setOracleAddress('')
   }, [activeChainId])
 
+  const factoryAddress = OracleFactories[activeChainId as keyof typeof OracleFactories]
+  const supportedChainLabel = getOracleChainLabel(activeChainId)
+  const supportedNetworksLabel = supportedOracleChainIds
+    .map((id) => getOracleChainLabel(id) ?? `Chain ${id}`)
+    .join(', ')
+  const isSupportedChain = Boolean(factoryAddress && factoryAddress !== '0x0000000000000000000000000000000000000000')
+
   const constructorArgs = useMemo(() => {
     return [
-      name || "Unnamed Oracle",                                                    // name
-      description || "No description provided",                                   // description
+      name.trim() || "Unnamed Oracle",                                            // name
+      description.trim() || "No description provided",                            // description
       (weightToken || "0x0000000000000000000000000000000000000000") as `0x${string}`, // weightToken
-      BigInt(Number(reward || 0)),                                                // reward
-      BigInt(Number(halfLifeSeconds || 0)),                                       // halfLifeSeconds
-      BigInt(Number(quorumBps || 0)),                                             // quorum
-      BigInt(Number(depositLock || 0)),                                           // operationLockingPeriod
-      BigInt(Number(withdrawLock || 0)),                                          // withdrawalLockingPeriod
-      BigInt(alpha || "0"),                                                       // alpha
+      toBigIntOrZero(reward),                                                     // reward
+      toBigIntOrZero(halfLifeSeconds),                                            // halfLifeSeconds
+      toBigIntOrZero(quorumBps),                                                  // quorum
+      toBigIntOrZero(depositLock),                                                // operationLockingPeriod
+      toBigIntOrZero(withdrawLock),                                               // withdrawalLockingPeriod
+      toBigIntOrZero(alpha),                                                      // alpha
     ] as const
   }, [name, description, weightToken, reward, halfLifeSeconds, quorumBps, depositLock, withdrawLock, alpha])
 
+  const validationErrors = useMemo(() => {
+    const newErrors: typeof errors = {}
+
+    if (!name.trim()) newErrors.name = 'Oracle name is required'
+    if (!description.trim()) newErrors.description = 'Description is required'
+
+    if (!owner.trim()) {
+      newErrors.owner = 'Owner address is required'
+    } else if (!isAddress(owner)) {
+      newErrors.owner = 'Enter a valid EVM address'
+    }
+
+    if (!weightToken.trim()) {
+      newErrors.weightToken = 'Weight token address is required'
+    } else if (!isAddress(weightToken)) {
+      newErrors.weightToken = 'Enter a valid ERC20 token address'
+    }
+
+    if (!reward.trim()) {
+      newErrors.reward = 'Reward is required'
+    } else if (!isWholeNumber(reward)) {
+      newErrors.reward = 'Reward must be a whole number'
+    }
+
+    if (!halfLifeSeconds.trim()) {
+      newErrors.halfLifeSeconds = 'Half life seconds is required'
+    } else if (!isWholeNumber(halfLifeSeconds) || Number(halfLifeSeconds) <= 0) {
+      newErrors.halfLifeSeconds = 'Half life must be a positive whole number'
+    }
+
+    if (!quorumBps.trim()) {
+      newErrors.quorumBps = 'Quorum is required'
+    } else if (!isWholeNumber(quorumBps) || Number(quorumBps) <= 0 || Number(quorumBps) > 10000) {
+      newErrors.quorumBps = 'Quorum must be a whole number between 1 and 10000'
+    }
+
+    if (!depositLock.trim()) {
+      newErrors.depositLock = 'Deposit lock period is required'
+    } else if (!isWholeNumber(depositLock)) {
+      newErrors.depositLock = 'Deposit lock must be a whole number'
+    }
+
+    if (!withdrawLock.trim()) {
+      newErrors.withdrawLock = 'Withdrawal lock period is required'
+    } else if (!isWholeNumber(withdrawLock)) {
+      newErrors.withdrawLock = 'Withdrawal lock must be a whole number'
+    }
+
+    if (!alpha.trim()) {
+      newErrors.alpha = 'Alpha is required'
+    } else if (!isWholeNumber(alpha)) {
+      newErrors.alpha = 'Alpha must be a whole number'
+    }
+
+    return newErrors
+  }, [alpha, depositLock, description, halfLifeSeconds, name, owner, quorumBps, reward, weightToken, withdrawLock])
+
   const validateInputs = () => {
-    const newErrors: any = {}
-
-    if (!name) newErrors.name = 'Oracle name is required'
-    if (!description) newErrors.description = 'Description is required'
-    if (!owner) newErrors.owner = 'Owner address is required'
-    if (!weightToken) newErrors.weightToken = 'Weight token address is required'
-    if (!reward) newErrors.reward = 'Reward is required'
-    if (!halfLifeSeconds) newErrors.halfLifeSeconds = 'Half life seconds is required'
-    if (!quorumBps) newErrors.quorumBps = 'Quorum is required'
-    if (!depositLock) newErrors.depositLock = 'Deposit lock period is required'
-    if (!withdrawLock) newErrors.withdrawLock = 'Withdrawal lock period is required'
-    if (!alpha) newErrors.alpha = 'Alpha is required'
-
-    if (Number(reward) < 0) newErrors.reward = 'Reward cannot be negative'
-    if (Number(quorumBps) < 0 || Number(quorumBps) > 10000) newErrors.quorumBps = 'Quorum must be between 0 and 10000'
-
-    setErrors(newErrors)
-    return Object.keys(newErrors).length === 0
+    setErrors(validationErrors)
+    return Object.keys(validationErrors).length === 0
   }
+
+  const createDisabledReason = useMemo(() => {
+    if (!account.address) {
+      return 'Connect a wallet to deploy a new oracle.'
+    }
+    if (!isSupportedChain) {
+      return `Switch to a supported network (${supportedNetworksLabel}) to create an oracle.`
+    }
+    if (Object.keys(validationErrors).length > 0) {
+      return 'Complete the required fields with valid values before submitting.'
+    }
+    return null
+  }, [account.address, isSupportedChain, supportedNetworksLabel, validationErrors])
 
   const onCopy = async (text: string) => {
     try {
@@ -159,7 +229,6 @@ export default function CreateOracleIntegrated() {
 
     try {
       setLoadingCreation(true)
-      const factoryAddress = OracleFactories[activeChainId as keyof typeof OracleFactories]
 
       if (!factoryAddress || factoryAddress === '0x0000000000000000000000000000000000000000') {
         throw new Error('Oracle Factory not deployed on this network')
@@ -281,6 +350,38 @@ export default function CreateOracleIntegrated() {
   return (
     <div className="font-[oblique] tracking-wide text-slate-100" style={{ fontStyle: "oblique 15deg" }}>
       <form onSubmit={(e) => { e.preventDefault(); createOracle(); }} className="space-y-8">
+        <Card className="border-2 border-blue-200 bg-card shadow-sm max-w-4xl mx-auto">
+          <CardHeader className="border-b border-blue-100">
+            <CardTitle className="text-slate-100 text-xl">
+              Deployment Status
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="grid grid-cols-1 gap-4 pt-4 md:grid-cols-2">
+            <div className="rounded-xl border border-blue-100 bg-slate-900/40 p-4">
+              <p className="text-xs uppercase tracking-wide text-slate-400">Network</p>
+              <p className="mt-2 text-base font-medium text-slate-100">
+                {isSupportedChain ? `Ready on ${supportedChainLabel}` : 'Unsupported network'}
+              </p>
+              <p className="mt-1 text-sm text-slate-400">
+                {isSupportedChain
+                  ? 'A factory contract is configured on this network.'
+                  : `Supported networks: ${supportedNetworksLabel}.`}
+              </p>
+            </div>
+            <div className="rounded-xl border border-blue-100 bg-slate-900/40 p-4">
+              <p className="text-xs uppercase tracking-wide text-slate-400">Wallet</p>
+              <p className="mt-2 text-base font-medium text-slate-100">
+                {account.address ? 'Connected and ready to sign' : 'Wallet not connected'}
+              </p>
+              <p className="mt-1 text-sm text-slate-400">
+                {account.address
+                  ? 'Review the parameters below and submit the deployment transaction.'
+                  : 'Connect your wallet before attempting to deploy an oracle.'}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
         <Card className="border-2 border-blue-200 bg-card shadow-sm max-w-4xl mx-auto">
           <CardHeader className="border-b border-blue-100">
             <CardTitle className="text-slate-100 text-xl">
@@ -611,26 +712,33 @@ export default function CreateOracleIntegrated() {
         </Card>
 
         <div className="justify-center flex  mx-auto">
-          <Button
-            type="submit"
-            size="lg"
-            className="bg-black border border-white hover:bg-primary max-w-4xl mx-auto border-slate-400 text-white"
-            disabled={loadingCreation || !account.address}
-          >
-            {loadingCreation ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Creating Oracle...
-              </>
-            ) : !account.address ? (
-              'Connect Wallet to Create Oracle'
-            ) : (
-              <>
-                Create Oracle
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </>
+          <div className="max-w-4xl text-center">
+            {createDisabledReason && (
+              <p className="mb-3 text-sm text-slate-400">{createDisabledReason}</p>
             )}
-          </Button>
+            <Button
+              type="submit"
+              size="lg"
+              className="bg-black border border-white hover:bg-primary max-w-4xl mx-auto border-slate-400 text-white"
+              disabled={loadingCreation || !!createDisabledReason}
+            >
+              {loadingCreation ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Creating Oracle...
+                </>
+              ) : !account.address ? (
+                'Connect Wallet to Create Oracle'
+              ) : !isSupportedChain ? (
+                'Switch Network to Create Oracle'
+              ) : (
+                <>
+                  Create Oracle
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </>
+              )}
+            </Button>
+          </div>
         </div>
       </form>
     </div>
