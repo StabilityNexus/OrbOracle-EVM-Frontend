@@ -48,6 +48,24 @@ const formatPriceFromWei = (value: bigint) => {
   return numeric.toFixed(DISPLAY_PRECISION)
 }
 
+const parseTokenAmount = (value: string, decimals: number) => {
+  const trimmed = value.trim()
+  if (!trimmed) {
+    return null
+  }
+
+  const numeric = Number.parseFloat(trimmed)
+  if (!Number.isFinite(numeric) || numeric <= 0) {
+    return null
+  }
+
+  try {
+    return parseUnits(trimmed, decimals)
+  } catch {
+    return null
+  }
+}
+
 export default function OracleInteractionPage() {
   const search = useSearchParams()
   const oracleParam = search.get("oracle")
@@ -364,6 +382,62 @@ export default function OracleInteractionPage() {
   const isActiveOperator = totalDepositedTokensRaw > BigInt(0)
   const hasUnlockedTokens = unlockedTokensRaw > BigInt(0)
   const operatorActionsDisabled = isActiveOperator && !hasUnlockedTokens
+  const actionInFlight =
+    isPending ||
+    isConfirming ||
+    isSubmitting ||
+    isDepositing ||
+    isWithdrawing ||
+    isVoting ||
+    isApproving ||
+    isUpdatingVoteWeights
+  const submitValueNumber = Number.parseFloat(submitValue)
+  const hasValidSubmitValue = submitValue.trim().length > 0 && Number.isFinite(submitValueNumber)
+  const depositAmountRaw = useMemo(() => parseTokenAmount(depositAmount, weightTokenDecimals), [depositAmount, weightTokenDecimals])
+  const withdrawAmountRaw = useMemo(() => parseTokenAmount(withdrawAmount, weightTokenDecimals), [withdrawAmount, weightTokenDecimals])
+  const hasValidDepositAmount = depositAmountRaw !== null
+  const hasValidWithdrawAmount = withdrawAmountRaw !== null
+  const hasEnoughWalletBalance = depositAmountRaw !== null && userTokenBalanceRaw >= depositAmountRaw
+  const hasEnoughUnlockedBalance = withdrawAmountRaw !== null && unlockedTokensRaw >= withdrawAmountRaw
+  const allowanceRaw = tokenAllowanceData ? BigInt(tokenAllowanceData as bigint) : BigInt(0)
+  const needsApproval = depositAmountRaw !== null && allowanceRaw < depositAmountRaw
+  const hasValidVoteTarget = isHexAddress(voteTarget)
+
+  const submitValueHint = !isConnected
+    ? "Connect your wallet to submit a value."
+    : !isActiveOperator
+      ? `Deposit ${weightTokenSymbol} before submitting prices.`
+      : !hasValidSubmitValue && submitValue.trim().length > 0
+        ? "Enter a valid numeric price value."
+        : "Deposited operators can submit new values to the oracle."
+
+  const depositHint = !isConnected
+    ? "Connect your wallet to approve and deposit tokens."
+    : !hasValidDepositAmount && depositAmount.trim().length > 0
+      ? "Enter a valid positive token amount."
+      : !hasEnoughWalletBalance && hasValidDepositAmount
+        ? `You do not have enough ${weightTokenSymbol} in your wallet for this deposit.`
+        : needsApproval
+          ? `Approval is required before depositing ${weightTokenSymbol}.`
+          : "Deposit weight tokens to activate operator actions."
+
+  const withdrawHint = !isConnected
+    ? "Connect your wallet to withdraw tokens."
+    : !hasUnlockedTokens
+      ? `No unlocked ${weightTokenSymbol} is currently available to withdraw.`
+      : !hasValidWithdrawAmount && withdrawAmount.trim().length > 0
+        ? "Enter a valid positive withdrawal amount."
+        : !hasEnoughUnlockedBalance && hasValidWithdrawAmount
+          ? "Withdrawal amount exceeds your unlocked balance."
+          : "Only unlocked deposited tokens can be withdrawn."
+
+  const governanceHint = !isConnected
+    ? "Connect your wallet to vote or update vote weights."
+    : !isActiveOperator
+      ? `Deposit ${weightTokenSymbol} to enable governance actions.`
+      : !hasValidVoteTarget && voteTarget.trim().length > 0
+        ? "Enter a valid EVM address for the governance target."
+        : "Governance actions use your deposited token balance as voting weight."
 
   // Update real-time data when contract data changes
   useEffect(() => {
@@ -542,7 +616,7 @@ export default function OracleInteractionPage() {
       return
     }
 
-    if (!submitValue || isNaN(parseFloat(submitValue))) {
+    if (!hasValidSubmitValue) {
       toast({
         title: "Invalid Value",
         description: "Please enter a valid numeric value.",
@@ -555,7 +629,7 @@ export default function OracleInteractionPage() {
       setIsSubmitting(true)
       // Convert to int256 - the value should be a scaled integer
       // For example, if submitting 2500, multiply by 1e18 to get proper precision
-      const valueAsFloat = parseFloat(submitValue)
+      const valueAsFloat = submitValueNumber
       const valueAsInt = BigInt(Math.floor(valueAsFloat * 1e18))
       
       console.log('Submitting value:', {
@@ -598,7 +672,7 @@ export default function OracleInteractionPage() {
       return
     }
 
-    if (!depositAmount || isNaN(parseFloat(depositAmount)) || parseFloat(depositAmount) <= 0) {
+    if (!depositAmountRaw) {
       toast({
         title: "Invalid Amount",
         description: "Please enter a valid amount to approve.",
@@ -609,13 +683,11 @@ export default function OracleInteractionPage() {
 
     try {
       setIsApproving(true)
-      const amount = parseUnits(depositAmount, weightTokenDecimals)
-      
       writeContract({
         address: weightTokenAddress as `0x${string}`,
         abi: erc20Abi,
         functionName: 'approve',
-        args: [oracleAddress!, amount],
+        args: [oracleAddress!, depositAmountRaw],
       })
 
       toast({
@@ -643,7 +715,7 @@ export default function OracleInteractionPage() {
       return
     }
 
-    if (!depositAmount || isNaN(parseFloat(depositAmount)) || parseFloat(depositAmount) <= 0) {
+    if (!depositAmountRaw) {
       toast({
         title: "Invalid Amount",
         description: "Please enter a valid amount to deposit.",
@@ -652,8 +724,8 @@ export default function OracleInteractionPage() {
       return
     }
 
-    const amount = parseUnits(depositAmount, weightTokenDecimals)
-    const allowance = tokenAllowanceData ? BigInt(tokenAllowanceData as bigint) : BigInt(0)
+    const amount = depositAmountRaw
+    const allowance = allowanceRaw
     
     if (allowance < amount) {
       toast({
@@ -699,7 +771,7 @@ export default function OracleInteractionPage() {
       return
     }
 
-    if (!withdrawAmount || isNaN(parseFloat(withdrawAmount)) || parseFloat(withdrawAmount) <= 0) {
+    if (!withdrawAmountRaw) {
       toast({
         title: "Invalid Amount",
         description: "Please enter a valid amount to withdraw.",
@@ -710,7 +782,7 @@ export default function OracleInteractionPage() {
 
     try {
       setIsWithdrawing(true)
-      const amount = parseUnits(withdrawAmount, weightTokenDecimals)
+      const amount = withdrawAmountRaw
       
       console.log('Withdrawing tokens:', {
         amount: amount.toString(),
@@ -1139,24 +1211,25 @@ export default function OracleInteractionPage() {
               <CardContent>
                 <div className="mb-4">
                   <Label htmlFor="submitValue" className="text-foreground font-medium mb-2">Price Value</Label>
-                <Input
-                  id="submitValue"
-                  type="number"
-                  placeholder="Enter price value (e.g., 2500)"
-                  value={submitValue}
-                  onChange={(e) => setSubmitValue(e.target.value)}
+                  <Input
+                    id="submitValue"
+                    type="number"
+                    placeholder="Enter price value (e.g., 2500)"
+                    value={submitValue}
+                    onChange={(e) => setSubmitValue(e.target.value)}
                     className="h-12 bg-card/50 border border-primary/30 rounded-xl font-light transition-all duration-300 focus:border-primary/50 focus:ring-2 focus:ring-primary/20 focus:bg-card/70"
-                />
-              </div>
-              <Button 
-                onClick={handleSubmitValue} 
-                disabled={isSubmitting || isPending || isConfirming || !submitValue || !isConnected}
-                className="w-full bg-primary hover:bg-primary/90 text-primary-foreground border-primary/50 h-12 rounded-xl transition-all duration-300"
-              >
-                {(isSubmitting || isPending || isConfirming) ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Send className="h-4 w-4 mr-2" />}
-                {isSubmitting || isPending ? "Submitting..." : isConfirming ? "Confirming..." : "Submit Value"}
-              </Button>
-            </CardContent>
+                  />
+                  <p className="mt-2 text-sm text-muted-foreground">{submitValueHint}</p>
+                </div>
+                <Button
+                  onClick={handleSubmitValue}
+                  disabled={!isConnected || !isActiveOperator || !hasValidSubmitValue || actionInFlight}
+                  className="w-full bg-primary hover:bg-primary/90 text-primary-foreground border-primary/50 h-12 rounded-xl transition-all duration-300"
+                >
+                  {(isSubmitting || isPending || isConfirming) ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Send className="h-4 w-4 mr-2" />}
+                  {isSubmitting || isPending ? "Submitting..." : isConfirming ? "Confirming..." : "Submit Value"}
+                </Button>
+              </CardContent>
           </Card>
 
             <Card className="border-border/50 bg-card/30 backdrop-blur-sm hover:bg-card/60 border-primary/20 hover:border-white transition-all duration-300 rounded-2xl">
@@ -1188,7 +1261,7 @@ export default function OracleInteractionPage() {
                       variant="outline"
                       className="h-8 px-3 text-xs border-primary/30 text-primary hover:bg-primary/10 hover:border-primary/50 transition-all duration-300"
                       onClick={handleReadLatestValue}
-                      disabled={isReadingLatestValue || isPending || isConfirming || !isConnected}
+                      disabled={isReadingLatestValue || isPending || isConfirming}
                     >
                       {isReadingLatestValue || isPending || isConfirming ? <Loader2 className="h-3 w-3 animate-spin" /> : "Read"}
                     </Button>
@@ -1205,7 +1278,7 @@ export default function OracleInteractionPage() {
                       variant="outline"
                       className="h-8 px-3 text-xs border-primary/30 text-primary hover:bg-primary/10 hover:border-primary/50 transition-all duration-300"
                       onClick={handleReadValue}
-                      disabled={isReadingValue || isPending || isConfirming || !isConnected}
+                      disabled={isReadingValue || isPending || isConfirming}
                     >
                       {isReadingValue || isPending || isConfirming ? <Loader2 className="h-3 w-3 animate-spin" /> : "Read"}
                     </Button>
@@ -1264,19 +1337,16 @@ export default function OracleInteractionPage() {
                     onChange={(e) => setDepositAmount(e.target.value)}
                     className="h-12 mb-4 bg-card/50 border border-primary/30 rounded-xl font-light transition-all duration-300 focus:border-primary/50 focus:ring-2 focus:ring-primary/20 focus:bg-card/70"
                   />
+                  <p className="text-sm text-muted-foreground">{depositHint}</p>
                 </div>
                 
                 {/* Conditional Buttons based on allowance */}
                 {(() => {
-                  const amount = depositAmount ? parseUnits(depositAmount, weightTokenDecimals) : BigInt(0)
-                  const allowance = tokenAllowanceData ? BigInt(tokenAllowanceData as bigint) : BigInt(0)
-                  const needsApproval = amount > allowance
-
                   if (needsApproval) {
                     return (
                       <Button 
                         onClick={handleApproveTokens} 
-                        disabled={isApproving || isPending || isConfirming || !depositAmount || !isConnected}
+                        disabled={!isConnected || !hasValidDepositAmount || !hasEnoughWalletBalance || actionInFlight}
                   className="w-full bg-primary hover:bg-primary/90 text-primary-foreground border-primary/50 h-12 rounded-xl transition-all duration-300"
 
                       >
@@ -1288,7 +1358,7 @@ export default function OracleInteractionPage() {
                     return (
                 <Button 
                   onClick={handleDepositTokens} 
-                        disabled={isDepositing || isPending || isConfirming || !depositAmount || !isConnected}
+                        disabled={!isConnected || !hasValidDepositAmount || !hasEnoughWalletBalance || needsApproval || actionInFlight}
                         className="w-full bg-primary hover:bg-primary/90 text-primary-foreground h-12 rounded-xl transition-all duration-300"
                 >
                         {(isDepositing || isPending || isConfirming) ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Wallet className="h-4 w-4 mr-2" />}
@@ -1337,10 +1407,11 @@ export default function OracleInteractionPage() {
                     onChange={(e) => setWithdrawAmount(e.target.value)}
                     className="h-12 mb-4 bg-card/50 border border-primary/30 rounded-xl font-light transition-all duration-300 focus:border-primary/50 focus:ring-2 focus:ring-primary/20 focus:bg-card/70"
                   />
+                  <p className="text-sm text-muted-foreground">{withdrawHint}</p>
                 </div>
                 <Button 
                   onClick={handleWithdrawTokens} 
-                  disabled={isWithdrawing || isPending || isConfirming || !withdrawAmount || !isConnected}
+                  disabled={!isConnected || !hasValidWithdrawAmount || !hasEnoughUnlockedBalance || operatorActionsDisabled || actionInFlight}
                   className="w-full bg-destructive hover:bg-destructive/90 text-destructive-foreground h-12 rounded-xl transition-all duration-300"
                 >
                   {(isWithdrawing || isPending || isConfirming) ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Wallet className="h-4 w-4 mr-2" />}
@@ -1372,11 +1443,12 @@ export default function OracleInteractionPage() {
                     onChange={(e) => setVoteTarget(e.target.value)}
                     className="h-12 mb-4 bg-card/50 border border-primary/30 rounded-xl font-light transition-all duration-300 focus:border-primary/50 focus:ring-2 focus:ring-primary/20 focus:bg-card/70"
                   />
+                  <p className="text-sm text-muted-foreground">{governanceHint}</p>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <Button 
                     onClick={handleVoteBlacklist} 
-                    disabled={isVoting || isPending || isConfirming || !voteTarget || !isConnected}
+                    disabled={!isConnected || !isActiveOperator || !hasValidVoteTarget || actionInFlight}
                     className="bg-destructive hover:bg-destructive/90 text-destructive-foreground h-12 rounded-xl transition-all duration-300"
                   >
                     {(isVoting || isPending || isConfirming) ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Shield className="h-4 w-4 mr-2" />}
@@ -1384,7 +1456,7 @@ export default function OracleInteractionPage() {
                   </Button>
                   <Button 
                     onClick={handleVoteWhitelist} 
-                    disabled={isVoting || isPending || isConfirming || !voteTarget || !isConnected}
+                    disabled={!isConnected || !isActiveOperator || !hasValidVoteTarget || actionInFlight}
                     className="bg-primary hover:bg-primary/90 text-primary-foreground h-12 rounded-xl transition-all duration-300"
                   >
                     {(isVoting || isPending || isConfirming) ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Shield className="h-4 w-4 mr-2" />}
@@ -1417,7 +1489,7 @@ export default function OracleInteractionPage() {
                 
                 <Button 
                   onClick={handleUpdateVoteWeights} 
-                  disabled={isUpdatingVoteWeights || isPending || isConfirming || !isConnected}
+                  disabled={!isConnected || !isActiveOperator || actionInFlight}
                   className="w-full bg-primary hover:bg-primary/90 text-primary-foreground border-primary/50 h-12 rounded-xl transition-all duration-300"
                 >
                   {(isUpdatingVoteWeights || isPending || isConfirming) ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Settings className="h-4 w-4 mr-2" />}
