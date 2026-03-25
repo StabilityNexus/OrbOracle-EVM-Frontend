@@ -38,6 +38,20 @@ function validatePositiveWholeNumber(value: string, fieldName: string) {
   return undefined
 }
 
+type OracleField =
+  | 'name'
+  | 'description'
+  | 'owner'
+  | 'weightToken'
+  | 'reward'
+  | 'halfLifeSeconds'
+  | 'quorumBps'
+  | 'depositLock'
+  | 'withdrawLock'
+  | 'alpha'
+
+type OracleFormErrors = Partial<Record<OracleField, string>>
+
 export default function CreateOracleIntegrated() {
   const account = useAccount()
   const activeChainId = useChainId()
@@ -63,19 +77,7 @@ export default function CreateOracleIntegrated() {
   const [showTooltip, setShowTooltip] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
   const [hasSubmitted, setHasSubmitted] = useState(false)
-
-  const [errors, setErrors] = useState<{
-    name?: string
-    description?: string
-    owner?: string
-    weightToken?: string
-    reward?: string
-    halfLifeSeconds?: string
-    quorumBps?: string
-    depositLock?: string
-    withdrawLock?: string
-    alpha?: string
-  }>({})
+  const [touchedFields, setTouchedFields] = useState<Partial<Record<OracleField, boolean>>>({})
 
   // Pre-fill owner with connected wallet address
   useEffect(() => {
@@ -90,6 +92,7 @@ export default function CreateOracleIntegrated() {
     setHashTx('')
     setOracleAddress('')
     setHasSubmitted(false)
+    setTouchedFields({})
   }, [activeChainId])
 
   const factoryAddress = OracleFactories[activeChainId as keyof typeof OracleFactories]
@@ -114,7 +117,7 @@ export default function CreateOracleIntegrated() {
   }, [name, description, weightToken, reward, halfLifeSeconds, quorumBps, depositLock, withdrawLock, alpha])
 
   const validationErrors = useMemo(() => {
-    const newErrors: typeof errors = {}
+    const newErrors: OracleFormErrors = {}
 
     if (!name.trim()) newErrors.name = 'Oracle name is required'
     if (!description.trim()) newErrors.description = 'Description is required'
@@ -163,15 +166,19 @@ export default function CreateOracleIntegrated() {
     return newErrors
   }, [alpha, depositLock, description, halfLifeSeconds, name, owner, quorumBps, reward, weightToken, withdrawLock])
 
-  useEffect(() => {
-    if (hasSubmitted) {
-      setErrors(validationErrors)
+  const getFieldError = (field: OracleField) => {
+    if (hasSubmitted || touchedFields[field]) {
+      return validationErrors[field]
     }
-  }, [hasSubmitted, validationErrors])
+    return undefined
+  }
+
+  const markTouched = (field: OracleField) => {
+    setTouchedFields((current) => (current[field] ? current : { ...current, [field]: true }))
+  }
 
   const validateInputs = () => {
     setHasSubmitted(true)
-    setErrors(validationErrors)
     return Object.keys(validationErrors).length === 0
   }
 
@@ -424,15 +431,18 @@ export default function CreateOracleIntegrated() {
                   </div>
                 )}
               </div>
-              <Input
-                id="name"
-                placeholder="ETH/USD Oracle"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className={`border-0 bg-slate-800/50  text-slate-100 placeholder:text-slate-400 border border-blue-100 max-w-full ${errors.name ? 'border-red-500' : ''}`}
-                required
-              />
-              {errors.name && <p className="text-red-400 text-xs">{errors.name}</p>}
+                <Input
+                  id="name"
+                  placeholder="ETH/USD Oracle"
+                  value={name}
+                  onChange={(e) => {
+                    setName(e.target.value)
+                    markTouched('name')
+                  }}
+                  className={`border-0 bg-slate-800/50  text-slate-100 placeholder:text-slate-400 border border-blue-100 max-w-full ${getFieldError('name') ? 'border-red-500' : ''}`}
+                  required
+                />
+              {getFieldError('name') && <p className="text-red-400 text-xs">{getFieldError('name')}</p>}
             </div>
             <div className="space-y-1 col-span-2">
               <div className="flex items-center gap-2">
@@ -457,11 +467,14 @@ export default function CreateOracleIntegrated() {
                 id="description"
                 placeholder="Describe your oracle's purpose and data source"
                 value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                className={`border-0 bg-slate-800/50 text-slate-100 placeholder:text-slate-400 border border-blue-100 ${errors.description ? 'border-red-500' : ''}`}
+                onChange={(e) => {
+                  setDescription(e.target.value)
+                  markTouched('description')
+                }}
+                className={`border-0 bg-slate-800/50 text-slate-100 placeholder:text-slate-400 border border-blue-100 ${getFieldError('description') ? 'border-red-500' : ''}`}
                 required
               />
-              {errors.description && <p className="text-red-400 text-xs">{errors.description}</p>}
+              {getFieldError('description') && <p className="text-red-400 text-xs">{getFieldError('description')}</p>}
             </div>
           </CardContent>
         </Card>
@@ -496,11 +509,14 @@ export default function CreateOracleIntegrated() {
                 id="owner"
                 placeholder="0x..."
                 value={owner}
-                onChange={(e) => setOwner(e.target.value)}
+                onChange={(e) => {
+                  setOwner(e.target.value)
+                  markTouched('owner')
+                }}
                 required
-                className={`border-0 bg-slate-800/50 text-slate-100 placeholder:text-slate-400 text-md border border-blue-100 ${errors.owner ? 'border-red-500' : ''}`}
+                className={`border-0 bg-slate-800/50 text-slate-100 placeholder:text-slate-400 text-md border border-blue-100 ${getFieldError('owner') ? 'border-red-500' : ''}`}
               />
-              {errors.owner && <p className="text-red-400 text-xs">{errors.owner}</p>}
+              {getFieldError('owner') && <p className="text-red-400 text-xs">{getFieldError('owner')}</p>}
             </div>
             
             <div className="space-y-1">
@@ -524,8 +540,11 @@ export default function CreateOracleIntegrated() {
               </div>
               <TokenSelector
                 value={weightToken}
-                onChange={(address) => setWeightToken(address)}
-                error={errors.weightToken}
+                onChange={(address) => {
+                  setWeightToken(address)
+                  markTouched('weightToken')
+                }}
+                error={getFieldError('weightToken')}
                 placeholder="0x..."
                 label=""
                 required={true}
@@ -557,11 +576,14 @@ export default function CreateOracleIntegrated() {
                 min={0}
                 placeholder="1000"
                 value={reward}
-                onChange={(e) => setReward(e.target.value)}
+                onChange={(e) => {
+                  setReward(e.target.value)
+                  markTouched('reward')
+                }}
                 required
-                className={`border-0 bg-slate-800/50 text-slate-100 placeholder:text-slate-400 text-md border border-blue-100 ${errors.reward ? 'border-red-500' : ''}`}
+                className={`border-0 bg-slate-800/50 text-slate-100 placeholder:text-slate-400 text-md border border-blue-100 ${getFieldError('reward') ? 'border-red-500' : ''}`}
               />
-              {errors.reward && <p className="text-red-400 text-xs">{errors.reward}</p>}
+              {getFieldError('reward') && <p className="text-red-400 text-xs">{getFieldError('reward')}</p>}
             </div>
 
             <div className="space-y-1">
@@ -589,11 +611,14 @@ export default function CreateOracleIntegrated() {
                 min={0}
                 placeholder="3600"
                 value={halfLifeSeconds}
-                onChange={(e) => setHalfLifeSeconds(e.target.value)}
+                onChange={(e) => {
+                  setHalfLifeSeconds(e.target.value)
+                  markTouched('halfLifeSeconds')
+                }}
                 required
-                className={`border-0 bg-slate-800/50 text-slate-100 placeholder:text-slate-400 text-md border border-blue-100 ${errors.halfLifeSeconds ? 'border-red-500' : ''}`}
+                className={`border-0 bg-slate-800/50 text-slate-100 placeholder:text-slate-400 text-md border border-blue-100 ${getFieldError('halfLifeSeconds') ? 'border-red-500' : ''}`}
               />
-              {errors.halfLifeSeconds && <p className="text-red-400 text-xs">{errors.halfLifeSeconds}</p>}
+              {getFieldError('halfLifeSeconds') && <p className="text-red-400 text-xs">{getFieldError('halfLifeSeconds')}</p>}
             </div>
 
             <div className="space-y-1">
@@ -622,11 +647,14 @@ export default function CreateOracleIntegrated() {
                 max={10000}
                 placeholder="2000"
                 value={quorumBps}
-                onChange={(e) => setQuorumBps(e.target.value)}
+                onChange={(e) => {
+                  setQuorumBps(e.target.value)
+                  markTouched('quorumBps')
+                }}
                 required
-                className={`border-0 bg-slate-800/50 text-slate-100 placeholder:text-slate-400 text-md border border-blue-100 ${errors.quorumBps ? 'border-red-500' : ''}`}
+                className={`border-0 bg-slate-800/50 text-slate-100 placeholder:text-slate-400 text-md border border-blue-100 ${getFieldError('quorumBps') ? 'border-red-500' : ''}`}
               />
-              {errors.quorumBps && <p className="text-red-400 text-xs">{errors.quorumBps}</p>}
+              {getFieldError('quorumBps') && <p className="text-red-400 text-xs">{getFieldError('quorumBps')}</p>}
             </div>
 
             <div className="space-y-1">
@@ -654,11 +682,14 @@ export default function CreateOracleIntegrated() {
                 min={0}
                 placeholder="3600"
                 value={depositLock}
-                onChange={(e) => setDepositLock(e.target.value)}
+                onChange={(e) => {
+                  setDepositLock(e.target.value)
+                  markTouched('depositLock')
+                }}
                 required
-                className={`border-0 bg-slate-800/50 text-slate-100 placeholder:text-slate-400 text-md border border-blue-100 ${errors.depositLock ? 'border-red-500' : ''}`}
+                className={`border-0 bg-slate-800/50 text-slate-100 placeholder:text-slate-400 text-md border border-blue-100 ${getFieldError('depositLock') ? 'border-red-500' : ''}`}
               />
-              {errors.depositLock && <p className="text-red-400 text-xs">{errors.depositLock}</p>}
+              {getFieldError('depositLock') && <p className="text-red-400 text-xs">{getFieldError('depositLock')}</p>}
             </div>
 
             <div className="space-y-1">
@@ -686,11 +717,14 @@ export default function CreateOracleIntegrated() {
                 min={0}
                 placeholder="3600"
                 value={withdrawLock}
-                onChange={(e) => setWithdrawLock(e.target.value)}
+                onChange={(e) => {
+                  setWithdrawLock(e.target.value)
+                  markTouched('withdrawLock')
+                }}
                 required
-                className={`border-0 bg-slate-800/50 text-slate-100 placeholder:text-slate-400 text-md border border-blue-100 ${errors.withdrawLock ? 'border-red-500' : ''}`}
+                className={`border-0 bg-slate-800/50 text-slate-100 placeholder:text-slate-400 text-md border border-blue-100 ${getFieldError('withdrawLock') ? 'border-red-500' : ''}`}
               />
-              {errors.withdrawLock && <p className="text-red-400 text-xs">{errors.withdrawLock}</p>}
+              {getFieldError('withdrawLock') && <p className="text-red-400 text-xs">{getFieldError('withdrawLock')}</p>}
             </div>
 
             <div className="space-y-1">
@@ -718,11 +752,14 @@ export default function CreateOracleIntegrated() {
                 min={0}
                 placeholder="1"
                 value={alpha}
-                onChange={(e) => setAlpha(e.target.value)}
+                onChange={(e) => {
+                  setAlpha(e.target.value)
+                  markTouched('alpha')
+                }}
                 required
-                className={`border-0 bg-slate-800/50 text-slate-100 placeholder:text-slate-400 text-md border border-blue-100 ${errors.alpha ? 'border-red-500' : ''}`}
+                className={`border-0 bg-slate-800/50 text-slate-100 placeholder:text-slate-400 text-md border border-blue-100 ${getFieldError('alpha') ? 'border-red-500' : ''}`}
               />
-              {errors.alpha && <p className="text-red-400 text-xs">{errors.alpha}</p>}
+              {getFieldError('alpha') && <p className="text-red-400 text-xs">{getFieldError('alpha')}</p>}
             </div>
           </CardContent>
         </Card>
