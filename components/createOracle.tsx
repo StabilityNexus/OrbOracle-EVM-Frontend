@@ -188,19 +188,6 @@ export default function CreateOracleIntegrated() {
     return null
   }, [account.address, isSupportedChain, supportedNetworksLabel, validationErrors])
 
-  const parameterChecks = useMemo(() => {
-    return [
-      { label: 'Owner address', error: validationErrors.owner },
-      { label: 'Weight token', error: validationErrors.weightToken },
-      { label: 'Reward', error: validationErrors.reward },
-      { label: 'Half life', error: validationErrors.halfLifeSeconds },
-      { label: 'Quorum', error: validationErrors.quorumBps },
-      { label: 'Deposit lock', error: validationErrors.depositLock },
-      { label: 'Withdrawal lock', error: validationErrors.withdrawLock },
-      { label: 'Alpha', error: validationErrors.alpha },
-    ]
-  }, [validationErrors])
-
   const onCopy = async (text: string) => {
     try {
       await navigator.clipboard.writeText(text)
@@ -737,31 +724,6 @@ export default function CreateOracleIntegrated() {
               />
               {errors.alpha && <p className="text-red-400 text-xs">{errors.alpha}</p>}
             </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-2 border-blue-200 bg-card shadow-sm max-w-4xl mx-auto">
-          <CardHeader className="border-b border-blue-100">
-            <CardTitle className="text-xl text-slate-100">
-              Parameter Checks
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="grid grid-cols-1 gap-3 pt-4 md:grid-cols-2">
-            {parameterChecks.map((check) => (
-              <div
-                key={check.label}
-                className={`rounded-xl border px-4 py-3 text-sm ${
-                  check.error
-                    ? 'border-red-500/50 bg-red-500/10 text-red-300'
-                    : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300'
-                }`}
-              >
-                <div className="font-medium">{check.label}</div>
-                <div className="mt-1 text-xs">
-                  {check.error ? check.error : 'Looks valid'}
-                </div>
-              </div>
-            ))}
           </CardContent>
         </Card>
 
