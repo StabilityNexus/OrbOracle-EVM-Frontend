@@ -145,7 +145,10 @@ export default function CreateOracleIntegrated() {
       newErrors.reward = 'Reward must be less than or equal to 100000'
     }
 
-    newErrors.halfLifeSeconds = validatePositiveWholeNumber(halfLifeSeconds, 'Half life seconds')
+    const halfLifeError = validatePositiveWholeNumber(halfLifeSeconds, 'Half life seconds')
+    if (halfLifeError) {
+      newErrors.halfLifeSeconds = halfLifeError
+    }
 
     if (!quorumBps.trim()) {
       newErrors.quorumBps = 'Quorum is required'
@@ -153,15 +156,24 @@ export default function CreateOracleIntegrated() {
       newErrors.quorumBps = 'Quorum must be a whole number between 1 and 10000'
     }
 
-    newErrors.depositLock = validatePositiveWholeNumber(depositLock, 'Deposit lock period')
+    const depositLockError = validatePositiveWholeNumber(depositLock, 'Deposit lock period')
+    if (depositLockError) {
+      newErrors.depositLock = depositLockError
+    }
 
-    newErrors.withdrawLock = validatePositiveWholeNumber(withdrawLock, 'Withdrawal lock period')
+    const withdrawLockError = validatePositiveWholeNumber(withdrawLock, 'Withdrawal lock period')
+    if (withdrawLockError) {
+      newErrors.withdrawLock = withdrawLockError
+    }
 
     if (!newErrors.depositLock && !newErrors.withdrawLock && Number(withdrawLock) < Number(depositLock)) {
       newErrors.withdrawLock = 'Withdrawal lock period should be greater than or equal to deposit lock period'
     }
 
-    newErrors.alpha = validatePositiveWholeNumber(alpha, 'Alpha')
+    const alphaError = validatePositiveWholeNumber(alpha, 'Alpha')
+    if (alphaError) {
+      newErrors.alpha = alphaError
+    }
 
     return newErrors
   }, [alpha, depositLock, description, halfLifeSeconds, name, owner, quorumBps, reward, weightToken, withdrawLock])
