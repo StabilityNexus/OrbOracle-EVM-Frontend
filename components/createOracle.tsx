@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Loader2, ArrowRight, Info, Check, Copy } from 'lucide-react'
-import { toast } from '@/components/ui/use-toast'
+import { toast } from '@/hooks/use-toast'
 import Link from 'next/link'
 import { useState, useEffect, useMemo } from 'react'
 import { useAccount, useChainId, useConfig } from 'wagmi'
@@ -78,6 +78,7 @@ export default function CreateOracleIntegrated() {
   const [copied, setCopied] = useState(false)
   const [hasSubmitted, setHasSubmitted] = useState(false)
   const [touchedFields, setTouchedFields] = useState<Partial<Record<OracleField, boolean>>>({})
+  const [submissionError, setSubmissionError] = useState<string | null>(null)
 
   // Pre-fill owner with connected wallet address
   useEffect(() => {
@@ -244,6 +245,8 @@ export default function CreateOracleIntegrated() {
   }
 
   async function createOracle() {
+    setSubmissionError(null)
+
     if (!validateInputs()) {
       toast({
         title: 'Error',
@@ -317,9 +320,11 @@ export default function CreateOracleIntegrated() {
 
     } catch (err: unknown) {
       console.error(err)
+      const message = formatContractError(err, 'An unexpected error occurred while creating the oracle.')
+      setSubmissionError(message)
       toast({
         title: 'Oracle Creation Failed',
-        description: formatContractError(err, 'An unexpected error occurred while creating the oracle.'),
+        description: message,
         variant: 'destructive',
       })
     } finally {
