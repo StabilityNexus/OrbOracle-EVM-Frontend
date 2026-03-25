@@ -319,7 +319,6 @@ export default function CreateOracleIntegrated() {
       }, 5000) // Wait 5 seconds for transaction to be mined
 
     } catch (err: unknown) {
-      console.error(err)
       const message = formatContractError(err, 'An unexpected error occurred while creating the oracle.')
       setSubmissionError(message)
       toast({

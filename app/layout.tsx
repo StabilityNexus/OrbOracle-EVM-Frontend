@@ -7,6 +7,7 @@ import { Inter } from 'next/font/google'
 import { ThemeProvider } from '@/providers/ThemeProvider'
 import { WalletProvider } from '@/providers/WalletProvider'
 import ClientFooter from '@/components/ClientFooter'
+import { Toaster } from '@/components/ui/toaster'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -102,6 +103,7 @@ export default function RootLayout({
                 {children}
               </div>
               <ClientFooter />
+              <Toaster />
             </main>
           </ThemeProvider>
         </WalletProvider>
