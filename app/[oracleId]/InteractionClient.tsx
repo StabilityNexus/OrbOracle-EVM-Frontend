@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label"
 import { useOracle } from "@/hooks/useOracles"
 import { useToast } from "@/hooks/use-toast"
 import { OracleAbi } from "@/utils/abi/Oracle"
+import { formatContractError } from "@/utils/formatContractError"
 import {
   ArrowLeft,
   Clock,
@@ -592,7 +593,7 @@ export default function OracleInteractionPage() {
     if (contractError) {
       toast({
         title: "Transaction Failed",
-        description: contractError.message || "An error occurred during the transaction.",
+        description: formatContractError(contractError, "An error occurred during the transaction."),
         variant: "destructive",
       })
       setIsSubmitting(false)
@@ -651,12 +652,12 @@ export default function OracleInteractionPage() {
         title: "Transaction Submitted",
         description: "Your price submission is being processed...",
       })
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error submitting value:', err)
       setIsSubmitting(false)
       toast({
         title: "Submission Failed",
-        description: err?.message || "Failed to submit value. Please try again.",
+        description: formatContractError(err, "Failed to submit value. Please try again."),
         variant: "destructive",
       })
     }
@@ -694,12 +695,12 @@ export default function OracleInteractionPage() {
         title: "Approval Submitted",
         description: "Your token approval is being processed...",
       })
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('Error approving tokens:', err)
       setIsApproving(false)
       toast({
         title: "Approval Failed",
-        description: "Failed to approve tokens. Please try again.",
+        description: formatContractError(err, "Failed to approve tokens. Please try again."),
         variant: "destructive",
       })
     }
@@ -750,12 +751,12 @@ export default function OracleInteractionPage() {
         title: "Transaction Submitted",
         description: "Your token deposit is being processed...",
       })
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('Error depositing tokens:', err)
       setIsDepositing(false)
       toast({
         title: "Deposit Failed",
-        description: "Failed to deposit tokens. Please try again.",
+        description: formatContractError(err, "Failed to deposit tokens. Please try again."),
         variant: "destructive",
       })
     }
@@ -803,12 +804,12 @@ export default function OracleInteractionPage() {
         title: "Transaction Submitted",
         description: "Your token withdrawal is being processed...",
       })
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error withdrawing tokens:', err)
       setIsWithdrawing(false)
       toast({
         title: "Withdrawal Failed",
-        description: err?.message || "Failed to withdraw tokens. Please try again.",
+        description: formatContractError(err, "Failed to withdraw tokens. Please try again."),
         variant: "destructive",
       })
     }
@@ -854,12 +855,12 @@ export default function OracleInteractionPage() {
         title: "Transaction Submitted",
         description: "Your blacklist vote is being processed...",
       })
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error voting blacklist:', err)
       setIsVoting(false)
       toast({
         title: "Vote Failed",
-        description: err?.message || "Failed to submit blacklist vote. Please try again.",
+        description: formatContractError(err, "Failed to submit blacklist vote. Please try again."),
         variant: "destructive",
       })
     }
@@ -905,12 +906,12 @@ export default function OracleInteractionPage() {
         title: "Transaction Submitted",
         description: "Your whitelist vote is being processed...",
       })
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error voting whitelist:', err)
       setIsVoting(false)
       toast({
         title: "Vote Failed",
-        description: err?.message || "Failed to submit whitelist vote. Please try again.",
+        description: formatContractError(err, "Failed to submit whitelist vote. Please try again."),
         variant: "destructive",
       })
     }
@@ -945,12 +946,12 @@ export default function OracleInteractionPage() {
         title: "Transaction Submitted",
         description: "Your vote weights are being updated...",
       })
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error updating vote weights:', err)
       setIsUpdatingVoteWeights(false)
       toast({
         title: "Update Failed",
-        description: err?.message || "Failed to update vote weights. Please try again.",
+        description: formatContractError(err, "Failed to update vote weights. Please try again."),
         variant: "destructive",
       })
     }
@@ -1021,16 +1022,9 @@ export default function OracleInteractionPage() {
       })
     } catch (err: unknown) {
       console.error('Error reading aggregated value:', err)
-      const description =
-        err instanceof BaseError
-          ? err.shortMessage
-          : err instanceof Error
-            ? err.message
-            : "Failed to read aggregated value. Please try again."
-
       toast({
         title: "Read Failed",
-        description,
+        description: formatContractError(err, "Failed to read aggregated value. Please try again."),
         variant: "destructive",
       })
     } finally {
@@ -1056,16 +1050,9 @@ export default function OracleInteractionPage() {
       })
     } catch (err: unknown) {
       console.error('Error reading latest value:', err)
-      const description =
-        err instanceof BaseError
-          ? err.shortMessage
-          : err instanceof Error
-            ? err.message
-            : "Failed to read latest value. Please try again."
-
       toast({
         title: "Read Failed",
-        description,
+        description: formatContractError(err, "Failed to read latest value. Please try again."),
         variant: "destructive",
       })
     } finally {

@@ -15,6 +15,7 @@ import { OracleFactories, getOracleChainLabel, supportedOracleChainIds } from '@
 import { OracleFactoryAbi } from '@/utils/abi/OracleFactory'
 import TokenSelector from '@/components/TokenSelector'
 import { isAddress } from 'viem'
+import { formatContractError } from '@/utils/formatContractError'
 
 function isWholeNumber(value: string) {
   return /^\d+$/.test(value.trim())
@@ -280,11 +281,11 @@ export default function CreateOracleIntegrated() {
         }
       }, 5000) // Wait 5 seconds for transaction to be mined
 
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err)
       toast({
-        title: 'Error',
-        description: err.message || 'An unexpected error occurred while creating the oracle.',
+        title: 'Oracle Creation Failed',
+        description: formatContractError(err, 'An unexpected error occurred while creating the oracle.'),
         variant: 'destructive',
       })
     } finally {
