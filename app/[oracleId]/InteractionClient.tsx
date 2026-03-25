@@ -364,8 +364,6 @@ export default function OracleInteractionPage() {
     },
     [explorerBaseUrl]
   )
-  const oracleExplorerUrl = useMemo(() => getExplorerAddressUrl(oracle.address), [getExplorerAddressUrl, oracle.address])
-  const weightTokenExplorerUrl = useMemo(() => getExplorerAddressUrl(weightTokenAddressString), [getExplorerAddressUrl, weightTokenAddressString])
   const formatTokenAmount = useCallback(
     (value?: bigint | null, fractionDigits = 2) => {
       try {
@@ -561,6 +559,8 @@ export default function OracleInteractionPage() {
   }
 
   const { oracle, loading: oracleLoading, error: oracleError } = useOracle(oracleAddress, chainId)
+  const oracleExplorerUrl = useMemo(() => (oracle ? getExplorerAddressUrl(oracle.address) : null), [getExplorerAddressUrl, oracle])
+  const weightTokenExplorerUrl = useMemo(() => getExplorerAddressUrl(weightTokenAddressString), [getExplorerAddressUrl, weightTokenAddressString])
 
   // Handle transaction success
   useEffect(() => {
