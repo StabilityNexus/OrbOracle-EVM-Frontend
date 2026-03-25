@@ -14,7 +14,7 @@ import { writeContract, simulateContract, readContract } from '@wagmi/core'
 import { OracleFactories, getOracleChainLabel, supportedOracleChainIds } from '@/utils/addresses'
 import { OracleFactoryAbi } from '@/utils/abi/OracleFactory'
 import TokenSelector from '@/components/TokenSelector'
-import { isAddress } from 'viem'
+import { isAddress, zeroAddress } from 'viem'
 import { formatContractError } from '@/utils/formatContractError'
 
 function isWholeNumber(value: string) {
@@ -23,6 +23,19 @@ function isWholeNumber(value: string) {
 
 function toBigIntOrZero(value: string) {
   return isWholeNumber(value) ? BigInt(value) : BigInt(0)
+}
+
+function validatePositiveWholeNumber(value: string, fieldName: string) {
+  if (!value.trim()) {
+    return `${fieldName} is required`
+  }
+  if (!isWholeNumber(value)) {
+    return `${fieldName} must be a whole number`
+  }
+  if (Number(value) <= 0) {
+    return `${fieldName} must be greater than 0`
+  }
+  return undefined
 }
 
 export default function CreateOracleIntegrated() {
@@ -49,6 +62,7 @@ export default function CreateOracleIntegrated() {
   const [oracleAddress, setOracleAddress] = useState<string>('')
   const [showTooltip, setShowTooltip] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
+  const [hasSubmitted, setHasSubmitted] = useState(false)
 
   const [errors, setErrors] = useState<{
     name?: string
@@ -75,6 +89,7 @@ export default function CreateOracleIntegrated() {
     setSubmitted(false)
     setHashTx('')
     setOracleAddress('')
+    setHasSubmitted(false)
   }, [activeChainId])
 
   const factoryAddress = OracleFactories[activeChainId as keyof typeof OracleFactories]
@@ -108,25 +123,26 @@ export default function CreateOracleIntegrated() {
       newErrors.owner = 'Owner address is required'
     } else if (!isAddress(owner)) {
       newErrors.owner = 'Enter a valid EVM address'
+    } else if (owner.toLowerCase() === zeroAddress) {
+      newErrors.owner = 'Owner cannot be the zero address'
     }
 
     if (!weightToken.trim()) {
       newErrors.weightToken = 'Weight token address is required'
     } else if (!isAddress(weightToken)) {
       newErrors.weightToken = 'Enter a valid ERC20 token address'
+    } else if (weightToken.toLowerCase() === zeroAddress) {
+      newErrors.weightToken = 'Weight token cannot be the zero address'
     }
 
-    if (!reward.trim()) {
-      newErrors.reward = 'Reward is required'
-    } else if (!isWholeNumber(reward)) {
-      newErrors.reward = 'Reward must be a whole number'
+    const rewardError = validatePositiveWholeNumber(reward, 'Reward')
+    if (rewardError) {
+      newErrors.reward = rewardError
+    } else if (Number(reward) > 100000) {
+      newErrors.reward = 'Reward must be less than or equal to 100000'
     }
 
-    if (!halfLifeSeconds.trim()) {
-      newErrors.halfLifeSeconds = 'Half life seconds is required'
-    } else if (!isWholeNumber(halfLifeSeconds) || Number(halfLifeSeconds) <= 0) {
-      newErrors.halfLifeSeconds = 'Half life must be a positive whole number'
-    }
+    newErrors.halfLifeSeconds = validatePositiveWholeNumber(halfLifeSeconds, 'Half life seconds')
 
     if (!quorumBps.trim()) {
       newErrors.quorumBps = 'Quorum is required'
@@ -134,28 +150,27 @@ export default function CreateOracleIntegrated() {
       newErrors.quorumBps = 'Quorum must be a whole number between 1 and 10000'
     }
 
-    if (!depositLock.trim()) {
-      newErrors.depositLock = 'Deposit lock period is required'
-    } else if (!isWholeNumber(depositLock)) {
-      newErrors.depositLock = 'Deposit lock must be a whole number'
+    newErrors.depositLock = validatePositiveWholeNumber(depositLock, 'Deposit lock period')
+
+    newErrors.withdrawLock = validatePositiveWholeNumber(withdrawLock, 'Withdrawal lock period')
+
+    if (!newErrors.depositLock && !newErrors.withdrawLock && Number(withdrawLock) < Number(depositLock)) {
+      newErrors.withdrawLock = 'Withdrawal lock period should be greater than or equal to deposit lock period'
     }
 
-    if (!withdrawLock.trim()) {
-      newErrors.withdrawLock = 'Withdrawal lock period is required'
-    } else if (!isWholeNumber(withdrawLock)) {
-      newErrors.withdrawLock = 'Withdrawal lock must be a whole number'
-    }
-
-    if (!alpha.trim()) {
-      newErrors.alpha = 'Alpha is required'
-    } else if (!isWholeNumber(alpha)) {
-      newErrors.alpha = 'Alpha must be a whole number'
-    }
+    newErrors.alpha = validatePositiveWholeNumber(alpha, 'Alpha')
 
     return newErrors
   }, [alpha, depositLock, description, halfLifeSeconds, name, owner, quorumBps, reward, weightToken, withdrawLock])
 
+  useEffect(() => {
+    if (hasSubmitted) {
+      setErrors(validationErrors)
+    }
+  }, [hasSubmitted, validationErrors])
+
   const validateInputs = () => {
+    setHasSubmitted(true)
     setErrors(validationErrors)
     return Object.keys(validationErrors).length === 0
   }
@@ -172,6 +187,19 @@ export default function CreateOracleIntegrated() {
     }
     return null
   }, [account.address, isSupportedChain, supportedNetworksLabel, validationErrors])
+
+  const parameterChecks = useMemo(() => {
+    return [
+      { label: 'Owner address', error: validationErrors.owner },
+      { label: 'Weight token', error: validationErrors.weightToken },
+      { label: 'Reward', error: validationErrors.reward },
+      { label: 'Half life', error: validationErrors.halfLifeSeconds },
+      { label: 'Quorum', error: validationErrors.quorumBps },
+      { label: 'Deposit lock', error: validationErrors.depositLock },
+      { label: 'Withdrawal lock', error: validationErrors.withdrawLock },
+      { label: 'Alpha', error: validationErrors.alpha },
+    ]
+  }, [validationErrors])
 
   const onCopy = async (text: string) => {
     try {
@@ -709,6 +737,31 @@ export default function CreateOracleIntegrated() {
               />
               {errors.alpha && <p className="text-red-400 text-xs">{errors.alpha}</p>}
             </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-2 border-blue-200 bg-card shadow-sm max-w-4xl mx-auto">
+          <CardHeader className="border-b border-blue-100">
+            <CardTitle className="text-xl text-slate-100">
+              Parameter Checks
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="grid grid-cols-1 gap-3 pt-4 md:grid-cols-2">
+            {parameterChecks.map((check) => (
+              <div
+                key={check.label}
+                className={`rounded-xl border px-4 py-3 text-sm ${
+                  check.error
+                    ? 'border-red-500/50 bg-red-500/10 text-red-300'
+                    : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300'
+                }`}
+              >
+                <div className="font-medium">{check.label}</div>
+                <div className="mt-1 text-xs">
+                  {check.error ? check.error : 'Looks valid'}
+                </div>
+              </div>
+            ))}
           </CardContent>
         </Card>
 
