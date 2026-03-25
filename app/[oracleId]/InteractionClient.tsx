@@ -27,8 +27,9 @@ import {
   History,
   Database,
   CheckCircle,
+  ExternalLink,
 } from "lucide-react"
-import { useAccount, useWriteContract, useReadContract, useWaitForTransactionReceipt, usePublicClient } from "wagmi"
+import { useAccount, useWriteContract, useReadContract, useWaitForTransactionReceipt, usePublicClient, useChains } from "wagmi"
 import { parseUnits, formatUnits, erc20Abi, BaseError } from "viem"
 
 function isHexAddress(value: string | null): value is `0x${string}` {
@@ -73,6 +74,7 @@ export default function OracleInteractionPage() {
   const chainIdParam = search.get("chainId")
   const { toast } = useToast()
   const { address: userAddress, isConnected } = useAccount()
+  const chains = useChains()
 
   // Form states
   const [submitValue, setSubmitValue] = useState("")
@@ -156,6 +158,8 @@ export default function OracleInteractionPage() {
   const chainId = chainIdParam ? Number(chainIdParam) : undefined
   const chainIdValid = chainId !== undefined && Number.isFinite(chainId) && chainId > 0
   const publicClient = usePublicClient({ chainId })
+  const activeChain = useMemo(() => chains.find((chain) => chain.id === chainId), [chains, chainId])
+  const explorerBaseUrl = activeChain?.blockExplorers?.default?.url
 
   // Contract write hook
   const { writeContract, writeContractAsync, data: hash, error: contractError, isPending } = useWriteContract()
@@ -351,6 +355,17 @@ export default function OracleInteractionPage() {
     () => weightTokenAddressString.startsWith("0x") && weightTokenAddressString.length === 42,
     [weightTokenAddressString]
   )
+  const getExplorerAddressUrl = useCallback(
+    (address: string) => {
+      if (!explorerBaseUrl || !isHexAddress(address)) {
+        return null
+      }
+      return `${explorerBaseUrl}/address/${address}`
+    },
+    [explorerBaseUrl]
+  )
+  const oracleExplorerUrl = useMemo(() => getExplorerAddressUrl(oracle.address), [getExplorerAddressUrl, oracle.address])
+  const weightTokenExplorerUrl = useMemo(() => getExplorerAddressUrl(weightTokenAddressString), [getExplorerAddressUrl, weightTokenAddressString])
   const formatTokenAmount = useCallback(
     (value?: bigint | null, fractionDigits = 2) => {
       try {
@@ -1133,13 +1148,26 @@ export default function OracleInteractionPage() {
                 <code className="flex-1 text-xs sm:text-sm bg-card/60 border border-primary/30 px-3 py-2 rounded-lg text-primary font-mono break-all">
                   {oracle.address}
                 </code>
-                <button
-                  onClick={() => navigator.clipboard.writeText(oracle.address)}
-                  className="text-muted-foreground hover:text-primary transition-colors p-2 hover:bg-card/50 rounded-lg border border-transparent hover:border-primary/30"
-                  title="Copy oracle address"
-                >
-                  <Copy className="h-4 w-4" />
-                </button>
+                <div className="flex items-center gap-2">
+                  {oracleExplorerUrl && (
+                    <a
+                      href={oracleExplorerUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-muted-foreground hover:text-primary transition-colors p-2 hover:bg-card/50 rounded-lg border border-transparent hover:border-primary/30"
+                      title="Open oracle address in explorer"
+                    >
+                      <ExternalLink className="h-4 w-4" />
+                    </a>
+                  )}
+                  <button
+                    onClick={() => navigator.clipboard.writeText(oracle.address)}
+                    className="text-muted-foreground hover:text-primary transition-colors p-2 hover:bg-card/50 rounded-lg border border-transparent hover:border-primary/30"
+                    title="Copy oracle address"
+                  >
+                    <Copy className="h-4 w-4" />
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -1152,16 +1180,29 @@ export default function OracleInteractionPage() {
                 <code className="flex-1 text-xs sm:text-sm bg-card/60 border border-primary/30 px-3 py-2 rounded-lg text-primary font-mono break-all">
                   {weightTokenAddressString}
                 </code>
-                <button
-                  onClick={() =>
-                    canCopyWeightTokenAddress && navigator.clipboard.writeText(weightTokenAddressString)
-                  }
-                  disabled={!canCopyWeightTokenAddress}
-                  className="text-muted-foreground hover:text-primary transition-colors p-2 hover:bg-card/50 rounded-lg border border-transparent hover:border-primary/30 disabled:opacity-40 disabled:cursor-not-allowed"
-                  title="Copy weight token address"
-                >
-                  <Copy className="h-4 w-4" />
-                </button>
+                <div className="flex items-center gap-2">
+                  {weightTokenExplorerUrl && (
+                    <a
+                      href={weightTokenExplorerUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-muted-foreground hover:text-primary transition-colors p-2 hover:bg-card/50 rounded-lg border border-transparent hover:border-primary/30"
+                      title="Open weight token address in explorer"
+                    >
+                      <ExternalLink className="h-4 w-4" />
+                    </a>
+                  )}
+                  <button
+                    onClick={() =>
+                      canCopyWeightTokenAddress && navigator.clipboard.writeText(weightTokenAddressString)
+                    }
+                    disabled={!canCopyWeightTokenAddress}
+                    className="text-muted-foreground hover:text-primary transition-colors p-2 hover:bg-card/50 rounded-lg border border-transparent hover:border-primary/30 disabled:opacity-40 disabled:cursor-not-allowed"
+                    title="Copy weight token address"
+                  >
+                    <Copy className="h-4 w-4" />
+                  </button>
+                </div>
               </div>
             </div>
           </div>
