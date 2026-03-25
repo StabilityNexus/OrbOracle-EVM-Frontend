@@ -7,8 +7,8 @@ import { OracleCard } from "@/components/oracle-card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useOracles } from "@/hooks/useOracles"
-import { OracleFactories, getOracleChainLabel, supportedOracleChainIds } from "@/utils/addresses"
-import { useAccount, useChainId } from "wagmi"
+import { OracleFactories, supportedOracleChainIds } from "@/utils/addresses"
+import { useAccount, useChainId, useChains } from "wagmi"
 import { Search, Loader2, AlertTriangle, CheckCircle2 } from "lucide-react"
 
 export default function ExplorerPage() {
@@ -16,10 +16,11 @@ export default function ExplorerPage() {
   const { oracles, loading, error } = useOracles()
   const { isConnected } = useAccount()
   const chainId = useChainId()
-  const supportedChainLabel = getOracleChainLabel(chainId)
+  const chains = useChains()
+  const currentChainName = chains.find((chain) => chain.id === chainId)?.name ?? (chainId ? `Chain ${chainId}` : "Unknown chain")
   const isSupportedChain = Boolean(OracleFactories[chainId as keyof typeof OracleFactories])
   const supportedNetworksLabel = supportedOracleChainIds
-    .map((id) => getOracleChainLabel(id) ?? `Chain ${id}`)
+    .map((id) => chains.find((chain) => chain.id === id)?.name ?? `Chain ${id}`)
     .join(", ")
 
   const filteredOracles = useMemo(() => {
@@ -56,13 +57,8 @@ export default function ExplorerPage() {
                 )}
                 <div>
                   <div className="font-medium text-foreground">
-                    {isSupportedChain ? `Ready on ${supportedChainLabel}` : "Unsupported network for Orb Oracle"}
+                    {isSupportedChain ? `Connected to ${currentChainName}` : `Supports ${supportedNetworksLabel}`}
                   </div>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    {isSupportedChain
-                      ? "The connected network has an Orb Oracle factory configured, so deployed feeds can be discovered here."
-                      : `Switch to a supported network to load deployed oracles. Supported: ${supportedNetworksLabel}.`}
-                  </p>
                 </div>
               </div>
             </div>
@@ -72,11 +68,6 @@ export default function ExplorerPage() {
               <div className="font-medium text-foreground">
                 {isConnected ? "Wallet connected" : "Wallet not connected"}
               </div>
-              <p className="mt-1 text-sm text-muted-foreground">
-                {isConnected
-                  ? "You can browse available oracles and open their interaction dashboards."
-                  : "Connect a wallet to browse the correct network and create a new oracle if none are deployed yet."}
-              </p>
             </div>
           </div>
         </div>
