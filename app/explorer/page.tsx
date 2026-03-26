@@ -63,7 +63,7 @@ export default function ExplorerPage() {
               {error}
             </p>
             <p className="text-sm text-slate-400 mb-4">
-              Make sure you're connected to the correct network and the Oracle Factory is deployed.
+              Make sure you&apos;re connected to the correct network and the Oracle Factory is deployed.
             </p>
           </div>
         ) : filteredOracles.length > 0 ? (
