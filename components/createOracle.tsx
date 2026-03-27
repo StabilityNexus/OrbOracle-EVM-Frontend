@@ -41,7 +41,6 @@ function validatePositiveWholeNumber(value: string, fieldName: string) {
 type OracleField =
   | 'name'
   | 'description'
-  | 'owner'
   | 'weightToken'
   | 'reward'
   | 'halfLifeSeconds'
@@ -123,14 +122,6 @@ export default function CreateOracleIntegrated() {
     if (!name.trim()) newErrors.name = 'Oracle name is required'
     if (!description.trim()) newErrors.description = 'Description is required'
 
-    if (!owner.trim()) {
-      newErrors.owner = 'Owner address is required'
-    } else if (!isAddress(owner)) {
-      newErrors.owner = 'Enter a valid EVM address'
-    } else if (owner.toLowerCase() === zeroAddress) {
-      newErrors.owner = 'Owner cannot be the zero address'
-    }
-
     if (!weightToken.trim()) {
       newErrors.weightToken = 'Weight token address is required'
     } else if (!isAddress(weightToken)) {
@@ -188,6 +179,9 @@ export default function CreateOracleIntegrated() {
 
   const markTouched = (field: OracleField) => {
     setTouchedFields((current) => (current[field] ? current : { ...current, [field]: true }))
+    if (submissionError) {
+      setSubmissionError(null)
+    }
   }
 
   const validateInputs = () => {
@@ -307,6 +301,7 @@ export default function CreateOracleIntegrated() {
             setOracleAddress(latestOracle.oracle)
           }
 
+          setSubmissionError(null)
           setSubmitted(true)
           toast({
             title: 'Oracle Created',
@@ -505,7 +500,7 @@ export default function CreateOracleIntegrated() {
             <div className="space-y-1">
               <div className="flex items-center gap-2 mb-2">
                 <Label htmlFor="owner" className="text-slate-100 text-md">
-                  Owner Address *
+                  Creator Address
                 </Label>
                 <button
                   type="button"
@@ -517,22 +512,18 @@ export default function CreateOracleIntegrated() {
                 </button>
                 {showTooltip === 'owner' && (
                   <div className="absolute z-10 bg-slate-800 text-slate-100 text-xs p-2 rounded shadow-lg mt-6">
-                    Address that will own and control the oracle contract
+                    Derived from the connected wallet. The current factory uses msg.sender and does not accept a separate owner parameter.
                   </div>
                 )}
               </div>
               <Input
                 id="owner"
-                placeholder="0x..."
                 value={owner}
-                onChange={(e) => {
-                  setOwner(e.target.value)
-                  markTouched('owner')
-                }}
-                required
-                className={`border-0 bg-slate-800/50 text-slate-100 placeholder:text-slate-400 text-md border border-blue-100 ${getFieldError('owner') ? 'border-red-500' : ''}`}
+                readOnly
+                disabled
+                className="border-0 bg-slate-800/50 text-slate-400 text-md border border-blue-100"
               />
-              {getFieldError('owner') && <p className="text-red-400 text-xs">{getFieldError('owner')}</p>}
+              <p className="text-slate-400 text-xs">This value is derived from your connected wallet and shown for reference only.</p>
             </div>
             
             <div className="space-y-1">
@@ -782,6 +773,12 @@ export default function CreateOracleIntegrated() {
 
         <div className="justify-center flex  mx-auto">
           <div className="max-w-4xl text-center">
+            {submissionError && (
+              <div role="alert" className="mb-4 rounded-xl border border-red-500/40 bg-red-500/10 p-4 text-left">
+                <p className="font-medium text-red-300">Oracle Creation Failed</p>
+                <p className="mt-1 text-sm text-red-200">{submissionError}</p>
+              </div>
+            )}
             {createDisabledReason && (
               <p className="mb-3 text-sm text-slate-400">{createDisabledReason}</p>
             )}

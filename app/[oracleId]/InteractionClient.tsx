@@ -387,14 +387,14 @@ export default function OracleInteractionPage() {
     [userTokenBalance]
   )
 
-  const lockedTokensRaw = lockedTokensData ? BigInt(lockedTokensData as bigint) : BigInt(0)
-  const unlockedTokensRaw = unlockedTokensData ? BigInt(unlockedTokensData as bigint) : BigInt(0)
-  const totalDepositedTokensRaw = lockedTokensRaw + unlockedTokensRaw
-  const userTokenBalanceRaw = userTokenBalanceData ? BigInt(userTokenBalanceData as bigint) : BigInt(0)
+  const lockedTokensRaw = lockedTokensData === undefined || lockedTokensData === null ? null : BigInt(lockedTokensData as bigint)
+  const unlockedTokensRaw = unlockedTokensData === undefined || unlockedTokensData === null ? null : BigInt(unlockedTokensData as bigint)
+  const totalDepositedTokensRaw = (lockedTokensRaw ?? BigInt(0)) + (unlockedTokensRaw ?? BigInt(0))
+  const userTokenBalanceRaw = userTokenBalanceData === undefined || userTokenBalanceData === null ? null : BigInt(userTokenBalanceData as bigint)
 
-  const isTokenHolder = userTokenBalanceRaw > BigInt(0)
-  const isActiveOperator = totalDepositedTokensRaw > BigInt(0)
-  const hasUnlockedTokens = unlockedTokensRaw > BigInt(0)
+  const operatorBalanceKnown = lockedTokensRaw !== null && unlockedTokensRaw !== null
+  const isActiveOperator = operatorBalanceKnown && totalDepositedTokensRaw > BigInt(0)
+  const hasUnlockedTokens = unlockedTokensRaw !== null && unlockedTokensRaw > BigInt(0)
   const operatorActionsDisabled = isActiveOperator && !hasUnlockedTokens
   const actionInFlight =
     isPending ||
@@ -405,53 +405,63 @@ export default function OracleInteractionPage() {
     isVoting ||
     isApproving ||
     isUpdatingVoteWeights
-  const submitValueNumber = Number.parseFloat(submitValue)
-  const hasValidSubmitValue = submitValue.trim().length > 0 && Number.isFinite(submitValueNumber)
+  const submitValueRaw = useMemo(() => parseTokenAmount(submitValue, PRICE_DECIMALS), [submitValue])
+  const hasValidSubmitValue = submitValueRaw !== null
   const depositAmountRaw = useMemo(() => parseTokenAmount(depositAmount, weightTokenDecimals), [depositAmount, weightTokenDecimals])
   const withdrawAmountRaw = useMemo(() => parseTokenAmount(withdrawAmount, weightTokenDecimals), [withdrawAmount, weightTokenDecimals])
   const hasValidDepositAmount = depositAmountRaw !== null
   const hasValidWithdrawAmount = withdrawAmountRaw !== null
-  const hasEnoughWalletBalance = depositAmountRaw !== null && userTokenBalanceRaw >= depositAmountRaw
-  const hasEnoughUnlockedBalance = withdrawAmountRaw !== null && unlockedTokensRaw >= withdrawAmountRaw
-  const allowanceRaw = tokenAllowanceData ? BigInt(tokenAllowanceData as bigint) : BigInt(0)
-  const needsApproval = depositAmountRaw !== null && allowanceRaw < depositAmountRaw
+  const hasEnoughWalletBalance = depositAmountRaw !== null && userTokenBalanceRaw !== null ? userTokenBalanceRaw >= depositAmountRaw : null
+  const hasEnoughUnlockedBalance = withdrawAmountRaw !== null && unlockedTokensRaw !== null ? unlockedTokensRaw >= withdrawAmountRaw : null
+  const allowanceRaw = tokenAllowanceData === undefined || tokenAllowanceData === null ? null : BigInt(tokenAllowanceData as bigint)
+  const needsApproval = depositAmountRaw !== null && allowanceRaw !== null ? allowanceRaw < depositAmountRaw : null
   const hasValidVoteTarget = isHexAddress(voteTarget)
 
   const submitValueHint = !isConnected
     ? "Connect your wallet to submit a value."
-    : !isActiveOperator
-      ? `Deposit ${weightTokenSymbol} before submitting prices.`
-      : !hasValidSubmitValue && submitValue.trim().length > 0
-        ? "Enter a valid numeric price value."
-        : "Deposited operators can submit new values to the oracle."
+    : !operatorBalanceKnown
+      ? `Checking deposited ${weightTokenSymbol} balance...`
+      : !isActiveOperator
+        ? `Deposit ${weightTokenSymbol} before submitting prices.`
+        : !hasValidSubmitValue && submitValue.trim().length > 0
+          ? "Enter a valid numeric price value."
+          : "Deposited operators can submit new values to the oracle."
 
   const depositHint = !isConnected
     ? "Connect your wallet to approve and deposit tokens."
     : !hasValidDepositAmount && depositAmount.trim().length > 0
       ? "Enter a valid positive token amount."
-      : !hasEnoughWalletBalance && hasValidDepositAmount
-        ? `You do not have enough ${weightTokenSymbol} in your wallet for this deposit.`
-        : needsApproval
-          ? `Approval is required before depositing ${weightTokenSymbol}.`
-          : "Deposit weight tokens to activate operator actions."
+      : hasValidDepositAmount && userTokenBalanceRaw === null
+        ? `Checking ${weightTokenSymbol} wallet balance...`
+        : hasEnoughWalletBalance === false
+          ? `You do not have enough ${weightTokenSymbol} in your wallet for this deposit.`
+          : hasValidDepositAmount && needsApproval === null
+            ? `Checking ${weightTokenSymbol} allowance...`
+            : needsApproval
+              ? `Approval is required before depositing ${weightTokenSymbol}.`
+              : "Deposit weight tokens to activate operator actions."
 
   const withdrawHint = !isConnected
     ? "Connect your wallet to withdraw tokens."
-    : !hasUnlockedTokens
-      ? `No unlocked ${weightTokenSymbol} is currently available to withdraw.`
-      : !hasValidWithdrawAmount && withdrawAmount.trim().length > 0
-        ? "Enter a valid positive withdrawal amount."
-        : !hasEnoughUnlockedBalance && hasValidWithdrawAmount
-          ? "Withdrawal amount exceeds your unlocked balance."
-          : "Only unlocked deposited tokens can be withdrawn."
+    : unlockedTokensRaw === null
+      ? `Checking unlocked ${weightTokenSymbol} balance...`
+      : !hasUnlockedTokens
+        ? `No unlocked ${weightTokenSymbol} is currently available to withdraw.`
+        : !hasValidWithdrawAmount && withdrawAmount.trim().length > 0
+          ? "Enter a valid positive withdrawal amount."
+          : hasEnoughUnlockedBalance === false && hasValidWithdrawAmount
+            ? "Withdrawal amount exceeds your unlocked balance."
+            : "Only unlocked deposited tokens can be withdrawn."
 
   const governanceHint = !isConnected
     ? "Connect your wallet to vote or update vote weights."
-    : !isActiveOperator
-      ? `Deposit ${weightTokenSymbol} to enable governance actions.`
-      : !hasValidVoteTarget && voteTarget.trim().length > 0
-        ? "Enter a valid EVM address for the governance target."
-        : "Governance actions use your deposited token balance as voting weight."
+    : !operatorBalanceKnown
+      ? `Checking deposited ${weightTokenSymbol} balance...`
+      : !isActiveOperator
+        ? `Deposit ${weightTokenSymbol} to enable governance actions.`
+        : !hasValidVoteTarget && voteTarget.trim().length > 0
+          ? "Enter a valid EVM address for the governance target."
+          : "Governance actions use your deposited token balance as voting weight."
 
   // Update real-time data when contract data changes
   useEffect(() => {
@@ -635,7 +645,7 @@ export default function OracleInteractionPage() {
     if (!hasValidSubmitValue) {
       toast({
         title: "Invalid Value",
-        description: "Please enter a valid numeric value.",
+        description: "Please enter a valid numeric price value.",
         variant: "destructive",
       })
       return
@@ -643,24 +653,11 @@ export default function OracleInteractionPage() {
 
     try {
       setIsSubmitting(true)
-      // Convert to int256 - the value should be a scaled integer
-      // For example, if submitting 2500, multiply by 1e18 to get proper precision
-      const valueAsFloat = submitValueNumber
-      const valueAsInt = BigInt(Math.floor(valueAsFloat * 1e18))
-      
-      console.log('Submitting value:', {
-        original: submitValue,
-        asFloat: valueAsFloat,
-        asInt: valueAsInt.toString(),
-        oracleAddress: oracleAddress,
-        userAddress: userAddress
-      })
-      
       writeContract({
         address: oracleAddress!,
         abi: OracleAbi,
         functionName: 'submitValue',
-        args: [valueAsInt],
+        args: [submitValueRaw],
       })
 
       toast({
@@ -742,7 +739,16 @@ export default function OracleInteractionPage() {
 
     const amount = depositAmountRaw
     const allowance = allowanceRaw
-    
+
+    if (allowance === null) {
+      toast({
+        title: "Allowance Unavailable",
+        description: "Please wait for the token allowance check to finish and try again.",
+        variant: "destructive",
+      })
+      return
+    }
+
     if (allowance < amount) {
       toast({
         title: "Insufficient Allowance",
@@ -1156,14 +1162,17 @@ export default function OracleInteractionPage() {
                       rel="noreferrer"
                       className="text-muted-foreground hover:text-primary transition-colors p-2 hover:bg-card/50 rounded-lg border border-transparent hover:border-primary/30"
                       title="Open oracle address in explorer"
+                      aria-label="Open oracle address in explorer"
                     >
                       <ExternalLink className="h-4 w-4" />
                     </a>
                   )}
                   <button
+                    type="button"
                     onClick={() => navigator.clipboard.writeText(oracle.address)}
                     className="text-muted-foreground hover:text-primary transition-colors p-2 hover:bg-card/50 rounded-lg border border-transparent hover:border-primary/30"
                     title="Copy oracle address"
+                    aria-label="Copy oracle address"
                   >
                     <Copy className="h-4 w-4" />
                   </button>
@@ -1188,17 +1197,20 @@ export default function OracleInteractionPage() {
                       rel="noreferrer"
                       className="text-muted-foreground hover:text-primary transition-colors p-2 hover:bg-card/50 rounded-lg border border-transparent hover:border-primary/30"
                       title="Open weight token address in explorer"
+                      aria-label="Open weight token address in explorer"
                     >
                       <ExternalLink className="h-4 w-4" />
                     </a>
                   )}
                   <button
+                    type="button"
                     onClick={() =>
                       canCopyWeightTokenAddress && navigator.clipboard.writeText(weightTokenAddressString)
                     }
                     disabled={!canCopyWeightTokenAddress}
                     className="text-muted-foreground hover:text-primary transition-colors p-2 hover:bg-card/50 rounded-lg border border-transparent hover:border-primary/30 disabled:opacity-40 disabled:cursor-not-allowed"
                     title="Copy weight token address"
+                    aria-label="Copy weight token address"
                   >
                     <Copy className="h-4 w-4" />
                   </button>
