@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label"
 import { useOracle } from "@/hooks/useOracles"
 import { useToast } from "@/hooks/use-toast"
 import { OracleAbi } from "@/utils/abi/Oracle"
+import { formatContractError } from "@/utils/formatContractError"
 import {
   ArrowLeft,
   Clock,
@@ -26,8 +27,9 @@ import {
   History,
   Database,
   CheckCircle,
+  ExternalLink,
 } from "lucide-react"
-import { useAccount, useWriteContract, useReadContract, useWaitForTransactionReceipt, usePublicClient } from "wagmi"
+import { useAccount, useWriteContract, useReadContract, useWaitForTransactionReceipt, usePublicClient, useChains } from "wagmi"
 import { parseUnits, formatUnits, erc20Abi, BaseError } from "viem"
 
 function isHexAddress(value: string | null): value is `0x${string}` {
@@ -48,12 +50,31 @@ const formatPriceFromWei = (value: bigint) => {
   return numeric.toFixed(DISPLAY_PRECISION)
 }
 
+const parseTokenAmount = (value: string, decimals: number) => {
+  const trimmed = value.trim()
+  if (!trimmed) {
+    return null
+  }
+
+  const numeric = Number.parseFloat(trimmed)
+  if (!Number.isFinite(numeric) || numeric <= 0) {
+    return null
+  }
+
+  try {
+    return parseUnits(trimmed, decimals)
+  } catch {
+    return null
+  }
+}
+
 export default function OracleInteractionPage() {
   const search = useSearchParams()
   const oracleParam = search.get("oracle")
   const chainIdParam = search.get("chainId")
   const { toast } = useToast()
   const { address: userAddress, isConnected } = useAccount()
+  const chains = useChains()
 
   // Form states
   const [submitValue, setSubmitValue] = useState("")
@@ -137,6 +158,8 @@ export default function OracleInteractionPage() {
   const chainId = chainIdParam ? Number(chainIdParam) : undefined
   const chainIdValid = chainId !== undefined && Number.isFinite(chainId) && chainId > 0
   const publicClient = usePublicClient({ chainId })
+  const activeChain = useMemo(() => chains.find((chain) => chain.id === chainId), [chains, chainId])
+  const explorerBaseUrl = activeChain?.blockExplorers?.default?.url
 
   // Contract write hook
   const { writeContract, writeContractAsync, data: hash, error: contractError, isPending } = useWriteContract()
@@ -332,6 +355,15 @@ export default function OracleInteractionPage() {
     () => weightTokenAddressString.startsWith("0x") && weightTokenAddressString.length === 42,
     [weightTokenAddressString]
   )
+  const getExplorerAddressUrl = useCallback(
+    (address: string) => {
+      if (!explorerBaseUrl || !isHexAddress(address)) {
+        return null
+      }
+      return `${explorerBaseUrl}/address/${address}`
+    },
+    [explorerBaseUrl]
+  )
   const formatTokenAmount = useCallback(
     (value?: bigint | null, fractionDigits = 2) => {
       try {
@@ -355,15 +387,81 @@ export default function OracleInteractionPage() {
     [userTokenBalance]
   )
 
-  const lockedTokensRaw = lockedTokensData ? BigInt(lockedTokensData as bigint) : BigInt(0)
-  const unlockedTokensRaw = unlockedTokensData ? BigInt(unlockedTokensData as bigint) : BigInt(0)
-  const totalDepositedTokensRaw = lockedTokensRaw + unlockedTokensRaw
-  const userTokenBalanceRaw = userTokenBalanceData ? BigInt(userTokenBalanceData as bigint) : BigInt(0)
+  const lockedTokensRaw = lockedTokensData === undefined || lockedTokensData === null ? null : BigInt(lockedTokensData as bigint)
+  const unlockedTokensRaw = unlockedTokensData === undefined || unlockedTokensData === null ? null : BigInt(unlockedTokensData as bigint)
+  const totalDepositedTokensRaw = (lockedTokensRaw ?? BigInt(0)) + (unlockedTokensRaw ?? BigInt(0))
+  const userTokenBalanceRaw = userTokenBalanceData === undefined || userTokenBalanceData === null ? null : BigInt(userTokenBalanceData as bigint)
 
-  const isTokenHolder = userTokenBalanceRaw > BigInt(0)
-  const isActiveOperator = totalDepositedTokensRaw > BigInt(0)
-  const hasUnlockedTokens = unlockedTokensRaw > BigInt(0)
+  const operatorBalanceKnown = lockedTokensRaw !== null && unlockedTokensRaw !== null
+  const isActiveOperator = operatorBalanceKnown && totalDepositedTokensRaw > BigInt(0)
+  const hasUnlockedTokens = unlockedTokensRaw !== null && unlockedTokensRaw > BigInt(0)
   const operatorActionsDisabled = isActiveOperator && !hasUnlockedTokens
+  const actionInFlight =
+    isPending ||
+    isConfirming ||
+    isSubmitting ||
+    isDepositing ||
+    isWithdrawing ||
+    isVoting ||
+    isApproving ||
+    isUpdatingVoteWeights
+  const submitValueRaw = useMemo(() => parseTokenAmount(submitValue, PRICE_DECIMALS), [submitValue])
+  const hasValidSubmitValue = submitValueRaw !== null
+  const depositAmountRaw = useMemo(() => parseTokenAmount(depositAmount, weightTokenDecimals), [depositAmount, weightTokenDecimals])
+  const withdrawAmountRaw = useMemo(() => parseTokenAmount(withdrawAmount, weightTokenDecimals), [withdrawAmount, weightTokenDecimals])
+  const hasValidDepositAmount = depositAmountRaw !== null
+  const hasValidWithdrawAmount = withdrawAmountRaw !== null
+  const hasEnoughWalletBalance = depositAmountRaw !== null && userTokenBalanceRaw !== null ? userTokenBalanceRaw >= depositAmountRaw : null
+  const hasEnoughUnlockedBalance = withdrawAmountRaw !== null && unlockedTokensRaw !== null ? unlockedTokensRaw >= withdrawAmountRaw : null
+  const allowanceRaw = tokenAllowanceData === undefined || tokenAllowanceData === null ? null : BigInt(tokenAllowanceData as bigint)
+  const needsApproval = depositAmountRaw !== null && allowanceRaw !== null ? allowanceRaw < depositAmountRaw : null
+  const hasValidVoteTarget = isHexAddress(voteTarget)
+
+  const submitValueHint = !isConnected
+    ? "Connect your wallet to submit a value."
+    : !operatorBalanceKnown
+      ? `Checking deposited ${weightTokenSymbol} balance...`
+      : !isActiveOperator
+        ? `Deposit ${weightTokenSymbol} before submitting prices.`
+        : !hasValidSubmitValue && submitValue.trim().length > 0
+          ? "Enter a valid numeric price value."
+          : "Deposited operators can submit new values to the oracle."
+
+  const depositHint = !isConnected
+    ? "Connect your wallet to approve and deposit tokens."
+    : !hasValidDepositAmount && depositAmount.trim().length > 0
+      ? "Enter a valid positive token amount."
+      : hasValidDepositAmount && userTokenBalanceRaw === null
+        ? `Checking ${weightTokenSymbol} wallet balance...`
+        : hasEnoughWalletBalance === false
+          ? `You do not have enough ${weightTokenSymbol} in your wallet for this deposit.`
+          : hasValidDepositAmount && needsApproval === null
+            ? `Checking ${weightTokenSymbol} allowance...`
+            : needsApproval
+              ? `Approval is required before depositing ${weightTokenSymbol}.`
+              : "Deposit weight tokens to activate operator actions."
+
+  const withdrawHint = !isConnected
+    ? "Connect your wallet to withdraw tokens."
+    : unlockedTokensRaw === null
+      ? `Checking unlocked ${weightTokenSymbol} balance...`
+      : !hasUnlockedTokens
+        ? `No unlocked ${weightTokenSymbol} is currently available to withdraw.`
+        : !hasValidWithdrawAmount && withdrawAmount.trim().length > 0
+          ? "Enter a valid positive withdrawal amount."
+          : hasEnoughUnlockedBalance === false && hasValidWithdrawAmount
+            ? "Withdrawal amount exceeds your unlocked balance."
+            : "Only unlocked deposited tokens can be withdrawn."
+
+  const governanceHint = !isConnected
+    ? "Connect your wallet to vote or update vote weights."
+    : !operatorBalanceKnown
+      ? `Checking deposited ${weightTokenSymbol} balance...`
+      : !isActiveOperator
+        ? `Deposit ${weightTokenSymbol} to enable governance actions.`
+        : !hasValidVoteTarget && voteTarget.trim().length > 0
+          ? "Enter a valid EVM address for the governance target."
+          : "Governance actions use your deposited token balance as voting weight."
 
   // Update real-time data when contract data changes
   useEffect(() => {
@@ -471,6 +569,8 @@ export default function OracleInteractionPage() {
   }
 
   const { oracle, loading: oracleLoading, error: oracleError } = useOracle(oracleAddress, chainId)
+  const oracleExplorerUrl = useMemo(() => (oracle ? getExplorerAddressUrl(oracle.address) : null), [getExplorerAddressUrl, oracle])
+  const weightTokenExplorerUrl = useMemo(() => getExplorerAddressUrl(weightTokenAddressString), [getExplorerAddressUrl, weightTokenAddressString])
 
   // Handle transaction success
   useEffect(() => {
@@ -518,7 +618,7 @@ export default function OracleInteractionPage() {
     if (contractError) {
       toast({
         title: "Transaction Failed",
-        description: contractError.message || "An error occurred during the transaction.",
+        description: formatContractError(contractError, "An error occurred during the transaction."),
         variant: "destructive",
       })
       setIsSubmitting(false)
@@ -542,10 +642,10 @@ export default function OracleInteractionPage() {
       return
     }
 
-    if (!submitValue || isNaN(parseFloat(submitValue))) {
+    if (!hasValidSubmitValue) {
       toast({
         title: "Invalid Value",
-        description: "Please enter a valid numeric value.",
+        description: "Please enter a valid numeric price value.",
         variant: "destructive",
       })
       return
@@ -553,36 +653,23 @@ export default function OracleInteractionPage() {
 
     try {
       setIsSubmitting(true)
-      // Convert to int256 - the value should be a scaled integer
-      // For example, if submitting 2500, multiply by 1e18 to get proper precision
-      const valueAsFloat = parseFloat(submitValue)
-      const valueAsInt = BigInt(Math.floor(valueAsFloat * 1e18))
-      
-      console.log('Submitting value:', {
-        original: submitValue,
-        asFloat: valueAsFloat,
-        asInt: valueAsInt.toString(),
-        oracleAddress: oracleAddress,
-        userAddress: userAddress
-      })
-      
       writeContract({
         address: oracleAddress!,
         abi: OracleAbi,
         functionName: 'submitValue',
-        args: [valueAsInt],
+        args: [submitValueRaw],
       })
 
       toast({
         title: "Transaction Submitted",
         description: "Your price submission is being processed...",
       })
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error submitting value:', err)
       setIsSubmitting(false)
       toast({
         title: "Submission Failed",
-        description: err?.message || "Failed to submit value. Please try again.",
+        description: formatContractError(err, "Failed to submit value. Please try again."),
         variant: "destructive",
       })
     }
@@ -598,7 +685,7 @@ export default function OracleInteractionPage() {
       return
     }
 
-    if (!depositAmount || isNaN(parseFloat(depositAmount)) || parseFloat(depositAmount) <= 0) {
+    if (!depositAmountRaw) {
       toast({
         title: "Invalid Amount",
         description: "Please enter a valid amount to approve.",
@@ -609,25 +696,23 @@ export default function OracleInteractionPage() {
 
     try {
       setIsApproving(true)
-      const amount = parseUnits(depositAmount, weightTokenDecimals)
-      
       writeContract({
         address: weightTokenAddress as `0x${string}`,
         abi: erc20Abi,
         functionName: 'approve',
-        args: [oracleAddress!, amount],
+        args: [oracleAddress!, depositAmountRaw],
       })
 
       toast({
         title: "Approval Submitted",
         description: "Your token approval is being processed...",
       })
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('Error approving tokens:', err)
       setIsApproving(false)
       toast({
         title: "Approval Failed",
-        description: "Failed to approve tokens. Please try again.",
+        description: formatContractError(err, "Failed to approve tokens. Please try again."),
         variant: "destructive",
       })
     }
@@ -643,7 +728,7 @@ export default function OracleInteractionPage() {
       return
     }
 
-    if (!depositAmount || isNaN(parseFloat(depositAmount)) || parseFloat(depositAmount) <= 0) {
+    if (!depositAmountRaw) {
       toast({
         title: "Invalid Amount",
         description: "Please enter a valid amount to deposit.",
@@ -652,9 +737,18 @@ export default function OracleInteractionPage() {
       return
     }
 
-    const amount = parseUnits(depositAmount, weightTokenDecimals)
-    const allowance = tokenAllowanceData ? BigInt(tokenAllowanceData as bigint) : BigInt(0)
-    
+    const amount = depositAmountRaw
+    const allowance = allowanceRaw
+
+    if (allowance === null) {
+      toast({
+        title: "Allowance Unavailable",
+        description: "Please wait for the token allowance check to finish and try again.",
+        variant: "destructive",
+      })
+      return
+    }
+
     if (allowance < amount) {
       toast({
         title: "Insufficient Allowance",
@@ -678,12 +772,12 @@ export default function OracleInteractionPage() {
         title: "Transaction Submitted",
         description: "Your token deposit is being processed...",
       })
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('Error depositing tokens:', err)
       setIsDepositing(false)
       toast({
         title: "Deposit Failed",
-        description: "Failed to deposit tokens. Please try again.",
+        description: formatContractError(err, "Failed to deposit tokens. Please try again."),
         variant: "destructive",
       })
     }
@@ -699,7 +793,7 @@ export default function OracleInteractionPage() {
       return
     }
 
-    if (!withdrawAmount || isNaN(parseFloat(withdrawAmount)) || parseFloat(withdrawAmount) <= 0) {
+    if (!withdrawAmountRaw) {
       toast({
         title: "Invalid Amount",
         description: "Please enter a valid amount to withdraw.",
@@ -710,7 +804,7 @@ export default function OracleInteractionPage() {
 
     try {
       setIsWithdrawing(true)
-      const amount = parseUnits(withdrawAmount, weightTokenDecimals)
+      const amount = withdrawAmountRaw
       
       console.log('Withdrawing tokens:', {
         amount: amount.toString(),
@@ -731,12 +825,12 @@ export default function OracleInteractionPage() {
         title: "Transaction Submitted",
         description: "Your token withdrawal is being processed...",
       })
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error withdrawing tokens:', err)
       setIsWithdrawing(false)
       toast({
         title: "Withdrawal Failed",
-        description: err?.message || "Failed to withdraw tokens. Please try again.",
+        description: formatContractError(err, "Failed to withdraw tokens. Please try again."),
         variant: "destructive",
       })
     }
@@ -782,12 +876,12 @@ export default function OracleInteractionPage() {
         title: "Transaction Submitted",
         description: "Your blacklist vote is being processed...",
       })
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error voting blacklist:', err)
       setIsVoting(false)
       toast({
         title: "Vote Failed",
-        description: err?.message || "Failed to submit blacklist vote. Please try again.",
+        description: formatContractError(err, "Failed to submit blacklist vote. Please try again."),
         variant: "destructive",
       })
     }
@@ -833,12 +927,12 @@ export default function OracleInteractionPage() {
         title: "Transaction Submitted",
         description: "Your whitelist vote is being processed...",
       })
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error voting whitelist:', err)
       setIsVoting(false)
       toast({
         title: "Vote Failed",
-        description: err?.message || "Failed to submit whitelist vote. Please try again.",
+        description: formatContractError(err, "Failed to submit whitelist vote. Please try again."),
         variant: "destructive",
       })
     }
@@ -873,12 +967,12 @@ export default function OracleInteractionPage() {
         title: "Transaction Submitted",
         description: "Your vote weights are being updated...",
       })
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error updating vote weights:', err)
       setIsUpdatingVoteWeights(false)
       toast({
         title: "Update Failed",
-        description: err?.message || "Failed to update vote weights. Please try again.",
+        description: formatContractError(err, "Failed to update vote weights. Please try again."),
         variant: "destructive",
       })
     }
@@ -949,16 +1043,9 @@ export default function OracleInteractionPage() {
       })
     } catch (err: unknown) {
       console.error('Error reading aggregated value:', err)
-      const description =
-        err instanceof BaseError
-          ? err.shortMessage
-          : err instanceof Error
-            ? err.message
-            : "Failed to read aggregated value. Please try again."
-
       toast({
         title: "Read Failed",
-        description,
+        description: formatContractError(err, "Failed to read aggregated value. Please try again."),
         variant: "destructive",
       })
     } finally {
@@ -984,16 +1071,9 @@ export default function OracleInteractionPage() {
       })
     } catch (err: unknown) {
       console.error('Error reading latest value:', err)
-      const description =
-        err instanceof BaseError
-          ? err.shortMessage
-          : err instanceof Error
-            ? err.message
-            : "Failed to read latest value. Please try again."
-
       toast({
         title: "Read Failed",
-        description,
+        description: formatContractError(err, "Failed to read latest value. Please try again."),
         variant: "destructive",
       })
     } finally {
@@ -1074,13 +1154,29 @@ export default function OracleInteractionPage() {
                 <code className="flex-1 text-xs sm:text-sm bg-card/60 border border-primary/30 px-3 py-2 rounded-lg text-primary font-mono break-all">
                   {oracle.address}
                 </code>
-                <button
-                  onClick={() => navigator.clipboard.writeText(oracle.address)}
-                  className="text-muted-foreground hover:text-primary transition-colors p-2 hover:bg-card/50 rounded-lg border border-transparent hover:border-primary/30"
-                  title="Copy oracle address"
-                >
-                  <Copy className="h-4 w-4" />
-                </button>
+                <div className="flex items-center gap-2">
+                  {oracleExplorerUrl && (
+                    <a
+                      href={oracleExplorerUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-muted-foreground hover:text-primary transition-colors p-2 hover:bg-card/50 rounded-lg border border-transparent hover:border-primary/30"
+                      title="Open oracle address in explorer"
+                      aria-label="Open oracle address in explorer"
+                    >
+                      <ExternalLink className="h-4 w-4" />
+                    </a>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => navigator.clipboard.writeText(oracle.address)}
+                    className="text-muted-foreground hover:text-primary transition-colors p-2 hover:bg-card/50 rounded-lg border border-transparent hover:border-primary/30"
+                    title="Copy oracle address"
+                    aria-label="Copy oracle address"
+                  >
+                    <Copy className="h-4 w-4" />
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -1093,16 +1189,32 @@ export default function OracleInteractionPage() {
                 <code className="flex-1 text-xs sm:text-sm bg-card/60 border border-primary/30 px-3 py-2 rounded-lg text-primary font-mono break-all">
                   {weightTokenAddressString}
                 </code>
-                <button
-                  onClick={() =>
-                    canCopyWeightTokenAddress && navigator.clipboard.writeText(weightTokenAddressString)
-                  }
-                  disabled={!canCopyWeightTokenAddress}
-                  className="text-muted-foreground hover:text-primary transition-colors p-2 hover:bg-card/50 rounded-lg border border-transparent hover:border-primary/30 disabled:opacity-40 disabled:cursor-not-allowed"
-                  title="Copy weight token address"
-                >
-                  <Copy className="h-4 w-4" />
-                </button>
+                <div className="flex items-center gap-2">
+                  {weightTokenExplorerUrl && (
+                    <a
+                      href={weightTokenExplorerUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-muted-foreground hover:text-primary transition-colors p-2 hover:bg-card/50 rounded-lg border border-transparent hover:border-primary/30"
+                      title="Open weight token address in explorer"
+                      aria-label="Open weight token address in explorer"
+                    >
+                      <ExternalLink className="h-4 w-4" />
+                    </a>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() =>
+                      canCopyWeightTokenAddress && navigator.clipboard.writeText(weightTokenAddressString)
+                    }
+                    disabled={!canCopyWeightTokenAddress}
+                    className="text-muted-foreground hover:text-primary transition-colors p-2 hover:bg-card/50 rounded-lg border border-transparent hover:border-primary/30 disabled:opacity-40 disabled:cursor-not-allowed"
+                    title="Copy weight token address"
+                    aria-label="Copy weight token address"
+                  >
+                    <Copy className="h-4 w-4" />
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -1139,24 +1251,25 @@ export default function OracleInteractionPage() {
               <CardContent>
                 <div className="mb-4">
                   <Label htmlFor="submitValue" className="text-foreground font-medium mb-2">Price Value</Label>
-                <Input
-                  id="submitValue"
-                  type="number"
-                  placeholder="Enter price value (e.g., 2500)"
-                  value={submitValue}
-                  onChange={(e) => setSubmitValue(e.target.value)}
+                  <Input
+                    id="submitValue"
+                    type="number"
+                    placeholder="Enter price value (e.g., 2500)"
+                    value={submitValue}
+                    onChange={(e) => setSubmitValue(e.target.value)}
                     className="h-12 bg-card/50 border border-primary/30 rounded-xl font-light transition-all duration-300 focus:border-primary/50 focus:ring-2 focus:ring-primary/20 focus:bg-card/70"
-                />
-              </div>
-              <Button 
-                onClick={handleSubmitValue} 
-                disabled={isSubmitting || isPending || isConfirming || !submitValue || !isConnected}
-                className="w-full bg-primary hover:bg-primary/90 text-primary-foreground border-primary/50 h-12 rounded-xl transition-all duration-300"
-              >
-                {(isSubmitting || isPending || isConfirming) ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Send className="h-4 w-4 mr-2" />}
-                {isSubmitting || isPending ? "Submitting..." : isConfirming ? "Confirming..." : "Submit Value"}
-              </Button>
-            </CardContent>
+                  />
+                  <p className="mt-2 text-sm text-muted-foreground">{submitValueHint}</p>
+                </div>
+                <Button
+                  onClick={handleSubmitValue}
+                  disabled={!isConnected || !isActiveOperator || !hasValidSubmitValue || actionInFlight}
+                  className="w-full bg-primary hover:bg-primary/90 text-primary-foreground border-primary/50 h-12 rounded-xl transition-all duration-300"
+                >
+                  {(isSubmitting || isPending || isConfirming) ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Send className="h-4 w-4 mr-2" />}
+                  {isSubmitting || isPending ? "Submitting..." : isConfirming ? "Confirming..." : "Submit Value"}
+                </Button>
+              </CardContent>
           </Card>
 
             <Card className="border-border/50 bg-card/30 backdrop-blur-sm hover:bg-card/60 border-primary/20 hover:border-white transition-all duration-300 rounded-2xl">
@@ -1188,7 +1301,7 @@ export default function OracleInteractionPage() {
                       variant="outline"
                       className="h-8 px-3 text-xs border-primary/30 text-primary hover:bg-primary/10 hover:border-primary/50 transition-all duration-300"
                       onClick={handleReadLatestValue}
-                      disabled={isReadingLatestValue || isPending || isConfirming || !isConnected}
+                      disabled={isReadingLatestValue || isPending || isConfirming}
                     >
                       {isReadingLatestValue || isPending || isConfirming ? <Loader2 className="h-3 w-3 animate-spin" /> : "Read"}
                     </Button>
@@ -1205,7 +1318,7 @@ export default function OracleInteractionPage() {
                       variant="outline"
                       className="h-8 px-3 text-xs border-primary/30 text-primary hover:bg-primary/10 hover:border-primary/50 transition-all duration-300"
                       onClick={handleReadValue}
-                      disabled={isReadingValue || isPending || isConfirming || !isConnected}
+                      disabled={isReadingValue || isPending || isConfirming}
                     >
                       {isReadingValue || isPending || isConfirming ? <Loader2 className="h-3 w-3 animate-spin" /> : "Read"}
                     </Button>
@@ -1264,19 +1377,16 @@ export default function OracleInteractionPage() {
                     onChange={(e) => setDepositAmount(e.target.value)}
                     className="h-12 mb-4 bg-card/50 border border-primary/30 rounded-xl font-light transition-all duration-300 focus:border-primary/50 focus:ring-2 focus:ring-primary/20 focus:bg-card/70"
                   />
+                  <p className="text-sm text-muted-foreground">{depositHint}</p>
                 </div>
                 
                 {/* Conditional Buttons based on allowance */}
                 {(() => {
-                  const amount = depositAmount ? parseUnits(depositAmount, weightTokenDecimals) : BigInt(0)
-                  const allowance = tokenAllowanceData ? BigInt(tokenAllowanceData as bigint) : BigInt(0)
-                  const needsApproval = amount > allowance
-
                   if (needsApproval) {
                     return (
                       <Button 
                         onClick={handleApproveTokens} 
-                        disabled={isApproving || isPending || isConfirming || !depositAmount || !isConnected}
+                        disabled={!isConnected || !hasValidDepositAmount || !hasEnoughWalletBalance || actionInFlight}
                   className="w-full bg-primary hover:bg-primary/90 text-primary-foreground border-primary/50 h-12 rounded-xl transition-all duration-300"
 
                       >
@@ -1288,7 +1398,7 @@ export default function OracleInteractionPage() {
                     return (
                 <Button 
                   onClick={handleDepositTokens} 
-                        disabled={isDepositing || isPending || isConfirming || !depositAmount || !isConnected}
+                        disabled={!isConnected || !hasValidDepositAmount || !hasEnoughWalletBalance || needsApproval || actionInFlight}
                         className="w-full bg-primary hover:bg-primary/90 text-primary-foreground h-12 rounded-xl transition-all duration-300"
                 >
                         {(isDepositing || isPending || isConfirming) ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Wallet className="h-4 w-4 mr-2" />}
@@ -1337,10 +1447,11 @@ export default function OracleInteractionPage() {
                     onChange={(e) => setWithdrawAmount(e.target.value)}
                     className="h-12 mb-4 bg-card/50 border border-primary/30 rounded-xl font-light transition-all duration-300 focus:border-primary/50 focus:ring-2 focus:ring-primary/20 focus:bg-card/70"
                   />
+                  <p className="text-sm text-muted-foreground">{withdrawHint}</p>
                 </div>
                 <Button 
                   onClick={handleWithdrawTokens} 
-                  disabled={isWithdrawing || isPending || isConfirming || !withdrawAmount || !isConnected}
+                  disabled={!isConnected || !hasValidWithdrawAmount || !hasEnoughUnlockedBalance || operatorActionsDisabled || actionInFlight}
                   className="w-full bg-destructive hover:bg-destructive/90 text-destructive-foreground h-12 rounded-xl transition-all duration-300"
                 >
                   {(isWithdrawing || isPending || isConfirming) ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Wallet className="h-4 w-4 mr-2" />}
@@ -1372,11 +1483,12 @@ export default function OracleInteractionPage() {
                     onChange={(e) => setVoteTarget(e.target.value)}
                     className="h-12 mb-4 bg-card/50 border border-primary/30 rounded-xl font-light transition-all duration-300 focus:border-primary/50 focus:ring-2 focus:ring-primary/20 focus:bg-card/70"
                   />
+                  <p className="text-sm text-muted-foreground">{governanceHint}</p>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <Button 
                     onClick={handleVoteBlacklist} 
-                    disabled={isVoting || isPending || isConfirming || !voteTarget || !isConnected}
+                    disabled={!isConnected || !isActiveOperator || !hasValidVoteTarget || actionInFlight}
                     className="bg-destructive hover:bg-destructive/90 text-destructive-foreground h-12 rounded-xl transition-all duration-300"
                   >
                     {(isVoting || isPending || isConfirming) ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Shield className="h-4 w-4 mr-2" />}
@@ -1384,7 +1496,7 @@ export default function OracleInteractionPage() {
                   </Button>
                   <Button 
                     onClick={handleVoteWhitelist} 
-                    disabled={isVoting || isPending || isConfirming || !voteTarget || !isConnected}
+                    disabled={!isConnected || !isActiveOperator || !hasValidVoteTarget || actionInFlight}
                     className="bg-primary hover:bg-primary/90 text-primary-foreground h-12 rounded-xl transition-all duration-300"
                   >
                     {(isVoting || isPending || isConfirming) ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Shield className="h-4 w-4 mr-2" />}
@@ -1417,7 +1529,7 @@ export default function OracleInteractionPage() {
                 
                 <Button 
                   onClick={handleUpdateVoteWeights} 
-                  disabled={isUpdatingVoteWeights || isPending || isConfirming || !isConnected}
+                  disabled={!isConnected || !isActiveOperator || actionInFlight}
                   className="w-full bg-primary hover:bg-primary/90 text-primary-foreground border-primary/50 h-12 rounded-xl transition-all duration-300"
                 >
                   {(isUpdatingVoteWeights || isPending || isConfirming) ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Settings className="h-4 w-4 mr-2" />}

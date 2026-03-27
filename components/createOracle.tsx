@@ -6,14 +6,50 @@ import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Loader2, ArrowRight, Info, Check, Copy } from 'lucide-react'
-import { toast } from '@/components/ui/use-toast'
+import { toast } from '@/hooks/use-toast'
 import Link from 'next/link'
 import { useState, useEffect, useMemo } from 'react'
 import { useAccount, useChainId, useConfig } from 'wagmi'
 import { writeContract, simulateContract, readContract } from '@wagmi/core'
-import { OracleFactories } from '@/utils/addresses'
+import { OracleFactories, getOracleChainLabel, supportedOracleChainIds } from '@/utils/addresses'
 import { OracleFactoryAbi } from '@/utils/abi/OracleFactory'
 import TokenSelector from '@/components/TokenSelector'
+import { isAddress, zeroAddress } from 'viem'
+import { formatContractError } from '@/utils/formatContractError'
+
+function isWholeNumber(value: string) {
+  return /^\d+$/.test(value.trim())
+}
+
+function toBigIntOrZero(value: string) {
+  return isWholeNumber(value) ? BigInt(value) : BigInt(0)
+}
+
+function validatePositiveWholeNumber(value: string, fieldName: string) {
+  if (!value.trim()) {
+    return `${fieldName} is required`
+  }
+  if (!isWholeNumber(value)) {
+    return `${fieldName} must be a whole number`
+  }
+  if (Number(value) <= 0) {
+    return `${fieldName} must be greater than 0`
+  }
+  return undefined
+}
+
+type OracleField =
+  | 'name'
+  | 'description'
+  | 'weightToken'
+  | 'reward'
+  | 'halfLifeSeconds'
+  | 'quorumBps'
+  | 'depositLock'
+  | 'withdrawLock'
+  | 'alpha'
+
+type OracleFormErrors = Partial<Record<OracleField, string>>
 
 export default function CreateOracleIntegrated() {
   const account = useAccount()
@@ -39,19 +75,9 @@ export default function CreateOracleIntegrated() {
   const [oracleAddress, setOracleAddress] = useState<string>('')
   const [showTooltip, setShowTooltip] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
-
-  const [errors, setErrors] = useState<{
-    name?: string
-    description?: string
-    owner?: string
-    weightToken?: string
-    reward?: string
-    halfLifeSeconds?: string
-    quorumBps?: string
-    depositLock?: string
-    withdrawLock?: string
-    alpha?: string
-  }>({})
+  const [hasSubmitted, setHasSubmitted] = useState(false)
+  const [touchedFields, setTouchedFields] = useState<Partial<Record<OracleField, boolean>>>({})
+  const [submissionError, setSubmissionError] = useState<string | null>(null)
 
   // Pre-fill owner with connected wallet address
   useEffect(() => {
@@ -65,42 +91,116 @@ export default function CreateOracleIntegrated() {
     setSubmitted(false)
     setHashTx('')
     setOracleAddress('')
+    setHasSubmitted(false)
+    setTouchedFields({})
   }, [activeChainId])
+
+  const factoryAddress = OracleFactories[activeChainId as keyof typeof OracleFactories]
+  const supportedChainLabel = getOracleChainLabel(activeChainId)
+  const supportedNetworksLabel = supportedOracleChainIds
+    .map((id) => getOracleChainLabel(id) ?? `Chain ${id}`)
+    .join(', ')
+  const isSupportedChain = Boolean(factoryAddress && factoryAddress !== '0x0000000000000000000000000000000000000000')
 
   const constructorArgs = useMemo(() => {
     return [
-      name || "Unnamed Oracle",                                                    // name
-      description || "No description provided",                                   // description
+      name.trim() || "Unnamed Oracle",                                            // name
+      description.trim() || "No description provided",                            // description
       (weightToken || "0x0000000000000000000000000000000000000000") as `0x${string}`, // weightToken
-      BigInt(Number(reward || 0)),                                                // reward
-      BigInt(Number(halfLifeSeconds || 0)),                                       // halfLifeSeconds
-      BigInt(Number(quorumBps || 0)),                                             // quorum
-      BigInt(Number(depositLock || 0)),                                           // operationLockingPeriod
-      BigInt(Number(withdrawLock || 0)),                                          // withdrawalLockingPeriod
-      BigInt(alpha || "0"),                                                       // alpha
+      toBigIntOrZero(reward),                                                     // reward
+      toBigIntOrZero(halfLifeSeconds),                                            // halfLifeSeconds
+      toBigIntOrZero(quorumBps),                                                  // quorum
+      toBigIntOrZero(depositLock),                                                // operationLockingPeriod
+      toBigIntOrZero(withdrawLock),                                               // withdrawalLockingPeriod
+      toBigIntOrZero(alpha),                                                      // alpha
     ] as const
   }, [name, description, weightToken, reward, halfLifeSeconds, quorumBps, depositLock, withdrawLock, alpha])
 
-  const validateInputs = () => {
-    const newErrors: any = {}
+  const validationErrors = useMemo(() => {
+    const newErrors: OracleFormErrors = {}
 
-    if (!name) newErrors.name = 'Oracle name is required'
-    if (!description) newErrors.description = 'Description is required'
-    if (!owner) newErrors.owner = 'Owner address is required'
-    if (!weightToken) newErrors.weightToken = 'Weight token address is required'
-    if (!reward) newErrors.reward = 'Reward is required'
-    if (!halfLifeSeconds) newErrors.halfLifeSeconds = 'Half life seconds is required'
-    if (!quorumBps) newErrors.quorumBps = 'Quorum is required'
-    if (!depositLock) newErrors.depositLock = 'Deposit lock period is required'
-    if (!withdrawLock) newErrors.withdrawLock = 'Withdrawal lock period is required'
-    if (!alpha) newErrors.alpha = 'Alpha is required'
+    if (!name.trim()) newErrors.name = 'Oracle name is required'
+    if (!description.trim()) newErrors.description = 'Description is required'
 
-    if (Number(reward) < 0) newErrors.reward = 'Reward cannot be negative'
-    if (Number(quorumBps) < 0 || Number(quorumBps) > 10000) newErrors.quorumBps = 'Quorum must be between 0 and 10000'
+    if (!weightToken.trim()) {
+      newErrors.weightToken = 'Weight token address is required'
+    } else if (!isAddress(weightToken)) {
+      newErrors.weightToken = 'Enter a valid ERC20 token address'
+    } else if (weightToken.toLowerCase() === zeroAddress) {
+      newErrors.weightToken = 'Weight token cannot be the zero address'
+    }
 
-    setErrors(newErrors)
-    return Object.keys(newErrors).length === 0
+    const rewardError = validatePositiveWholeNumber(reward, 'Reward')
+    if (rewardError) {
+      newErrors.reward = rewardError
+    } else if (Number(reward) > 100000) {
+      newErrors.reward = 'Reward must be less than or equal to 100000'
+    }
+
+    const halfLifeError = validatePositiveWholeNumber(halfLifeSeconds, 'Half life seconds')
+    if (halfLifeError) {
+      newErrors.halfLifeSeconds = halfLifeError
+    }
+
+    if (!quorumBps.trim()) {
+      newErrors.quorumBps = 'Quorum is required'
+    } else if (!isWholeNumber(quorumBps) || Number(quorumBps) <= 0 || Number(quorumBps) > 10000) {
+      newErrors.quorumBps = 'Quorum must be a whole number between 1 and 10000'
+    }
+
+    const depositLockError = validatePositiveWholeNumber(depositLock, 'Deposit lock period')
+    if (depositLockError) {
+      newErrors.depositLock = depositLockError
+    }
+
+    const withdrawLockError = validatePositiveWholeNumber(withdrawLock, 'Withdrawal lock period')
+    if (withdrawLockError) {
+      newErrors.withdrawLock = withdrawLockError
+    }
+
+    if (!newErrors.depositLock && !newErrors.withdrawLock && Number(withdrawLock) < Number(depositLock)) {
+      newErrors.withdrawLock = 'Withdrawal lock period should be greater than or equal to deposit lock period'
+    }
+
+    const alphaError = validatePositiveWholeNumber(alpha, 'Alpha')
+    if (alphaError) {
+      newErrors.alpha = alphaError
+    }
+
+    return newErrors
+  }, [alpha, depositLock, description, halfLifeSeconds, name, owner, quorumBps, reward, weightToken, withdrawLock])
+
+  const getFieldError = (field: OracleField) => {
+    if (hasSubmitted || touchedFields[field]) {
+      return validationErrors[field]
+    }
+    return undefined
   }
+
+  const markTouched = (field: OracleField) => {
+    setTouchedFields((current) => (current[field] ? current : { ...current, [field]: true }))
+    if (submissionError) {
+      setSubmissionError(null)
+    }
+  }
+
+  const validateInputs = () => {
+    setHasSubmitted(true)
+    return Object.keys(validationErrors).length === 0
+  }
+
+  const createDisabledReason = useMemo(() => {
+    if (!account.address) {
+      return 'Connect a wallet to deploy a new oracle.'
+    }
+    if (!isSupportedChain) {
+      return `Switch to a supported network (${supportedNetworksLabel}) to create an oracle.`
+    }
+    if (Object.keys(validationErrors).length > 0) {
+      return 'Complete the required fields with valid values before submitting.'
+    }
+    return null
+  }, [account.address, isSupportedChain, supportedNetworksLabel, validationErrors])
 
   const onCopy = async (text: string) => {
     try {
@@ -139,6 +239,8 @@ export default function CreateOracleIntegrated() {
   }
 
   async function createOracle() {
+    setSubmissionError(null)
+
     if (!validateInputs()) {
       toast({
         title: 'Error',
@@ -159,7 +261,6 @@ export default function CreateOracleIntegrated() {
 
     try {
       setLoadingCreation(true)
-      const factoryAddress = OracleFactories[activeChainId as keyof typeof OracleFactories]
 
       if (!factoryAddress || factoryAddress === '0x0000000000000000000000000000000000000000') {
         throw new Error('Oracle Factory not deployed on this network')
@@ -200,6 +301,7 @@ export default function CreateOracleIntegrated() {
             setOracleAddress(latestOracle.oracle)
           }
 
+          setSubmissionError(null)
           setSubmitted(true)
           toast({
             title: 'Oracle Created',
@@ -211,11 +313,12 @@ export default function CreateOracleIntegrated() {
         }
       }, 5000) // Wait 5 seconds for transaction to be mined
 
-    } catch (err: any) {
-      console.error(err)
+    } catch (err: unknown) {
+      const message = formatContractError(err, 'An unexpected error occurred while creating the oracle.')
+      setSubmissionError(message)
       toast({
-        title: 'Error',
-        description: err.message || 'An unexpected error occurred while creating the oracle.',
+        title: 'Oracle Creation Failed',
+        description: message,
         variant: 'destructive',
       })
     } finally {
@@ -284,6 +387,38 @@ export default function CreateOracleIntegrated() {
         <Card className="border-2 border-blue-200 bg-card shadow-sm max-w-4xl mx-auto">
           <CardHeader className="border-b border-blue-100">
             <CardTitle className="text-slate-100 text-xl">
+              Deployment Status
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="grid grid-cols-1 gap-4 pt-4 md:grid-cols-2">
+            <div className="rounded-xl border border-blue-100 bg-slate-900/40 p-4">
+              <p className="text-xs uppercase tracking-wide text-slate-400">Network</p>
+              <p className="mt-2 text-base font-medium text-slate-100">
+                {isSupportedChain ? `Ready on ${supportedChainLabel}` : 'Unsupported network'}
+              </p>
+              <p className="mt-1 text-sm text-slate-400">
+                {isSupportedChain
+                  ? 'A factory contract is configured on this network.'
+                  : `Supported networks: ${supportedNetworksLabel}.`}
+              </p>
+            </div>
+            <div className="rounded-xl border border-blue-100 bg-slate-900/40 p-4">
+              <p className="text-xs uppercase tracking-wide text-slate-400">Wallet</p>
+              <p className="mt-2 text-base font-medium text-slate-100">
+                {account.address ? 'Connected and ready to sign' : 'Wallet not connected'}
+              </p>
+              <p className="mt-1 text-sm text-slate-400">
+                {account.address
+                  ? 'Review the parameters below and submit the deployment transaction.'
+                  : 'Connect your wallet before attempting to deploy an oracle.'}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-2 border-blue-200 bg-card shadow-sm max-w-4xl mx-auto">
+          <CardHeader className="border-b border-blue-100">
+            <CardTitle className="text-slate-100 text-xl">
               Oracle Metadata
             </CardTitle>
           </CardHeader>
@@ -307,15 +442,18 @@ export default function CreateOracleIntegrated() {
                   </div>
                 )}
               </div>
-              <Input
-                id="name"
-                placeholder="ETH/USD Oracle"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className={`border-0 bg-slate-800/50  text-slate-100 placeholder:text-slate-400 border border-blue-100 max-w-full ${errors.name ? 'border-red-500' : ''}`}
-                required
-              />
-              {errors.name && <p className="text-red-400 text-xs">{errors.name}</p>}
+                <Input
+                  id="name"
+                  placeholder="ETH/USD Oracle"
+                  value={name}
+                  onChange={(e) => {
+                    setName(e.target.value)
+                    markTouched('name')
+                  }}
+                  className={`border-0 bg-slate-800/50  text-slate-100 placeholder:text-slate-400 border border-blue-100 max-w-full ${getFieldError('name') ? 'border-red-500' : ''}`}
+                  required
+                />
+              {getFieldError('name') && <p className="text-red-400 text-xs">{getFieldError('name')}</p>}
             </div>
             <div className="space-y-1 col-span-2">
               <div className="flex items-center gap-2">
@@ -340,11 +478,14 @@ export default function CreateOracleIntegrated() {
                 id="description"
                 placeholder="Describe your oracle's purpose and data source"
                 value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                className={`border-0 bg-slate-800/50 text-slate-100 placeholder:text-slate-400 border border-blue-100 ${errors.description ? 'border-red-500' : ''}`}
+                onChange={(e) => {
+                  setDescription(e.target.value)
+                  markTouched('description')
+                }}
+                className={`border-0 bg-slate-800/50 text-slate-100 placeholder:text-slate-400 border border-blue-100 ${getFieldError('description') ? 'border-red-500' : ''}`}
                 required
               />
-              {errors.description && <p className="text-red-400 text-xs">{errors.description}</p>}
+              {getFieldError('description') && <p className="text-red-400 text-xs">{getFieldError('description')}</p>}
             </div>
           </CardContent>
         </Card>
@@ -359,7 +500,7 @@ export default function CreateOracleIntegrated() {
             <div className="space-y-1">
               <div className="flex items-center gap-2 mb-2">
                 <Label htmlFor="owner" className="text-slate-100 text-md">
-                  Owner Address *
+                  Creator Address
                 </Label>
                 <button
                   type="button"
@@ -371,19 +512,18 @@ export default function CreateOracleIntegrated() {
                 </button>
                 {showTooltip === 'owner' && (
                   <div className="absolute z-10 bg-slate-800 text-slate-100 text-xs p-2 rounded shadow-lg mt-6">
-                    Address that will own and control the oracle contract
+                    Derived from the connected wallet. The current factory uses msg.sender and does not accept a separate owner parameter.
                   </div>
                 )}
               </div>
               <Input
                 id="owner"
-                placeholder="0x..."
                 value={owner}
-                onChange={(e) => setOwner(e.target.value)}
-                required
-                className={`border-0 bg-slate-800/50 text-slate-100 placeholder:text-slate-400 text-md border border-blue-100 ${errors.owner ? 'border-red-500' : ''}`}
+                readOnly
+                disabled
+                className="border-0 bg-slate-800/50 text-slate-400 text-md border border-blue-100"
               />
-              {errors.owner && <p className="text-red-400 text-xs">{errors.owner}</p>}
+              <p className="text-slate-400 text-xs">This value is derived from your connected wallet and shown for reference only.</p>
             </div>
             
             <div className="space-y-1">
@@ -407,8 +547,11 @@ export default function CreateOracleIntegrated() {
               </div>
               <TokenSelector
                 value={weightToken}
-                onChange={(address) => setWeightToken(address)}
-                error={errors.weightToken}
+                onChange={(address) => {
+                  setWeightToken(address)
+                  markTouched('weightToken')
+                }}
+                error={getFieldError('weightToken')}
                 placeholder="0x..."
                 label=""
                 required={true}
@@ -440,11 +583,14 @@ export default function CreateOracleIntegrated() {
                 min={0}
                 placeholder="1000"
                 value={reward}
-                onChange={(e) => setReward(e.target.value)}
+                onChange={(e) => {
+                  setReward(e.target.value)
+                  markTouched('reward')
+                }}
                 required
-                className={`border-0 bg-slate-800/50 text-slate-100 placeholder:text-slate-400 text-md border border-blue-100 ${errors.reward ? 'border-red-500' : ''}`}
+                className={`border-0 bg-slate-800/50 text-slate-100 placeholder:text-slate-400 text-md border border-blue-100 ${getFieldError('reward') ? 'border-red-500' : ''}`}
               />
-              {errors.reward && <p className="text-red-400 text-xs">{errors.reward}</p>}
+              {getFieldError('reward') && <p className="text-red-400 text-xs">{getFieldError('reward')}</p>}
             </div>
 
             <div className="space-y-1">
@@ -472,11 +618,14 @@ export default function CreateOracleIntegrated() {
                 min={0}
                 placeholder="3600"
                 value={halfLifeSeconds}
-                onChange={(e) => setHalfLifeSeconds(e.target.value)}
+                onChange={(e) => {
+                  setHalfLifeSeconds(e.target.value)
+                  markTouched('halfLifeSeconds')
+                }}
                 required
-                className={`border-0 bg-slate-800/50 text-slate-100 placeholder:text-slate-400 text-md border border-blue-100 ${errors.halfLifeSeconds ? 'border-red-500' : ''}`}
+                className={`border-0 bg-slate-800/50 text-slate-100 placeholder:text-slate-400 text-md border border-blue-100 ${getFieldError('halfLifeSeconds') ? 'border-red-500' : ''}`}
               />
-              {errors.halfLifeSeconds && <p className="text-red-400 text-xs">{errors.halfLifeSeconds}</p>}
+              {getFieldError('halfLifeSeconds') && <p className="text-red-400 text-xs">{getFieldError('halfLifeSeconds')}</p>}
             </div>
 
             <div className="space-y-1">
@@ -505,11 +654,14 @@ export default function CreateOracleIntegrated() {
                 max={10000}
                 placeholder="2000"
                 value={quorumBps}
-                onChange={(e) => setQuorumBps(e.target.value)}
+                onChange={(e) => {
+                  setQuorumBps(e.target.value)
+                  markTouched('quorumBps')
+                }}
                 required
-                className={`border-0 bg-slate-800/50 text-slate-100 placeholder:text-slate-400 text-md border border-blue-100 ${errors.quorumBps ? 'border-red-500' : ''}`}
+                className={`border-0 bg-slate-800/50 text-slate-100 placeholder:text-slate-400 text-md border border-blue-100 ${getFieldError('quorumBps') ? 'border-red-500' : ''}`}
               />
-              {errors.quorumBps && <p className="text-red-400 text-xs">{errors.quorumBps}</p>}
+              {getFieldError('quorumBps') && <p className="text-red-400 text-xs">{getFieldError('quorumBps')}</p>}
             </div>
 
             <div className="space-y-1">
@@ -537,11 +689,14 @@ export default function CreateOracleIntegrated() {
                 min={0}
                 placeholder="3600"
                 value={depositLock}
-                onChange={(e) => setDepositLock(e.target.value)}
+                onChange={(e) => {
+                  setDepositLock(e.target.value)
+                  markTouched('depositLock')
+                }}
                 required
-                className={`border-0 bg-slate-800/50 text-slate-100 placeholder:text-slate-400 text-md border border-blue-100 ${errors.depositLock ? 'border-red-500' : ''}`}
+                className={`border-0 bg-slate-800/50 text-slate-100 placeholder:text-slate-400 text-md border border-blue-100 ${getFieldError('depositLock') ? 'border-red-500' : ''}`}
               />
-              {errors.depositLock && <p className="text-red-400 text-xs">{errors.depositLock}</p>}
+              {getFieldError('depositLock') && <p className="text-red-400 text-xs">{getFieldError('depositLock')}</p>}
             </div>
 
             <div className="space-y-1">
@@ -569,11 +724,14 @@ export default function CreateOracleIntegrated() {
                 min={0}
                 placeholder="3600"
                 value={withdrawLock}
-                onChange={(e) => setWithdrawLock(e.target.value)}
+                onChange={(e) => {
+                  setWithdrawLock(e.target.value)
+                  markTouched('withdrawLock')
+                }}
                 required
-                className={`border-0 bg-slate-800/50 text-slate-100 placeholder:text-slate-400 text-md border border-blue-100 ${errors.withdrawLock ? 'border-red-500' : ''}`}
+                className={`border-0 bg-slate-800/50 text-slate-100 placeholder:text-slate-400 text-md border border-blue-100 ${getFieldError('withdrawLock') ? 'border-red-500' : ''}`}
               />
-              {errors.withdrawLock && <p className="text-red-400 text-xs">{errors.withdrawLock}</p>}
+              {getFieldError('withdrawLock') && <p className="text-red-400 text-xs">{getFieldError('withdrawLock')}</p>}
             </div>
 
             <div className="space-y-1">
@@ -601,36 +759,52 @@ export default function CreateOracleIntegrated() {
                 min={0}
                 placeholder="1"
                 value={alpha}
-                onChange={(e) => setAlpha(e.target.value)}
+                onChange={(e) => {
+                  setAlpha(e.target.value)
+                  markTouched('alpha')
+                }}
                 required
-                className={`border-0 bg-slate-800/50 text-slate-100 placeholder:text-slate-400 text-md border border-blue-100 ${errors.alpha ? 'border-red-500' : ''}`}
+                className={`border-0 bg-slate-800/50 text-slate-100 placeholder:text-slate-400 text-md border border-blue-100 ${getFieldError('alpha') ? 'border-red-500' : ''}`}
               />
-              {errors.alpha && <p className="text-red-400 text-xs">{errors.alpha}</p>}
+              {getFieldError('alpha') && <p className="text-red-400 text-xs">{getFieldError('alpha')}</p>}
             </div>
           </CardContent>
         </Card>
 
         <div className="justify-center flex  mx-auto">
-          <Button
-            type="submit"
-            size="lg"
-            className="bg-black border border-white hover:bg-primary max-w-4xl mx-auto border-slate-400 text-white"
-            disabled={loadingCreation || !account.address}
-          >
-            {loadingCreation ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Creating Oracle...
-              </>
-            ) : !account.address ? (
-              'Connect Wallet to Create Oracle'
-            ) : (
-              <>
-                Create Oracle
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </>
+          <div className="max-w-4xl text-center">
+            {submissionError && (
+              <div role="alert" className="mb-4 rounded-xl border border-red-500/40 bg-red-500/10 p-4 text-left">
+                <p className="font-medium text-red-300">Oracle Creation Failed</p>
+                <p className="mt-1 text-sm text-red-200">{submissionError}</p>
+              </div>
             )}
-          </Button>
+            {createDisabledReason && (
+              <p className="mb-3 text-sm text-slate-400">{createDisabledReason}</p>
+            )}
+            <Button
+              type="submit"
+              size="lg"
+              className="bg-black border border-white hover:bg-primary max-w-4xl mx-auto border-slate-400 text-white"
+              disabled={loadingCreation || !!createDisabledReason}
+            >
+              {loadingCreation ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Creating Oracle...
+                </>
+              ) : !account.address ? (
+                'Connect Wallet to Create Oracle'
+              ) : !isSupportedChain ? (
+                'Switch Network to Create Oracle'
+              ) : (
+                <>
+                  Create Oracle
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </>
+              )}
+            </Button>
+          </div>
         </div>
       </form>
     </div>
