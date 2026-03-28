@@ -16,7 +16,7 @@ export const metadata: Metadata = {
   icons: {
     icon: '/stability.svg',
     shortcut: '/stability.svg',
-    apple: '/stability.svg',
+    apple: '/apple-touch-icon.png',
   },
   keywords: [
     'OrbOracle',
