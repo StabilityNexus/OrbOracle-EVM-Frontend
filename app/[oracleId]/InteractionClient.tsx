@@ -3,7 +3,6 @@
 import Link from "next/link"
 import { useSearchParams } from "next/navigation"
 import { useCallback, useEffect, useMemo, useState } from "react"
-import { Navigation } from "@/components/navigation"
 import { PriceChart, type PriceChartPoint } from "@/components/price-chart"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -445,7 +444,6 @@ export default function OracleInteractionPage() {
   if (!oracleAddress || !chainIdValid) {
     return (
       <div className="min-h-screen bg-background font-[oblique] tracking-wide" style={{ fontStyle: 'oblique 12deg' }}>
-        <Navigation />
         <div className="container mx-auto px-6 pt-24 pb-12">
           <div className="text-center py-20">
             <div className="text-red-400 mb-6">
@@ -1004,7 +1002,6 @@ export default function OracleInteractionPage() {
   if (oracleLoading) {
     return (
       <div className="min-h-screen bg-background font-[oblique] tracking-wide" style={{ fontStyle: 'oblique 12deg' }}>
-        <Navigation />
         <div className="container mx-auto px-6 pt-24 pb-12">
           <div className="text-center py-20">
             <Loader2 className="h-16 w-16 mx-auto mb-6 animate-spin text-primary" />
@@ -1018,7 +1015,6 @@ export default function OracleInteractionPage() {
   if (oracleError || !oracle) {
     return (
       <div className="min-h-screen bg-background font-[oblique] tracking-wide" style={{ fontStyle: 'oblique 12deg' }}>
-        <Navigation />
         <div className="container mx-auto px-6 pt-24 pb-12">
           <div className="text-center py-20">
             <div className="text-red-400 mb-6">
@@ -1039,8 +1035,6 @@ export default function OracleInteractionPage() {
 
   return (
     <div className="min-h-screen bg-background font-[oblique] tracking-wide" style={{ fontStyle: 'oblique 12deg' }}>
-      <Navigation />
-
       <div className="container mx-auto px-6 pt-24 pb-12">
         {/* Header */}
         <div className="mb-12 text-center max-w-6xl mx-auto">

@@ -1,0 +1,24 @@
+type: fix: resolve wagmi network sync and harden oracle components
+
+### 1. Problem
+- The application suffered from severe network connection desyncs because `useNetworkGuard.ts` overwrote Wagmi's internal state mappings directly with React state bindings (`eventChain`) and invalidated `wallet_switchEthereumChain` RPC calls by injecting legacy `addEthereumChainParameter` fields.
+- Missing error boundaries caused the explorer page to crash entirely on failed API logic.
+- `createOracle.tsx` was bloated, lacking proper form validation, and included broken Tooltips implementations.
+- No developer pre-commit hook workflows existed to prevent malformed code pushing.
+
+### 2. Current Behavior
+- **Reproduction:** If a user clicks to switch the chain on `ConnectBtn.tsx`, Wagmi transitions state but MetaMask never receives the popup, leading to a silent UI/Provider mismatch.
+- **Evidence:** Console logs reported `Chain Switched` internally, but no modal opened. Missing validation caused transaction reverts on-chain for the Oracle factory.
+
+### 3. Proposed Solution
+- Rewrote `hooks/useNetworkGuard.ts` to strictly observe Wagmi's built-in `useSwitchChain` and `useAccount` states, dropping all manual EIP-1193 listener overrides.
+- Implemented `react-hook-form` coupled with `zod` schema validation for `createOracle.tsx`.
+- Refactored `createOracle.tsx` into modular Form components to reduce bundle bloat.
+- Introduced `Husky` and `lint-staged` pre-commit workflows.
+- Implemented robust generic `ErrorBoundary` wrappers.
+
+### 4. Acceptance Criteria
+- [x] Network switching consistently triggers MetaMask modals.
+- [x] No behavioral regressions in Wagmi provider connectivity.
+- [x] All form inputs strictly validate before simulating the smart contract logic.
+- [x] Verified locally via `npm run build` and `tsc`.

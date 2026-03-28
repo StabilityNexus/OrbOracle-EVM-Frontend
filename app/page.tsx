@@ -1,17 +1,12 @@
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Navigation } from "@/components/navigation"
 import { ArrowRight, Database, Shield, Zap } from "lucide-react"
 import Orb from "@/components/Orb"
 
 export default function HomePage() {
   return (
     <div className="min-h-screen bg-background font-[oblique] tracking-wide" style={{ fontStyle: 'oblique 12deg' }}>
-      {/* <SplashCursor /> */}
-      <Navigation />
-
-      {/* Hero Section */}
       <section className="relative h-screen flex items-center justify-center overflow-hidden">
         <div className="absolute inset-0 z-0">
           <div style={{ 
@@ -59,7 +54,6 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Features Section */}
       <section className="h-screen flex items-center justify-center">
         <div className="container mx-auto px-4">
           <div className="text-center mb-12 sm:mb-16 px-4">
@@ -109,7 +103,6 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Stats Section */}
       <section className="h-screen flex items-center justify-center">
         <div className="container mx-auto px-4">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-8 text-center px-4">
@@ -133,7 +126,6 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* CTA Section */}
       <section className="h-screen flex items-center justify-center">
         <div className="container mx-auto px-4 text-center">
           <div className="max-w-2xl mx-auto px-4">

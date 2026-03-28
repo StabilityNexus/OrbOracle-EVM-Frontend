@@ -1,12 +1,13 @@
 
 
-import '@rainbow-me/rainbowkit/styles.css'
 import './globals.css'
 import { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import { ThemeProvider } from '@/providers/ThemeProvider'
 import { WalletProvider } from '@/providers/WalletProvider'
 import ClientFooter from '@/components/ClientFooter'
+import { KYAModalProvider } from '@/context/KYAModalContext'
+import { Navigation } from '@/components/navigation'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -97,12 +98,15 @@ export default function RootLayout({
             enableSystem
             disableTransitionOnChange
           >
-            <main className="min-h-screen flex flex-col">
-              <div className="flex-grow">
-                {children}
-              </div>
-              <ClientFooter />
-            </main>
+            <KYAModalProvider>
+              <Navigation />
+              <main className="min-h-screen flex flex-col">
+                <div className="flex-grow">
+                  {children}
+                </div>
+                <ClientFooter />
+              </main>
+            </KYAModalProvider>
           </ThemeProvider>
         </WalletProvider>
       </body>
