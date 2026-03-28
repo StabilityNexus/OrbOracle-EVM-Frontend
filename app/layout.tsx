@@ -13,6 +13,11 @@ const inter = Inter({ subsets: ['latin'] })
 export const metadata: Metadata = {
   title: 'OrbOracle | Decentralized Oracle Network for DeFi',
   description: 'OrbOracle is a decentralized oracle network providing reliable price feeds and data for DeFi applications. Create custom oracles, manage voting weights, and access real-time blockchain data across multiple networks.',
+  icons: {
+    icon: '/stability.svg',
+    shortcut: '/stability.svg',
+    apple: '/stability.svg',
+  },
   keywords: [
     'OrbOracle',
     'decentralized oracle',
@@ -88,7 +93,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang='en'>
+    <html lang='en' suppressHydrationWarning>
       <body className={inter.className}>
         <WalletProvider>
           <ThemeProvider
