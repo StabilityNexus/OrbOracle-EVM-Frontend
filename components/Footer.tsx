@@ -1,13 +1,14 @@
 "use client";
 
 import Image from "next/image";
+import { useKYAModal } from "@/context/KYAModalContext";
 
 interface FooterProps {
-  onKyaClick: () => void;
   onShareClick?: () => void;
 }
 
-export default function Footer({ onKyaClick, onShareClick }: FooterProps) {
+export default function Footer({ onShareClick }: FooterProps) {
+  const { open } = useKYAModal();
   const currentYear = new Date().getFullYear();
 
   return (
@@ -140,7 +141,9 @@ export default function Footer({ onKyaClick, onShareClick }: FooterProps) {
 
             {/* KYA Button */}
             <button
-              onClick={onKyaClick}
+              type="button"
+              onClick={open}
+              aria-haspopup="dialog"
               className="text-slate-300 hover:text-white transition-colors text-base font-medium ml-3"
             >
               KYA

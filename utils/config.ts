@@ -1,3 +1,4 @@
+import { http, createConfig, createStorage } from 'wagmi'
 import {
   base,
   bsc,
@@ -5,18 +6,25 @@ import {
   polygon,
   scrollSepolia
 } from 'wagmi/chains'
-import {
-  getDefaultConfig
-} from '@rainbow-me/rainbowkit'
+import { injected, safe } from 'wagmi/connectors'
 
-export const config = getDefaultConfig({
-  appName: 'OrbOracle',
-  projectId: process.env.NEXT_PUBLIC_PROJECT_ID ?? '8dd54aacfe3cf3db6f8040d9e9a901e4',
+export const config = createConfig({
   chains: [
     mainnet,
     base,
     scrollSepolia,
     bsc,
   ],
+  connectors: [injected(), safe()],
+  storage: createStorage({
+    storage: typeof window !== 'undefined' ? window.sessionStorage : undefined,
+  }),
+  multiInjectedProviderDiscovery: true,
+  transports: {
+    [mainnet.id]: http(),
+    [base.id]: http(),
+    [scrollSepolia.id]: http(),
+    [bsc.id]: http(),
+  },
   ssr: true,
 })

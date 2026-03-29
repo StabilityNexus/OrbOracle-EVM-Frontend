@@ -1,8 +1,8 @@
 "use client"
 
 import { usePathname } from "next/navigation"
-import { ConnectButton } from "@rainbow-me/rainbowkit"
 import PillNav from "./PillNav"
+import ConnectBtn from "./ConnectBtn"
 
 export function Navigation() {
   const pathname = usePathname()
@@ -33,7 +33,7 @@ export function Navigation() {
       
       {/* Connect button on the right */}
       <div className="fixed top-4 right-6 z-50">
-        <ConnectButton />
+        <ConnectBtn />
       </div>
     </>
   )

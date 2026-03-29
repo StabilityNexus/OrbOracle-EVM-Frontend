@@ -1,9 +1,8 @@
-import { notFound } from 'next/navigation'
-import InteractionClient from './InteractionClient'
-import { Suspense } from 'react'
+import InteractionClient from "./InteractionClient";
+import { Suspense } from "react";
 
 export async function generateStaticParams() {
-  return [{ oracleId: 'o' }]
+  return [{ oracleId: "o" }];
 }
 
 export default function OraclePage() {
@@ -11,5 +10,5 @@ export default function OraclePage() {
     <Suspense>
       <InteractionClient />
     </Suspense>
-  )
+  );
 }

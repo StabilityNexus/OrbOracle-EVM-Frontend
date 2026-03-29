@@ -27,8 +27,6 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({
   onChange,
   error,
   placeholder = "Enter ERC20 token address or select from list",
-  label = "Token Address",
-  required = false,
 }) => {
   const chainId = useChainId();
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -44,7 +42,7 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({
       setManualAddress(value);
       // Check if value matches any token in the list
       const matchingToken = tokens.find(
-        (token) => token.contract_address.toLowerCase() === value.toLowerCase()
+        (token) => token.contract_address.toLowerCase() === value.toLowerCase(),
       );
       if (!matchingToken) {
         setIsManualInput(true);
@@ -94,7 +92,7 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({
       (token) =>
         token.name.toLowerCase().includes(query) ||
         token.symbol.toLowerCase().includes(query) ||
-        token.contract_address.toLowerCase().includes(query)
+        token.contract_address.toLowerCase().includes(query),
     );
   }, [tokens, searchQuery]);
 
@@ -125,7 +123,7 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({
   const selectedToken = useMemo(() => {
     if (!value || isManualInput) return null;
     return tokens.find(
-      (token) => token.contract_address.toLowerCase() === value.toLowerCase()
+      (token) => token.contract_address.toLowerCase() === value.toLowerCase(),
     );
   }, [value, tokens, isManualInput]);
 
@@ -141,6 +139,7 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({
                 error ? "border-red-500" : ""
               }`}
             >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={selectedToken.image || "/stability.svg"}
                 alt={selectedToken.symbol}
@@ -176,9 +175,7 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({
         </button>
       </div>
 
-      {error && (
-        <p className="text-red-400 text-xs">{error}</p>
-      )}
+      {error && <p className="text-red-400 text-xs">{error}</p>}
 
       {/* Token Selection Modal */}
       {isModalOpen && (
@@ -248,6 +245,7 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({
                       onClick={() => handleTokenSelect(token)}
                       className="w-full flex items-center gap-3 p-3 rounded-md hover:bg-slate-800/50 transition-colors text-left border border-transparent hover:border-blue-100"
                     >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={token.image || "/stability.svg"}
                         alt={token.symbol}
@@ -296,4 +294,3 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({
 };
 
 export default TokenSelector;
-
