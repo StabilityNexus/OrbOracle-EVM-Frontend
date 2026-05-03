@@ -556,7 +556,7 @@ export default function OracleInteractionPage() {
       // Convert to int256 - the value should be a scaled integer
       // For example, if submitting 2500, multiply by 1e8 to get proper precision
       const valueAsFloat = parseFloat(submitValue)
-      const valueAsInt = BigInt(Math.floor(valueAsFloat * 1e8))
+      const valueAsInt = BigInt(Math.floor(valueAsFloat * (10**PRICE_DECIMALS)))
       
       console.log('Submitting value:', {
         original: submitValue,
