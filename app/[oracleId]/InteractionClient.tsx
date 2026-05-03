@@ -36,7 +36,7 @@ function isHexAddress(value: string | null): value is `0x${string}` {
 
 type PriceHistoryResult = readonly [readonly bigint[], readonly bigint[], readonly bigint[]]
 
-const PRICE_DECIMALS = 18
+const PRICE_DECIMALS = 8
 const DISPLAY_PRECISION = 6
 const MAX_PRICE_POINTS = 20
 
@@ -554,9 +554,9 @@ export default function OracleInteractionPage() {
     try {
       setIsSubmitting(true)
       // Convert to int256 - the value should be a scaled integer
-      // For example, if submitting 2500, multiply by 1e18 to get proper precision
+      // For example, if submitting 2500, multiply by 1e8 to get proper precision
       const valueAsFloat = parseFloat(submitValue)
-      const valueAsInt = BigInt(Math.floor(valueAsFloat * 1e18))
+      const valueAsInt = BigInt(Math.floor(valueAsFloat * (10**PRICE_DECIMALS)))
       
       console.log('Submitting value:', {
         original: submitValue,
