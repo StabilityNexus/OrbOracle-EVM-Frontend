@@ -1,6 +1,7 @@
 import {
   base,
   bsc,
+  classic,
   mainnet,
   polygon,
   scrollSepolia
@@ -14,6 +15,7 @@ export const config = getDefaultConfig({
   projectId: process.env.NEXT_PUBLIC_PROJECT_ID ?? '8dd54aacfe3cf3db6f8040d9e9a901e4',
   chains: [
     mainnet,
+    classic,
     base,
     scrollSepolia,
     bsc,

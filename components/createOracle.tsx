@@ -72,12 +72,12 @@ export default function CreateOracleIntegrated() {
       name || "Unnamed Oracle",                                                    // name
       description || "No description provided",                                   // description
       (weightToken || "0x0000000000000000000000000000000000000000") as `0x${string}`, // weightToken
-      BigInt(Number(reward || 0)),                                                // reward
       BigInt(Number(halfLifeSeconds || 0)),                                       // halfLifeSeconds
-      BigInt(Number(quorumBps || 0)),                                             // quorum
-      BigInt(Number(depositLock || 0)),                                           // operationLockingPeriod
+      BigInt(Number(quorumBps || 0)),                                             // q
+      BigInt(Number(depositLock || 0)),                                           // depositLockingPeriod
       BigInt(Number(withdrawLock || 0)),                                          // withdrawalLockingPeriod
-      BigInt(alpha || "0"),                                                       // alpha
+      BigInt(Number(reward || 0)),                                                // rewardBps
+      BigInt(alpha || "0"),                                                       // gamma
     ] as const
   }, [name, description, weightToken, reward, halfLifeSeconds, quorumBps, depositLock, withdrawLock, alpha])
 

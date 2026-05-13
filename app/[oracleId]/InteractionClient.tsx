@@ -213,7 +213,7 @@ export default function OracleInteractionPage() {
   const { data: rewardData } = useReadContract({
     address: oracleAddress || undefined,
     abi: OracleAbi,
-    functionName: 'REWARD',
+    functionName: 'REWARD_BPS',
     query: { enabled: !!oracleAddress }
   })
 
@@ -227,14 +227,14 @@ export default function OracleInteractionPage() {
   const { data: quorumData } = useReadContract({
     address: oracleAddress || undefined,
     abi: OracleAbi,
-    functionName: 'QUORUM',
+    functionName: 'Q',
     query: { enabled: !!oracleAddress }
   })
 
   const { data: operationLockingPeriodData } = useReadContract({
     address: oracleAddress || undefined,
     abi: OracleAbi,
-    functionName: 'OPERATION_LOCKING_PERIOD',
+    functionName: 'DEPOSIT_LOCKING_PERIOD',
     query: { enabled: !!oracleAddress }
   })
 
@@ -248,7 +248,7 @@ export default function OracleInteractionPage() {
   const { data: alphaData } = useReadContract({
     address: oracleAddress || undefined,
     abi: OracleAbi,
-    functionName: 'ALPHA',
+    functionName: 'GAMMA',
     query: { enabled: !!oracleAddress }
   })
 
