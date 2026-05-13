@@ -32,12 +32,12 @@ const OracleFactory = {
                 {"name": "name", "type": "string", "internalType": "string"},
                 {"name": "description", "type": "string", "internalType": "string"},
                 {"name": "weightToken", "type": "address", "internalType": "address"},
-                {"name": "reward", "type": "uint256", "internalType": "uint256"},
                 {"name": "halfLifeSeconds", "type": "uint256", "internalType": "uint256"},
-                {"name": "quorum", "type": "uint256", "internalType": "uint256"},
-                {"name": "operationLockingPeriod", "type": "uint256", "internalType": "uint256"},
+                {"name": "q", "type": "uint256", "internalType": "uint256"},
+                {"name": "depositLockingPeriod", "type": "uint256", "internalType": "uint256"},
                 {"name": "withdrawalLockingPeriod", "type": "uint256", "internalType": "uint256"},
-                {"name": "alpha", "type": "uint256", "internalType": "uint256"}
+                {"name": "rewardBps", "type": "uint256", "internalType": "uint256"},
+                {"name": "gamma", "type": "uint256", "internalType": "uint256"}
             ],
             "outputs": [
                 {"name": "oracle", "type": "address", "internalType": "address"},
@@ -124,6 +124,11 @@ const OracleFactory = {
                 {"name": "newOwner", "type": "address", "indexed": true, "internalType": "address"}
             ],
             "anonymous": false
+        },
+        {
+            "type": "error",
+            "name": "InvalidWeightToken",
+            "inputs": []
         },
         {
             "type": "error",

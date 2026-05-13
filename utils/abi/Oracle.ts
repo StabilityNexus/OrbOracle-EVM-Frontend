@@ -6,27 +6,27 @@ export const OracleAbi = [
       { "name": "name_", "type": "string", "internalType": "string" },
       { "name": "description_", "type": "string", "internalType": "string" },
       { "name": "weightToken_", "type": "address", "internalType": "address" },
-      { "name": "reward_", "type": "uint256", "internalType": "uint256" },
       { "name": "halfLifeSeconds_", "type": "uint256", "internalType": "uint256" },
-      { "name": "quorum_", "type": "uint256", "internalType": "uint256" },
+      { "name": "q_", "type": "uint256", "internalType": "uint256" },
       { "name": "depositLockingPeriod_", "type": "uint256", "internalType": "uint256" },
       { "name": "withdrawalLockingPeriod_", "type": "uint256", "internalType": "uint256" },
-      { "name": "alpha_", "type": "uint256", "internalType": "uint256" }
+      { "name": "rewardBps_", "type": "uint256", "internalType": "uint256" },
+      { "name": "gamma_", "type": "uint256", "internalType": "uint256" }
     ],
     "stateMutability": "nonpayable"
   },
   { "type": "receive", "stateMutability": "payable" },
 
   // Immutable/public config
-  { "type": "function", "name": "ALPHA", "inputs": [], "outputs": [{ "type": "uint256", "internalType": "uint256" }], "stateMutability": "view" },
-  { "type": "function", "name": "OPERATION_LOCKING_PERIOD", "inputs": [], "outputs": [{ "type": "uint256", "internalType": "uint256" }], "stateMutability": "view" },
-  { "type": "function", "name": "WITHDRAWAL_LOCKING_PERIOD", "inputs": [], "outputs": [{ "type": "uint256", "internalType": "uint256" }], "stateMutability": "view" },
-  { "type": "function", "name": "REWARD", "inputs": [], "outputs": [{ "type": "uint256", "internalType": "uint256" }], "stateMutability": "view" },
+  { "type": "function", "name": "DEPOSIT_LOCKING_PERIOD", "inputs": [], "outputs": [{ "type": "uint256", "internalType": "uint256" }], "stateMutability": "view" },
+  { "type": "function", "name": "GAMMA", "inputs": [], "outputs": [{ "type": "uint256", "internalType": "uint256" }], "stateMutability": "view" },
   { "type": "function", "name": "HALF_LIFE_SECONDS", "inputs": [], "outputs": [{ "type": "uint256", "internalType": "uint256" }], "stateMutability": "view" },
-  { "type": "function", "name": "QUORUM", "inputs": [], "outputs": [{ "type": "uint256", "internalType": "uint256" }], "stateMutability": "view" },
+  { "type": "function", "name": "Q", "inputs": [], "outputs": [{ "type": "uint256", "internalType": "uint256" }], "stateMutability": "view" },
+  { "type": "function", "name": "REWARD_BPS", "inputs": [], "outputs": [{ "type": "uint256", "internalType": "uint256" }], "stateMutability": "view" },
+  { "type": "function", "name": "WEIGHT_TOKEN", "inputs": [], "outputs": [{ "type": "address", "internalType": "contract IERC20" }], "stateMutability": "view" },
+  { "type": "function", "name": "WITHDRAWAL_LOCKING_PERIOD", "inputs": [], "outputs": [{ "type": "uint256", "internalType": "uint256" }], "stateMutability": "view" },
 
   // Public vars
-  { "type": "function", "name": "WEIGHT_TOKEN", "inputs": [], "outputs": [{ "type": "address", "internalType": "contract IERC20" }], "stateMutability": "view" },
   { "type": "function", "name": "name", "inputs": [], "outputs": [{ "type": "string", "internalType": "string" }], "stateMutability": "view" },
   { "type": "function", "name": "description", "inputs": [], "outputs": [{ "type": "string", "internalType": "string" }], "stateMutability": "view" },
   { "type": "function", "name": "totalDepositedTokens", "inputs": [], "outputs": [{ "type": "uint256", "internalType": "uint256" }], "stateMutability": "view" },
@@ -53,6 +53,8 @@ export const OracleAbi = [
   { "type": "function", "name": "submitValue", "inputs": [{ "name": "newValue", "type": "int256", "internalType": "int256" }], "outputs": [], "stateMutability": "nonpayable" },
   { "type": "function", "name": "readValue", "inputs": [], "outputs": [{ "type": "int256", "internalType": "int256" }], "stateMutability": "nonpayable" },
   { "type": "function", "name": "readLatestValue", "inputs": [], "outputs": [{ "type": "int256", "internalType": "int256" }], "stateMutability": "nonpayable" },
+  { "type": "function", "name": "readMaxValue", "inputs": [{ "name": "sampleSize", "type": "uint256", "internalType": "uint256" }], "outputs": [{ "type": "int256", "internalType": "int256" }], "stateMutability": "nonpayable" },
+  { "type": "function", "name": "readMinValue", "inputs": [{ "name": "sampleSize", "type": "uint256", "internalType": "uint256" }], "outputs": [{ "type": "int256", "internalType": "int256" }], "stateMutability": "nonpayable" },
 
   // Token flows
   { "type": "function", "name": "depositTokens", "inputs": [{ "name": "amount", "type": "uint256", "internalType": "uint256" }], "outputs": [], "stateMutability": "nonpayable" },
@@ -89,19 +91,6 @@ export const OracleAbi = [
     "stateMutability": "view"
   },
   { "type": "function", "name": "getPriceHistoryLength", "inputs": [], "outputs": [{ "type": "uint256", "internalType": "uint256" }], "stateMutability": "view" },
-
-  // Token accounting helpers
-  { "type": "function", "name": "getTotalUserTokens", "inputs": [{ "name": "user", "type": "address", "internalType": "address" }], "outputs": [{ "type": "uint256", "internalType": "uint256" }], "stateMutability": "view" },
-  {
-    "type": "function",
-    "name": "getTokenBreakdown",
-    "inputs": [{ "name": "user", "type": "address", "internalType": "address" }],
-    "outputs": [
-      { "name": "locked", "type": "uint256", "internalType": "uint256" },
-      { "name": "unlocked", "type": "uint256", "internalType": "uint256" }
-    ],
-    "stateMutability": "view"
-  },
 
   // Update vote weights
   { "type": "function", "name": "updateUserVoteWeights", "inputs": [], "outputs": [], "stateMutability": "nonpayable" },
@@ -196,7 +185,20 @@ export const OracleAbi = [
   },
 
   // Errors
+  { "type": "error", "name": "AmountZero", "inputs": [] },
+  { "type": "error", "name": "BlacklistedCaller", "inputs": [] },
+  { "type": "error", "name": "EmptyHistory", "inputs": [] },
+  { "type": "error", "name": "InsufficientUnlockedBalance", "inputs": [] },
+  { "type": "error", "name": "InvalidPriceHistoryRange", "inputs": [] },
+  { "type": "error", "name": "InvalidSampleSize", "inputs": [] },
+  { "type": "error", "name": "InvalidWeightTokenAddress", "inputs": [] },
+  { "type": "error", "name": "NoGovernanceWeight", "inputs": [] },
   { "type": "error", "name": "OwnableInvalidOwner", "inputs": [{ "name": "owner", "type": "address", "internalType": "address" }] },
   { "type": "error", "name": "OwnableUnauthorizedAccount", "inputs": [{ "name": "account", "type": "address", "internalType": "address" }] },
-  { "type": "error", "name": "ReentrancyGuardReentrantCall", "inputs": [] }
+  { "type": "error", "name": "PriceHistoryEndOutOfBounds", "inputs": [] },
+  { "type": "error", "name": "PriceHistoryStartOutOfBounds", "inputs": [] },
+  { "type": "error", "name": "ReentrancyGuardReentrantCall", "inputs": [] },
+  { "type": "error", "name": "RewardTransferFailed", "inputs": [] },
+  { "type": "error", "name": "TokenTransferFailed", "inputs": [] },
+  { "type": "error", "name": "WithdrawalLockActive", "inputs": [{ "name": "unlockTime", "type": "uint256", "internalType": "uint256" }] }
 ] as const;
