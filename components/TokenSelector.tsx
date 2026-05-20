@@ -18,8 +18,6 @@ interface TokenSelectorProps {
   onChange: (address: string) => void;
   error?: string;
   placeholder?: string;
-  label?: string;
-  required?: boolean;
 }
 
 const TokenSelector: React.FC<TokenSelectorProps> = ({
@@ -27,8 +25,6 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({
   onChange,
   error,
   placeholder = "Enter ERC20 token address or select from list",
-  label = "Token Address",
-  required = false,
 }) => {
   const chainId = useChainId();
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -296,4 +292,3 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({
 };
 
 export default TokenSelector;
-

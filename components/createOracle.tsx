@@ -82,7 +82,7 @@ export default function CreateOracleIntegrated() {
   }, [name, description, weightToken, reward, halfLifeSeconds, quorumBps, depositLock, withdrawLock, alpha])
 
   const validateInputs = () => {
-    const newErrors: any = {}
+    const newErrors: typeof errors = {}
 
     if (!name) newErrors.name = 'Oracle name is required'
     if (!description) newErrors.description = 'Description is required'
@@ -123,15 +123,6 @@ export default function CreateOracleIntegrated() {
       534351: 'https://sepolia.scrollscan.com',
     }
     return explorers[chainId] ? `${explorers[chainId]}/tx/${txHash}` : ''
-  }
-
-  const getAddressExplorerUrl = (chainId: number, address: string) => {
-    const explorers: { [key: number]: string } = {
-      1: 'https://etherscan.io',
-      8453: 'https://basescan.org',
-      534351: 'https://sepolia.scrollscan.com',
-    }
-    return explorers[chainId] ? `${explorers[chainId]}/address/${address}` : ''
   }
 
   const formatAddress = (address: string) => {
@@ -211,11 +202,11 @@ export default function CreateOracleIntegrated() {
         }
       }, 5000) // Wait 5 seconds for transaction to be mined
 
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err)
       toast({
         title: 'Error',
-        description: err.message || 'An unexpected error occurred while creating the oracle.',
+        description: err instanceof Error ? err.message : 'An unexpected error occurred while creating the oracle.',
         variant: 'destructive',
       })
     } finally {
@@ -332,7 +323,7 @@ export default function CreateOracleIntegrated() {
                 </button>
                 {showTooltip === 'description' && (
                   <div className="absolute z-10 bg-slate-800 text-slate-100 text-xs p-2 rounded shadow-lg mt-6">
-                    Detailed description of your oracle's purpose
+                    Detailed description of your oracle&apos;s purpose
                   </div>
                 )}
               </div>
@@ -410,8 +401,6 @@ export default function CreateOracleIntegrated() {
                 onChange={(address) => setWeightToken(address)}
                 error={errors.weightToken}
                 placeholder="0x..."
-                label=""
-                required={true}
               />
             </div>
 

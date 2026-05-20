@@ -48,6 +48,16 @@ const formatPriceFromWei = (value: bigint) => {
   return numeric.toFixed(DISPLAY_PRECISION)
 }
 
+const describeError = (error: unknown, fallback: string) => {
+  if (error instanceof BaseError) {
+    return error.shortMessage
+  }
+  if (error instanceof Error) {
+    return error.message
+  }
+  return fallback
+}
+
 export default function OracleInteractionPage() {
   const search = useSearchParams()
   const oracleParam = search.get("oracle")
@@ -77,8 +87,6 @@ export default function OracleInteractionPage() {
   const [lastUpdated, setLastUpdated] = useState<string>("Loading...")
   const [userDepositedTokens, setUserDepositedTokens] = useState<string>("0")
   const [userTokenBalance, setUserTokenBalance] = useState<string>("0")
-  const [tokenAllowance, setTokenAllowance] = useState<string>("0")
-
   const [priceHistoryPoints, setPriceHistoryPoints] = useState<PriceChartPoint[]>([])
 
   // Oracle configuration display values
@@ -139,10 +147,11 @@ export default function OracleInteractionPage() {
   const publicClient = usePublicClient({ chainId })
 
   // Contract write hook
-  const { writeContract, writeContractAsync, data: hash, error: contractError, isPending } = useWriteContract()
+  const { writeContract, data: hash, error: contractError, isPending } = useWriteContract()
   const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({
     hash,
   })
+  const { oracle, loading: oracleLoading, error: oracleError } = useOracle(oracleAddress ?? "", chainIdValid ? chainId : undefined)
 
   // Read contract data
   const { data: weightTokenAddress } = useReadContract({
@@ -355,15 +364,7 @@ export default function OracleInteractionPage() {
     [userTokenBalance]
   )
 
-  const lockedTokensRaw = lockedTokensData ? BigInt(lockedTokensData as bigint) : BigInt(0)
-  const unlockedTokensRaw = unlockedTokensData ? BigInt(unlockedTokensData as bigint) : BigInt(0)
-  const totalDepositedTokensRaw = lockedTokensRaw + unlockedTokensRaw
-  const userTokenBalanceRaw = userTokenBalanceData ? BigInt(userTokenBalanceData as bigint) : BigInt(0)
-
-  const isTokenHolder = userTokenBalanceRaw > BigInt(0)
-  const isActiveOperator = totalDepositedTokensRaw > BigInt(0)
-  const hasUnlockedTokens = unlockedTokensRaw > BigInt(0)
-  const operatorActionsDisabled = isActiveOperator && !hasUnlockedTokens
+  const hasInvalidParams = !oracleAddress || !chainIdValid
 
   // Update real-time data when contract data changes
   useEffect(() => {
@@ -376,9 +377,6 @@ export default function OracleInteractionPage() {
     }
     if (userTokenBalanceData !== undefined) {
       setUserTokenBalance(formatTokenAmount(userTokenBalanceData as bigint, 4))
-    }
-    if (tokenAllowanceData !== undefined) {
-      setTokenAllowance(formatTokenAmount(tokenAllowanceData as bigint, 4))
     }
     if (lastSubmissionTimeData) {
       const timestamp = Number(lastSubmissionTimeData as bigint)
@@ -440,37 +438,6 @@ export default function OracleInteractionPage() {
     }
 
   }, [lockedTokensData, unlockedTokensData, userTokenBalanceData, tokenAllowanceData, formatTokenAmount, weightTokenDecimals, lastSubmissionTimeData, rewardData, halfLifeSecondsData, quorumData, operationLockingPeriodData, withdrawalLockingPeriodData, alphaData, depositTimestampData, lastOperationTimestampData])
-
-  // Early validation before calling the hook
-  if (!oracleAddress || !chainIdValid) {
-    return (
-      <div className="min-h-screen bg-background font-[oblique] tracking-wide" style={{ fontStyle: 'oblique 12deg' }}>
-        <Navigation />
-        <div className="container mx-auto px-6 pt-24 pb-12">
-          <div className="text-center py-20">
-            <div className="text-red-400 mb-6">
-              <TrendingUp className="h-16 w-16 mx-auto mb-4 opacity-50" />
-            </div>
-            <p className="text-xl text-red-400 mb-2 font-medium">Missing or invalid query params</p>
-            <p className="text-sm text-muted-foreground mb-8">
-              Expected <code className="bg-card/50 border border-primary/30 px-2 py-1 rounded text-primary">oracle</code> (0x…40 chars) and <code className="bg-card/50 border border-primary/30 px-2 py-1 rounded text-primary">chainId</code> (number) in the URL.
-            </p>
-            <div className="text-sm text-muted-foreground mb-8">
-              Example:&nbsp;
-              <code className="bg-card/50 border border-primary/30 px-3 py-2 rounded-lg text-xs text-primary">
-                /o?chainId=534351&oracle=0xfd8EA784cac0D42040579a7ced6080Fe45e9Cc7d
-              </code>
-            </div>
-            <Link href="/explorer" className="text-primary hover:text-primary/80 font-medium hover:underline transition-colors">
-              Back to Explorer
-            </Link>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  const { oracle, loading: oracleLoading, error: oracleError } = useOracle(oracleAddress, chainId)
 
   // Handle transaction success
   useEffect(() => {
@@ -577,12 +544,12 @@ export default function OracleInteractionPage() {
         title: "Transaction Submitted",
         description: "Your price submission is being processed...",
       })
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error submitting value:', err)
       setIsSubmitting(false)
       toast({
         title: "Submission Failed",
-        description: err?.message || "Failed to submit value. Please try again.",
+        description: describeError(err, "Failed to submit value. Please try again."),
         variant: "destructive",
       })
     }
@@ -731,12 +698,12 @@ export default function OracleInteractionPage() {
         title: "Transaction Submitted",
         description: "Your token withdrawal is being processed...",
       })
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error withdrawing tokens:', err)
       setIsWithdrawing(false)
       toast({
         title: "Withdrawal Failed",
-        description: err?.message || "Failed to withdraw tokens. Please try again.",
+        description: describeError(err, "Failed to withdraw tokens. Please try again."),
         variant: "destructive",
       })
     }
@@ -782,12 +749,12 @@ export default function OracleInteractionPage() {
         title: "Transaction Submitted",
         description: "Your blacklist vote is being processed...",
       })
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error voting blacklist:', err)
       setIsVoting(false)
       toast({
         title: "Vote Failed",
-        description: err?.message || "Failed to submit blacklist vote. Please try again.",
+        description: describeError(err, "Failed to submit blacklist vote. Please try again."),
         variant: "destructive",
       })
     }
@@ -833,12 +800,12 @@ export default function OracleInteractionPage() {
         title: "Transaction Submitted",
         description: "Your whitelist vote is being processed...",
       })
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error voting whitelist:', err)
       setIsVoting(false)
       toast({
         title: "Vote Failed",
-        description: err?.message || "Failed to submit whitelist vote. Please try again.",
+        description: describeError(err, "Failed to submit whitelist vote. Please try again."),
         variant: "destructive",
       })
     }
@@ -873,12 +840,12 @@ export default function OracleInteractionPage() {
         title: "Transaction Submitted",
         description: "Your vote weights are being updated...",
       })
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error updating vote weights:', err)
       setIsUpdatingVoteWeights(false)
       toast({
         title: "Update Failed",
-        description: err?.message || "Failed to update vote weights. Please try again.",
+        description: describeError(err, "Failed to update vote weights. Please try again."),
         variant: "destructive",
       })
     }
@@ -999,6 +966,34 @@ export default function OracleInteractionPage() {
     } finally {
       setIsReadingLatestValue(false)
     }
+  }
+
+  if (hasInvalidParams) {
+    return (
+      <div className="min-h-screen bg-background font-[oblique] tracking-wide" style={{ fontStyle: 'oblique 12deg' }}>
+        <Navigation />
+        <div className="container mx-auto px-6 pt-24 pb-12">
+          <div className="text-center py-20">
+            <div className="text-red-400 mb-6">
+              <TrendingUp className="h-16 w-16 mx-auto mb-4 opacity-50" />
+            </div>
+            <p className="text-xl text-red-400 mb-2 font-medium">Missing or invalid query params</p>
+            <p className="text-sm text-muted-foreground mb-8">
+              Expected <code className="bg-card/50 border border-primary/30 px-2 py-1 rounded text-primary">oracle</code> (0x…40 chars) and <code className="bg-card/50 border border-primary/30 px-2 py-1 rounded text-primary">chainId</code> (number) in the URL.
+            </p>
+            <div className="text-sm text-muted-foreground mb-8">
+              Example:&nbsp;
+              <code className="bg-card/50 border border-primary/30 px-3 py-2 rounded-lg text-xs text-primary">
+                /o?chainId=534351&oracle=0xfd8EA784cac0D42040579a7ced6080Fe45e9Cc7d
+              </code>
+            </div>
+            <Link href="/explorer" className="text-primary hover:text-primary/80 font-medium hover:underline transition-colors">
+              Back to Explorer
+            </Link>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   if (oracleLoading) {
