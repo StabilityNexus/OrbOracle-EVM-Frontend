@@ -7,29 +7,35 @@ import Orb from "@/components/Orb"
 
 export default function HomePage() {
   return (
-    <div className="min-h-screen bg-background font-[oblique] tracking-wide" style={{ fontStyle: 'oblique 12deg' }}>
-      {/* <SplashCursor /> */}
+    <div
+      className="min-h-screen bg-background font-[oblique] tracking-wide"
+      style={{ fontStyle: "oblique" }}
+    >
       <Navigation />
 
       {/* Hero Section */}
       <section className="relative h-screen flex items-center justify-center overflow-hidden">
         <div className="absolute inset-0 z-0">
-          <div style={{ 
-            width: '100vw', 
-            height: '100vh', 
-            position: 'absolute', 
-            top: '0', 
-            left: '0',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center'
-          }}>
-            <div style={{ 
-              width: 'min(90vw, 90vh)', 
-              height: 'min(90vw, 90vh)', 
-              maxWidth: '800px',
-              maxHeight: '800px'
-            }}>
+          <div
+            style={{
+              width: "100vw",
+              height: "100vh",
+              position: "absolute",
+              top: "0",
+              left: "0",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <div
+              style={{
+                width: "min(90vw, 90vh)",
+                height: "min(90vw, 90vh)",
+                maxWidth: "800px",
+                maxHeight: "800px",
+              }}
+            >
               <Orb
                 hoverIntensity={1.7}
                 rotateOnHover={true}
@@ -39,19 +45,34 @@ export default function HomePage() {
             </div>
           </div>
         </div>
+
         <div className="container mx-auto px-4 text-center z-10 relative">
           <div className="max-w-4xl mx-auto">
-            <h1 className="text-3xl sm:text-4xl md:text-5xl font-medium mb-6 sm:mb-8 text-balance tracking-wide px-4" style={{ fontStyle: 'oblique 15deg' }}>
-              Orb Oracle: 
-              <div><span className="text-primary">The Price of Everything</span></div>
+            <h1
+              className="text-3xl sm:text-4xl md:text-5xl font-medium mb-6 sm:mb-8 text-balance tracking-wide px-4"
+              style={{ fontStyle: "oblique" }}
+            >
+              Orb Oracle:
+              <div>
+                <span className="text-primary">The Price of Everything</span>
+              </div>
             </h1>
+
             <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center px-4">
-              <Button asChild size="lg" className="text-lg px-8 bg-white text-black hover:bg-gray-100">
-                <Link href="/create">
-                  Get Started
-                </Link>
+              <Button
+                asChild
+                size="lg"
+                className="text-lg px-8 bg-white text-black hover:bg-gray-100"
+              >
+                <Link href="/create">Get Started</Link>
               </Button>
-              <Button asChild variant="outline" size="lg" className="text-lg px-8 bg-transparent border-gray-600 text-gray-400 hover:bg-gray-800">
+
+              <Button
+                asChild
+                variant="outline"
+                size="lg"
+                className="text-lg px-8 bg-transparent border-gray-600 text-gray-400 hover:bg-gray-800"
+              >
                 <Link href="/explorer">Learn More</Link>
               </Button>
             </div>
@@ -63,7 +84,12 @@ export default function HomePage() {
       <section className="h-screen flex items-center justify-center">
         <div className="container mx-auto px-4">
           <div className="text-center mb-12 sm:mb-16 px-4">
-            <h2 className="text-2xl sm:text-3xl md:text-4xl font-medium mb-4 tracking-wide" style={{ fontStyle: 'oblique 15deg' }}>Why choose OracleNet?</h2>
+            <h2
+              className="text-2xl sm:text-3xl md:text-4xl font-medium mb-4 tracking-wide"
+              style={{ fontStyle: "oblique" }}
+            >
+              Why choose OrbOracle?
+            </h2>
             <p className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto">
               Enterprise-grade infrastructure for the next generation of decentralized applications
             </p>
@@ -77,7 +103,7 @@ export default function HomePage() {
                 </div>
                 <CardTitle>Lightning Fast</CardTitle>
                 <CardDescription>
-                  Sub-second data feeds with 99.9% uptime guarantee for mission-critical applications
+                  Sub-second data feeds with reliable performance for mission-critical applications.
                 </CardDescription>
               </CardHeader>
             </Card>
@@ -89,7 +115,7 @@ export default function HomePage() {
                 </div>
                 <CardTitle>Secure & Reliable</CardTitle>
                 <CardDescription>
-                  Multi-signature validation and cryptographic proofs ensure data integrity
+                  Decentralized validation and cryptographic guarantees ensure data integrity.
                 </CardDescription>
               </CardHeader>
             </Card>
@@ -101,7 +127,7 @@ export default function HomePage() {
                 </div>
                 <CardTitle>Rich Data Sources</CardTitle>
                 <CardDescription>
-                  Connect to thousands of APIs, IoT devices, and real-world data providers
+                  Aggregates verified off-chain data sources for seamless on-chain access.
                 </CardDescription>
               </CardHeader>
             </Card>
@@ -109,25 +135,32 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Stats Section */}
+      {/* Protocol Overview Section */}
       <section className="h-screen flex items-center justify-center">
         <div className="container mx-auto px-4">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-8 text-center px-4">
-            <div>
-              <div className="text-4xl font-medium text-primary mb-2">1,247</div>
-              <div className="text-muted-foreground">Active Oracles</div>
+          <div className="max-w-5xl mx-auto grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 sm:gap-8 px-4">
+            <div className="space-y-3">
+              <h3 className="text-xl font-semibold">What OrbOracle Is</h3>
+              <p className="text-sm text-muted-foreground">
+                OrbOracle is a decentralized oracle network that delivers accurate and verifiable
+                off-chain data to smart contracts without relying on centralized providers.
+              </p>
             </div>
-            <div>
-              <div className="text-4xl font-medium text-primary mb-2">$2.4B</div>
-              <div className="text-muted-foreground">Total Value Secured</div>
+
+            <div className="space-y-3">
+              <h3 className="text-xl font-semibold">How It Works</h3>
+              <p className="text-sm text-muted-foreground">
+                Data is sourced from multiple providers, validated through decentralized mechanisms,
+                and securely published on-chain for transparent smart contract usage.
+              </p>
             </div>
-            <div>
-              <div className="text-4xl font-medium text-primary mb-2">99.9%</div>
-              <div className="text-muted-foreground">Uptime</div>
-            </div>
-            <div>
-              <div className="text-4xl font-medium text-primary mb-2">50+</div>
-              <div className="text-muted-foreground">Supported Chains</div>
+
+            <div className="space-y-3">
+              <h3 className="text-xl font-semibold">Why It’s Better</h3>
+              <p className="text-sm text-muted-foreground">
+                By prioritizing transparency, cryptographic verification, and low latency, OrbOracle
+                enables developers to build trust-minimized decentralized applications.
+              </p>
             </div>
           </div>
         </div>
@@ -137,9 +170,14 @@ export default function HomePage() {
       <section className="h-screen flex items-center justify-center">
         <div className="container mx-auto px-4 text-center">
           <div className="max-w-2xl mx-auto px-4">
-            <h2 className="text-2xl sm:text-3xl md:text-4xl font-medium mb-4 sm:mb-6 tracking-wide" style={{ fontStyle: 'oblique 15deg' }}>Ready to build the future?</h2>
+            <h2
+              className="text-2xl sm:text-3xl md:text-4xl font-medium mb-4 sm:mb-6 tracking-wide"
+              style={{ fontStyle: "oblique" }}
+            >
+              Ready to build the future?
+            </h2>
             <p className="text-lg sm:text-xl text-muted-foreground mb-6 sm:mb-8">
-              Join thousands of developers building the next generation of decentralized applications
+              Join developers building the next generation of decentralized applications.
             </p>
             <Button asChild size="lg" className="text-lg px-8">
               <Link href="/create">
