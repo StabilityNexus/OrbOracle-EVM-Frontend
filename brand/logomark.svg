@@ -1,0 +1,83 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500" width="100%" height="100%">
+  <defs>
+    <!-- Indigo & Cyan Glow Filters matching website WebGL Orb (hue=300) -->
+    <filter id="siteGlow" x="-25%" y="-25%" width="150%" height="150%">
+      <feGaussianBlur stdDeviation="5.5" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+
+    <filter id="coreHighlightGlow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="9" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+
+    <!-- Diagonal Gradient: Electric Cyan (#38BDF8) -> Neon Violet (#8B5CF6) -> Deep Indigo (#1E1B4B) -->
+    <linearGradient id="siteTorusGrad" x1="100%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#38BDF8"/>
+      <stop offset="35%" stop-color="#818CF8"/>
+      <stop offset="70%" stop-color="#8B5CF6"/>
+      <stop offset="100%" stop-color="#1E1B4B"/>
+    </linearGradient>
+
+    <linearGradient id="siteBorderGrad" x1="100%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#E0E7FF"/>
+      <stop offset="30%" stop-color="#38BDF8"/>
+      <stop offset="70%" stop-color="#8B5CF6"/>
+      <stop offset="100%" stop-color="#312E81"/>
+    </linearGradient>
+
+    <radialGradient id="siteNodeGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="45%" stop-color="#C084FC"/>
+      <stop offset="100%" stop-color="#818CF8"/>
+    </radialGradient>
+  </defs>
+
+  <g transform="translate(0, 0)">
+    <!-- Outer Glass Ring Trim -->
+    <circle cx="250" cy="250" r="226" fill="none" stroke="url(#siteBorderGrad)" stroke-width="4.5" filter="url(#siteGlow)"/>
+    <circle cx="250" cy="250" r="220" fill="none" stroke="#818CF8" stroke-width="1.5" opacity="0.85"/>
+
+    <!-- Inner Hollow 'O' Window Ring -->
+    <circle cx="250" cy="250" r="92" fill="none" stroke="url(#siteBorderGrad)" stroke-width="5" filter="url(#siteGlow)"/>
+    <circle cx="250" cy="250" r="86" fill="none" stroke="#38BDF8" stroke-width="1.5" opacity="0.85"/>
+
+    <!-- Interlocking Torus Mesh Lattice (Indigo / Violet / Cyan) -->
+    <g stroke="url(#siteTorusGrad)" fill="none">
+      <circle cx="250" cy="250" r="192" stroke-width="2.8" opacity="0.88"/>
+      <circle cx="250" cy="250" r="160" stroke-width="2.8" opacity="0.92"/>
+      <circle cx="250" cy="250" r="126" stroke-width="2.8" opacity="0.88"/>
+
+      <ellipse cx="250" cy="250" rx="222" ry="115" stroke-width="3.2" transform="rotate(0 250 250)"/>
+      <ellipse cx="250" cy="250" rx="222" ry="115" stroke-width="3.2" transform="rotate(30 250 250)"/>
+      <ellipse cx="250" cy="250" rx="222" ry="115" stroke-width="3.2" transform="rotate(60 250 250)"/>
+      <ellipse cx="250" cy="250" rx="222" ry="115" stroke-width="3.2" transform="rotate(90 250 250)"/>
+      <ellipse cx="250" cy="250" rx="222" ry="115" stroke-width="3.2" transform="rotate(120 250 250)"/>
+      <ellipse cx="250" cy="250" rx="222" ry="115" stroke-width="3.2" transform="rotate(150 250 250)"/>
+    </g>
+
+    <!-- Glowing Network Data Nodes -->
+    <g fill="#A855F7" filter="url(#siteGlow)">
+      <circle cx="250" cy="28" r="9.5" fill="url(#siteNodeGlow)" stroke="#FFFFFF" stroke-width="1.5"/>
+      <circle cx="346" cy="54" r="9" fill="url(#siteNodeGlow)"/>
+      <circle cx="422" cy="130" r="9" fill="url(#siteNodeGlow)"/>
+      <circle cx="450" cy="226" r="9.5" fill="url(#siteNodeGlow)"/>
+      <circle cx="370" cy="130" r="8" fill="url(#siteNodeGlow)"/>
+      <circle cx="314" cy="94" r="8" fill="url(#siteNodeGlow)"/>
+
+      <circle cx="390" cy="250" r="7.5" fill="#818CF8"/>
+      <circle cx="346" cy="346" r="7.5" fill="#8B5CF6"/>
+      <circle cx="250" cy="390" r="7.5" fill="#A855F7"/>
+
+      <circle cx="310" cy="190" r="7" fill="#38BDF8"/>
+      <circle cx="310" cy="310" r="6.5" fill="#8B5CF6"/>
+      <circle cx="190" cy="310" r="6.5" fill="#6366F1"/>
+
+      <circle cx="130" cy="422" r="8" fill="#4F46E5"/>
+      <circle cx="50" cy="250" r="8.5" fill="#312E81"/>
+      <circle cx="78" cy="154" r="7.5" fill="#1E1B4B"/>
+      <circle cx="130" cy="78" r="8" fill="#6366F1"/>
+      <circle cx="190" cy="190" r="6.5" fill="#38BDF8"/>
+    </g>
+  </g>
+</svg>

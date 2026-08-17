@@ -1,0 +1,153 @@
+# Enables IDE autocompletion for this config file
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+
+# Language for CodeRabbit's review comments
+language: en
+
+# Enable experimental features
+early_access: true
+
+chat:
+  # CodeRabbit will automatically respond to @coderabbitai mentions in PR comments
+  auto_reply: true
+
+issue_enrichment:
+  labeling:
+    auto_apply_labels: true
+    labeling_instructions:
+      - label: bug
+        instructions: Issues reporting bugs, errors, crashes, incorrect behavior, or unexpected results. This includes runtime errors, logic errors, broken functionality, regressions, and any deviation from expected behavior.
+      - label: enhancement
+        instructions: Feature requests, improvements to existing functionality, performance optimizations, refactoring suggestions, UI/UX enhancements, and suggestions to add new capabilities.
+      - label: documentation
+        instructions: Documentation updates, additions, corrections, or clarifications needed. This includes missing docs, outdated information, unclear instructions, API documentation, code examples, README improvements, and guides.
+
+reviews:
+  profile: assertive # Options: chill, assertive
+
+  auto_review:
+    # Automatically trigger reviews when PRs are opened or updated
+    enabled: true
+    ignore_title_keywords:
+      - "WIP"
+    drafts: false
+    base_branches:
+      - main
+      - develop
+
+  high_level_summary: true
+  sequence_diagrams: true
+  poem: true
+  review_status: true
+  collapse_walkthrough: false
+  changed_files_summary: true
+  request_changes_workflow: true
+
+  pre_merge_checks:
+    description:
+      mode: warning
+
+  # Exclude build artifacts and dependencies from reviews
+  path_filters:
+    - "!**/node_modules/**" # npm dependencies
+    - "!**/.next/**" # Next.js build cache/output
+    - "!**/out/**" # Next.js static export
+    - "!**/dist/**" # Build output
+
+  # Tools used when reviewing
+  tools:
+    markdownlint:
+      enabled: true
+    github-checks:
+      enabled: true
+      timeout_ms: 90000
+    languagetool:
+      enabled: true
+      enabled_only: false
+      level: default
+    biome:
+      enabled: true
+    yamllint:
+      enabled: true
+    gitleaks:
+      enabled: true
+    checkov:
+      enabled: true
+    eslint:
+      enabled: true
+
+  # Apply labels to PRs
+  labeling_instructions:
+    - label: Typescript Lang
+      instructions: Apply when the PR contains changes to TypeScript or JavaScript source code.
+    - label: Web3 / Wagmi
+      instructions: Apply when the PR contains changes to Wagmi hooks, Viem contract interactions, or RainbowKit wallet setup.
+    - label: UI / Tailwind
+      instructions: Apply when the PR contains changes to UI components, styling, or Tailwind CSS definitions.
+    - label: Documentation
+      instructions: Apply whenever project documentation (namely markdown source code) is updated.
+    - label: Linter
+      instructions: Apply when the purpose of the PR is related to fixing feedback from a linter or formatter.
+
+  # Review instructions for all files
+  instructions: >-
+    - Verify that documentation and comments are free of spelling mistakes
+    - Ensure that code adheres to strict TypeScript type safety (avoid 'any')
+    - Confirm that all on-chain interactions follow Wagmi/Viem best practices
+    - Verify UI responsiveness across mobile and desktop devices
+    - Look for code duplication and suggest clean modular component patterns
+    - Suggest code completions when seeing a TODO or FIXME comment
+
+  # Custom review instructions for specific file patterns
+  path_instructions:
+    # Next.js / TypeScript / React files
+    - path: "**/*.{ts,tsx,js,jsx}"
+      instructions: |
+        Next.js (App Router):
+        - Ensure "use client" directive is declared only on interactive client components.
+        - Verify Next.js App Router conventions (file-based routing under app/, layout.tsx, page.tsx).
+        - Use Next.js Image component (<Image />) for static/optimized images.
+
+        TypeScript & React:
+        - Strict type safety: avoid 'any', declare explicit interfaces for component props and contract data.
+        - Prefer 'import type' for type-only imports.
+        - Ensure proper hook dependency arrays (useCallback, useEffect, useMemo).
+        - Adhere to custom Wagmi hooks separation (keep contract read/write logic out of main visual presentation where appropriate).
+
+        Styling & UX:
+        - Enforce Tailwind CSS standards and design tokens using CSS variables defined in globals.css.
+        - Avoid inline CSS or arbitrary hardcoded color values outside the design palette.
+        - Ensure responsive layout design for mobile and desktop screens.
+
+        Security:
+        - No exposed private keys, RPC credentials, or sensitive secrets in client-side code or git commits.
+        - Ensure proper sanitization against XSS and validate user inputs in creation forms.
+
+    # HTML & CSS files
+    - path: "**/*.css"
+      instructions: |
+        Review CSS styling to ensure:
+        - Consistent OKLCH / CSS variable design token usage in globals.css.
+        - No redundant or conflicting CSS rule declarations.
+
+    # React / Web3 test files
+    - path: "**/*.test.{ts,tsx,js,jsx}"
+      instructions: |
+        Review test files for:
+        - Comprehensive coverage of component behavior using @testing-library/react.
+        - Proper mocking of Wagmi/Viem contract calls and window.ethereum providers.
+        - Clear, descriptive test names reflecting intended user or contract interaction behaviors.
+
+    # Asset files (images, icons, vectors)
+    - path: "public/**/*"
+      instructions: |
+        Review public assets for:
+        - Image optimization (SVG or web-optimized webp/png formats).
+        - Clean SVG code without unnecessary metadata or hardcoded inline width/height conflicts.
+
+    # Dependency manifest files
+    - path: "**/{package.json,package-lock.json,yarn.lock,pnpm-lock.yaml}"
+      instructions: |
+        Dependency Analysis:
+        - Verify version bumps and ensure no major breaking changes are introduced silently.
+        - Confirm compatibility between Next.js, React, Viem, Wagmi, and RainbowKit peer dependencies.
