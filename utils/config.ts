@@ -4,11 +4,13 @@ import {
   classic,
   mainnet,
   polygon,
-  scrollSepolia
+  scrollSepolia,
+  sepolia
 } from 'wagmi/chains'
 import {
   getDefaultConfig
 } from '@rainbow-me/rainbowkit'
+import { http } from 'wagmi'
 
 export const config = getDefaultConfig({
   appName: 'OrbOracle',
@@ -19,6 +21,15 @@ export const config = getDefaultConfig({
     base,
     scrollSepolia,
     bsc,
+    sepolia,
   ],
+  transports: {
+    [sepolia.id]: http('https://ethereum-sepolia-rpc.publicnode.com'),
+    [classic.id]: http('https://etc.etcdesktop.com'),
+    [scrollSepolia.id]: http('https://scroll-public.scroll-testnet.quiknode.pro'),
+    [mainnet.id]: http('https://cloudflare-eth.com'),
+    [base.id]: http('https://mainnet.base.org'),
+    [bsc.id]: http('https://bsc-dataseed.binance.org'),
+  },
   ssr: true,
 })

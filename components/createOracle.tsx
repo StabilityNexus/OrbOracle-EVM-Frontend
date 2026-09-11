@@ -126,6 +126,7 @@ export default function CreateOracleIntegrated() {
       1: 'https://etherscan.io',
       8453: 'https://basescan.org',
       534351: 'https://sepolia.scrollscan.com',
+      11155111: 'https://sepolia.etherscan.io',
     }
     return explorers[chainId] ? `${explorers[chainId]}/tx/${txHash}` : ''
   }
@@ -135,6 +136,7 @@ export default function CreateOracleIntegrated() {
       1: 'https://etherscan.io',
       8453: 'https://basescan.org',
       534351: 'https://sepolia.scrollscan.com',
+      11155111: 'https://sepolia.etherscan.io',
     }
     return explorers[chainId] ? `${explorers[chainId]}/address/${address}` : ''
   }
