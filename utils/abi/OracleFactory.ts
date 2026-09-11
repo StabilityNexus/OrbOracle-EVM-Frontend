@@ -37,7 +37,8 @@ const OracleFactory = {
                 {"name": "depositLockingPeriod", "type": "uint256", "internalType": "uint256"},
                 {"name": "withdrawalLockingPeriod", "type": "uint256", "internalType": "uint256"},
                 {"name": "rewardBps", "type": "uint256", "internalType": "uint256"},
-                {"name": "gamma", "type": "uint256", "internalType": "uint256"}
+                {"name": "gamma", "type": "uint256", "internalType": "uint256"},
+                {"name": "defaultSampleSize", "type": "uint256", "internalType": "uint256"}
             ],
             "outputs": [
                 {"name": "oracle", "type": "address", "internalType": "address"},

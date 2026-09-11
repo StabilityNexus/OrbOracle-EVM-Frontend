@@ -36,7 +36,7 @@ function isHexAddress(value: string | null): value is `0x${string}` {
 
 type PriceHistoryResult = readonly [readonly bigint[], readonly bigint[], readonly bigint[]]
 
-const PRICE_DECIMALS = 8
+const PRICE_DECIMALS = 18
 const DISPLAY_PRECISION = 6
 const MAX_PRICE_POINTS = 20
 
@@ -202,10 +202,10 @@ export default function OracleInteractionPage() {
     query: { enabled: !!oracleAddress && !!userAddress }
   })
 
-  const { data: lastSubmissionTimeData } = useReadContract({
+  const { data: lastUpdatedData } = useReadContract({
     address: oracleAddress || undefined,
     abi: OracleAbi,
-    functionName: 'lastSubmissionTime',
+    functionName: 'lastUpdated',
     query: { enabled: !!oracleAddress }
   })
 
@@ -380,8 +380,8 @@ export default function OracleInteractionPage() {
     if (tokenAllowanceData !== undefined) {
       setTokenAllowance(formatTokenAmount(tokenAllowanceData as bigint, 4))
     }
-    if (lastSubmissionTimeData) {
-      const timestamp = Number(lastSubmissionTimeData as bigint)
+    if (lastUpdatedData) {
+      const timestamp = Number(lastUpdatedData as bigint)
       const now = Math.floor(Date.now() / 1000)
       const diff = now - timestamp
       if (diff < 60) {
@@ -439,7 +439,7 @@ export default function OracleInteractionPage() {
       }
     }
 
-  }, [lockedTokensData, unlockedTokensData, userTokenBalanceData, tokenAllowanceData, formatTokenAmount, weightTokenDecimals, lastSubmissionTimeData, rewardData, halfLifeSecondsData, quorumData, operationLockingPeriodData, withdrawalLockingPeriodData, alphaData, depositTimestampData, lastOperationTimestampData])
+  }, [lockedTokensData, unlockedTokensData, userTokenBalanceData, tokenAllowanceData, formatTokenAmount, weightTokenDecimals, lastUpdatedData, rewardData, halfLifeSecondsData, quorumData, operationLockingPeriodData, withdrawalLockingPeriodData, alphaData, depositTimestampData, lastOperationTimestampData])
 
   // Early validation before calling the hook
   if (!oracleAddress || !chainIdValid) {
@@ -553,14 +553,11 @@ export default function OracleInteractionPage() {
 
     try {
       setIsSubmitting(true)
-      // Convert to int256 - the value should be a scaled integer
-      // For example, if submitting 2500, multiply by 1e8 to get proper precision
-      const valueAsFloat = parseFloat(submitValue)
-      const valueAsInt = BigInt(Math.floor(valueAsFloat * (10**PRICE_DECIMALS)))
+      // Parse to bigint using exact decimals to prevent JS precision loss
+      const valueAsInt = parseUnits(submitValue, PRICE_DECIMALS)
       
       console.log('Submitting value:', {
         original: submitValue,
-        asFloat: valueAsFloat,
         asInt: valueAsInt.toString(),
         oracleAddress: oracleAddress,
         userAddress: userAddress
@@ -891,7 +888,7 @@ export default function OracleInteractionPage() {
       }
 
       const attempt = async (account?: `0x${string}`) => {
-        const { result } = await publicClient.simulateContract({
+        const result = await publicClient.readContract({
           address: oracleAddress,
           abi: OracleAbi,
           functionName: fnName,

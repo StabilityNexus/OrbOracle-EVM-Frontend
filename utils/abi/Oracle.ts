@@ -11,7 +11,8 @@ export const OracleAbi = [
       { "name": "depositLockingPeriod_", "type": "uint256", "internalType": "uint256" },
       { "name": "withdrawalLockingPeriod_", "type": "uint256", "internalType": "uint256" },
       { "name": "rewardBps_", "type": "uint256", "internalType": "uint256" },
-      { "name": "gamma_", "type": "uint256", "internalType": "uint256" }
+      { "name": "gamma_", "type": "uint256", "internalType": "uint256" },
+      { "name": "defaultSampleSize_", "type": "uint256", "internalType": "uint256" }
     ],
     "stateMutability": "nonpayable"
   },
@@ -41,20 +42,19 @@ export const OracleAbi = [
   { "type": "function", "name": "lastOperationTimestamp", "inputs": [{ "name": "", "type": "address", "internalType": "address" }], "outputs": [{ "type": "uint256", "internalType": "uint256" }], "stateMutability": "view" },
 
   // Price storage (public)
-  { "type": "function", "name": "priceHistory", "inputs": [{ "name": "", "type": "uint256", "internalType": "uint256" }], "outputs": [{ "type": "int256", "internalType": "int256" }], "stateMutability": "view" },
-  { "type": "function", "name": "latestValueHistory", "inputs": [{ "name": "", "type": "uint256", "internalType": "uint256" }], "outputs": [{ "type": "int256", "internalType": "int256" }], "stateMutability": "view" },
+  { "type": "function", "name": "priceHistory", "inputs": [{ "name": "", "type": "uint256", "internalType": "uint256" }], "outputs": [{ "type": "uint256", "internalType": "uint256" }], "stateMutability": "view" },
+  { "type": "function", "name": "latestValueHistory", "inputs": [{ "name": "", "type": "uint256", "internalType": "uint256" }], "outputs": [{ "type": "uint256", "internalType": "uint256" }], "stateMutability": "view" },
   { "type": "function", "name": "priceTimestamps", "inputs": [{ "name": "", "type": "uint256", "internalType": "uint256" }], "outputs": [{ "type": "uint256", "internalType": "uint256" }], "stateMutability": "view" },
 
   // Time markers
-  { "type": "function", "name": "lastSubmissionTime", "inputs": [], "outputs": [{ "type": "uint256", "internalType": "uint256" }], "stateMutability": "view" },
+  { "type": "function", "name": "lastUpdated", "inputs": [], "outputs": [{ "type": "uint256", "internalType": "uint256" }], "stateMutability": "view" },
   { "type": "function", "name": "lastTimestamp", "inputs": [], "outputs": [{ "type": "uint256", "internalType": "uint256" }], "stateMutability": "view" },
 
   // Core actions
-  { "type": "function", "name": "submitValue", "inputs": [{ "name": "newValue", "type": "int256", "internalType": "int256" }], "outputs": [], "stateMutability": "nonpayable" },
-  { "type": "function", "name": "readValue", "inputs": [], "outputs": [{ "type": "int256", "internalType": "int256" }], "stateMutability": "nonpayable" },
-  { "type": "function", "name": "readLatestValue", "inputs": [], "outputs": [{ "type": "int256", "internalType": "int256" }], "stateMutability": "nonpayable" },
-  { "type": "function", "name": "readMaxValue", "inputs": [{ "name": "sampleSize", "type": "uint256", "internalType": "uint256" }], "outputs": [{ "type": "int256", "internalType": "int256" }], "stateMutability": "nonpayable" },
-  { "type": "function", "name": "readMinValue", "inputs": [{ "name": "sampleSize", "type": "uint256", "internalType": "uint256" }], "outputs": [{ "type": "int256", "internalType": "int256" }], "stateMutability": "nonpayable" },
+  { "type": "function", "name": "submitValue", "inputs": [{ "name": "newValue", "type": "uint256", "internalType": "uint256" }], "outputs": [], "stateMutability": "nonpayable" },
+  { "type": "function", "name": "readValue", "inputs": [], "outputs": [{ "type": "uint256", "internalType": "uint256" }], "stateMutability": "view" },
+  { "type": "function", "name": "readLatestValue", "inputs": [], "outputs": [{ "type": "uint256", "internalType": "uint256" }], "stateMutability": "view" },
+  { "type": "function", "name": "readValueInterval", "inputs": [], "outputs": [{ "name": "minValue", "type": "uint256", "internalType": "uint256" }, { "name": "maxValue", "type": "uint256", "internalType": "uint256" }], "stateMutability": "view" },
 
   // Token flows
   { "type": "function", "name": "depositTokens", "inputs": [{ "name": "amount", "type": "uint256", "internalType": "uint256" }], "outputs": [], "stateMutability": "nonpayable" },
@@ -85,8 +85,8 @@ export const OracleAbi = [
     ],
     "outputs": [
       { "name": "timestamps", "type": "uint256[]", "internalType": "uint256[]" },
-      { "name": "aggregatedPrices", "type": "int256[]", "internalType": "int256[]" },
-      { "name": "latestValues", "type": "int256[]", "internalType": "int256[]" }
+      { "name": "aggregatedPrices", "type": "uint256[]", "internalType": "uint256[]" },
+      { "name": "latestValues", "type": "uint256[]", "internalType": "uint256[]" }
     ],
     "stateMutability": "view"
   },
@@ -101,7 +101,7 @@ export const OracleAbi = [
     "name": "getSubmitterInfo",
     "inputs": [{ "name": "submitter", "type": "address", "internalType": "address" }],
     "outputs": [
-      { "name": "lastSubmittedPrice", "type": "int256", "internalType": "int256" },
+      { "name": "lastSubmittedPrice", "type": "uint256", "internalType": "uint256" },
       { "name": "lastWeight", "type": "uint256", "internalType": "uint256" },
       { "name": "lastSubmittedTime", "type": "uint256", "internalType": "uint256" }
     ],
@@ -120,8 +120,8 @@ export const OracleAbi = [
     "inputs": [
       { "name": "submitter", "type": "address", "indexed": true, "internalType": "address" },
       { "name": "timestamp", "type": "uint256", "indexed": true, "internalType": "uint256" },
-      { "name": "submittedValue", "type": "int256", "indexed": false, "internalType": "int256" },
-      { "name": "aggregatedValue", "type": "int256", "indexed": false, "internalType": "int256" },
+      { "name": "submittedValue", "type": "uint256", "indexed": false, "internalType": "uint256" },
+      { "name": "aggregatedValue", "type": "uint256", "indexed": false, "internalType": "uint256" },
       { "name": "weight", "type": "uint256", "indexed": false, "internalType": "uint256" },
       { "name": "rewardWei", "type": "uint256", "indexed": false, "internalType": "uint256" }
     ],

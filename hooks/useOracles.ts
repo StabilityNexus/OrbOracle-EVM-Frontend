@@ -32,7 +32,7 @@ export interface Oracle {
   updateFrequency: string
   accuracy: string
   lastUpdate: string
-  lastSubmissionTime: string
+  lastUpdated: string
   lastTimestamp: string
 }
 
@@ -74,7 +74,7 @@ export function useOracles() {
         const oraclePromises = oracleInfos.map(async (info: any, index: number) => {
           try {
             // Read oracle name and description from the contract
-            const [name, description, lastSubmissionTime, lastTimestamp] = await Promise.all([
+            const [name, description, lastUpdated, lastTimestamp] = await Promise.all([
               readContract(config, {
                 address: info.oracle as `0x${string}`,
                 abi: OracleAbi,
@@ -88,7 +88,7 @@ export function useOracles() {
               readContract(config, {
                 address: info.oracle as `0x${string}`,
                 abi: OracleAbi,
-                functionName: 'lastSubmissionTime',
+                functionName: 'lastUpdated',
               }).catch(() => BigInt(0)),
               readContract(config, {
                 address: info.oracle as `0x${string}`,
@@ -109,7 +109,7 @@ export function useOracles() {
               updateFrequency: '1min',
               accuracy: '99.9%',
               lastUpdate: new Date().toISOString(),
-              lastSubmissionTime: formatTimestamp(lastSubmissionTime as bigint),
+              lastUpdated: formatTimestamp(lastUpdated as bigint),
               lastTimestamp: formatTimestamp(lastTimestamp as bigint),
             }
           } catch (err) {
@@ -126,7 +126,7 @@ export function useOracles() {
               updateFrequency: 'Unknown',
               accuracy: 'Unknown',
               lastUpdate: new Date().toISOString(),
-              lastSubmissionTime: '—',
+              lastUpdated: '—',
               lastTimestamp: '—',
             }
           }
@@ -185,7 +185,7 @@ export function useOracle(oracleAddress: string, targetChainId?: number) {
 
       try {
         // Read oracle details from the contract
-        const [name, description, lastSubmissionTime, lastTimestamp] = await Promise.all([
+        const [name, description, lastUpdated, lastTimestamp] = await Promise.all([
           readContract(config, {
             address: oracleAddress as `0x${string}`,
             abi: OracleAbi,
@@ -199,7 +199,7 @@ export function useOracle(oracleAddress: string, targetChainId?: number) {
           readContract(config, {
             address: oracleAddress as `0x${string}`,
             abi: OracleAbi,
-            functionName: 'lastSubmissionTime',
+            functionName: 'lastUpdated',
           }).catch(() => BigInt(0)),
           readContract(config, {
             address: oracleAddress as `0x${string}`,
@@ -220,7 +220,7 @@ export function useOracle(oracleAddress: string, targetChainId?: number) {
           updateFrequency: '1min',
           accuracy: '99.9%',
           lastUpdate: new Date().toISOString(),
-          lastSubmissionTime: formatTimestamp(lastSubmissionTime as bigint),
+          lastUpdated: formatTimestamp(lastUpdated as bigint),
           lastTimestamp: formatTimestamp(lastTimestamp as bigint),
         })
       } catch (err) {
@@ -238,7 +238,7 @@ export function useOracle(oracleAddress: string, targetChainId?: number) {
           updateFrequency: 'Unknown',
           accuracy: 'Unknown',
           lastUpdate: new Date().toISOString(),
-          lastSubmissionTime: '—',
+          lastUpdated: '—',
           lastTimestamp: '—',
         })
       } finally {

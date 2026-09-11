@@ -38,7 +38,7 @@ export function OracleCard({ oracle }: OracleCardProps) {
           <div className="space-y-3 text-xs text-muted-foreground">
             <div className="flex items-center justify-between">
               <span className="uppercase tracking-wide text-muted-foreground/70">Last Submission</span>
-              <span className="text-foreground/90 font-medium">{oracle.lastSubmissionTime}</span>
+              <span className="text-foreground/90 font-medium">{oracle.lastUpdated}</span>
             </div>
             <div className="flex items-center justify-between">
               <span className="uppercase tracking-wide text-muted-foreground/70">Last Activity</span>

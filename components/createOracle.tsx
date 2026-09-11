@@ -31,6 +31,7 @@ export default function CreateOracleIntegrated() {
   const [depositLock, setDepositLock] = useState<string>('3600')
   const [withdrawLock, setWithdrawLock] = useState<string>('3600')
   const [alpha, setAlpha] = useState<string>('1')
+  const [defaultSampleSize, setDefaultSampleSize] = useState<string>('100')
 
   // UI state
   const [loadingCreation, setLoadingCreation] = useState<boolean>(false)
@@ -51,6 +52,7 @@ export default function CreateOracleIntegrated() {
     depositLock?: string
     withdrawLock?: string
     alpha?: string
+    defaultSampleSize?: string
   }>({})
 
   // Pre-fill owner with connected wallet address
@@ -77,9 +79,10 @@ export default function CreateOracleIntegrated() {
       BigInt(Number(depositLock || 0)),                                           // depositLockingPeriod
       BigInt(Number(withdrawLock || 0)),                                          // withdrawalLockingPeriod
       BigInt(Number(reward || 0)),                                                // rewardBps
-      BigInt(alpha || "0"),                                                       // gamma
+      BigInt(alpha && /^\d+$/.test(alpha) ? alpha : "0"),                         // gamma
+      BigInt(defaultSampleSize && /^\d+$/.test(defaultSampleSize) ? defaultSampleSize : "100"), // defaultSampleSize
     ] as const
-  }, [name, description, weightToken, reward, halfLifeSeconds, quorumBps, depositLock, withdrawLock, alpha])
+  }, [name, description, weightToken, reward, halfLifeSeconds, quorumBps, depositLock, withdrawLock, alpha, defaultSampleSize])
 
   const validateInputs = () => {
     const newErrors: any = {}
@@ -94,8 +97,10 @@ export default function CreateOracleIntegrated() {
     if (!depositLock) newErrors.depositLock = 'Deposit lock period is required'
     if (!withdrawLock) newErrors.withdrawLock = 'Withdrawal lock period is required'
     if (!alpha) newErrors.alpha = 'Alpha is required'
+    if (!defaultSampleSize) newErrors.defaultSampleSize = 'Default sample size is required'
 
     if (Number(reward) < 0) newErrors.reward = 'Reward cannot be negative'
+    if (Number(defaultSampleSize) <= 0) newErrors.defaultSampleSize = 'Default sample size must be greater than 0'
     if (Number(quorumBps) < 0 || Number(quorumBps) > 10000) newErrors.quorumBps = 'Quorum must be between 0 and 10000'
 
     setErrors(newErrors)
@@ -606,6 +611,39 @@ export default function CreateOracleIntegrated() {
                 className={`border-0 bg-slate-800/50 text-slate-100 placeholder:text-slate-400 text-md border border-blue-100 ${errors.alpha ? 'border-red-500' : ''}`}
               />
               {errors.alpha && <p className="text-red-400 text-xs">{errors.alpha}</p>}
+            </div>
+
+            <div className="space-y-1">
+              <div className="flex items-center gap-2 mb-2">
+                <Label htmlFor="defaultSampleSize" className="text-slate-100 text-md">
+                  Default Lookback Sample Size *
+                </Label>
+                <button
+                  type="button"
+                  className="text-slate-300 hover:text-slate-100 transition-colors"
+                  onMouseEnter={() => setShowTooltip('defaultSampleSize')}
+                  onMouseLeave={() => setShowTooltip(null)}
+                >
+                  <Info className="h-3 w-3" />
+                </button>
+                {showTooltip === 'defaultSampleSize' && (
+                  <div className="absolute z-10 bg-slate-800 text-slate-100 text-xs p-2 rounded shadow-lg mt-6">
+                    The default number of historical price points used for min/max calculations
+                  </div>
+                )}
+              </div>
+              <Input
+                id="defaultSampleSize"
+                type="number"
+                min={1}
+                step={1}
+                placeholder="100"
+                value={defaultSampleSize}
+                onChange={(e) => setDefaultSampleSize(e.target.value)}
+                required
+                className={`border-0 bg-slate-800/50 text-slate-100 placeholder:text-slate-400 text-md border border-blue-100 ${errors.defaultSampleSize ? 'border-red-500' : ''}`}
+              />
+              {errors.defaultSampleSize && <p className="text-red-400 text-xs">{errors.defaultSampleSize}</p>}
             </div>
           </CardContent>
         </Card>
