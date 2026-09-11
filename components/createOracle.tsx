@@ -11,14 +11,20 @@ import Link from 'next/link'
 import { useState, useEffect, useMemo } from 'react'
 import { useAccount, useChainId, useConfig } from 'wagmi'
 import { writeContract, simulateContract, readContract } from '@wagmi/core'
-import { OracleFactories } from '@/utils/addresses'
+import { OracleFactories, ComposedOracleFactories } from '@/utils/addresses'
 import { OracleFactoryAbi } from '@/utils/abi/OracleFactory'
+import { ComposedOracleFactoryAbi } from '@/utils/abi/ComposedOracleFactory'
+import { useOracles } from '@/hooks/useOracles'
 import TokenSelector from '@/components/TokenSelector'
 
 export default function CreateOracleIntegrated() {
   const account = useAccount()
   const activeChainId = useChainId()
   const config = useConfig()
+  const { oracles, loading: loadingOracles } = useOracles()
+
+  // Tab State
+  const [activeTab, setActiveTab] = useState<'base' | 'composed'>('base')
   
   // Oracle parameters
   const [name, setName] = useState<string>('')
@@ -32,6 +38,12 @@ export default function CreateOracleIntegrated() {
   const [withdrawLock, setWithdrawLock] = useState<string>('3600')
   const [alpha, setAlpha] = useState<string>('1')
   const [defaultSampleSize, setDefaultSampleSize] = useState<string>('100')
+
+  // Composed parameters
+  const [feedA, setFeedA] = useState<string>('')
+  const [feedB, setFeedB] = useState<string>('')
+  const [operation, setOperation] = useState<number>(0)
+  const [invertResult, setInvertResult] = useState<boolean>(false)
 
   // UI state
   const [loadingCreation, setLoadingCreation] = useState<boolean>(false)
@@ -53,6 +65,8 @@ export default function CreateOracleIntegrated() {
     withdrawLock?: string
     alpha?: string
     defaultSampleSize?: string
+    feedA?: string
+    feedB?: string
   }>({})
 
   // Pre-fill owner with connected wallet address
@@ -87,21 +101,31 @@ export default function CreateOracleIntegrated() {
   const validateInputs = () => {
     const newErrors: any = {}
 
-    if (!name) newErrors.name = 'Oracle name is required'
-    if (!description) newErrors.description = 'Description is required'
-    if (!owner) newErrors.owner = 'Owner address is required'
-    if (!weightToken) newErrors.weightToken = 'Weight token address is required'
-    if (!reward) newErrors.reward = 'Reward is required'
-    if (!halfLifeSeconds) newErrors.halfLifeSeconds = 'Half life seconds is required'
-    if (!quorumBps) newErrors.quorumBps = 'Quorum is required'
-    if (!depositLock) newErrors.depositLock = 'Deposit lock period is required'
-    if (!withdrawLock) newErrors.withdrawLock = 'Withdrawal lock period is required'
-    if (!alpha) newErrors.alpha = 'Alpha is required'
-    if (!defaultSampleSize) newErrors.defaultSampleSize = 'Default sample size is required'
+    if (activeTab === 'base') {
+      if (!name) newErrors.name = 'Oracle name is required'
+      if (!description) newErrors.description = 'Description is required'
+      if (!owner) newErrors.owner = 'Owner address is required'
+      if (!weightToken) newErrors.weightToken = 'Weight token address is required'
+      if (!reward) newErrors.reward = 'Reward is required'
+      if (!halfLifeSeconds) newErrors.halfLifeSeconds = 'Half life seconds is required'
+      if (!quorumBps) newErrors.quorumBps = 'Quorum is required'
+      if (!depositLock) newErrors.depositLock = 'Deposit lock period is required'
+      if (!withdrawLock) newErrors.withdrawLock = 'Withdrawal lock period is required'
+      if (!alpha) newErrors.alpha = 'Alpha is required'
+      if (!defaultSampleSize) newErrors.defaultSampleSize = 'Default sample size is required'
 
-    if (Number(reward) < 0) newErrors.reward = 'Reward cannot be negative'
-    if (Number(defaultSampleSize) <= 0) newErrors.defaultSampleSize = 'Default sample size must be greater than 0'
-    if (Number(quorumBps) < 0 || Number(quorumBps) > 10000) newErrors.quorumBps = 'Quorum must be between 0 and 10000'
+      if (Number(reward) < 0) newErrors.reward = 'Reward cannot be negative'
+      if (Number(defaultSampleSize) <= 0) newErrors.defaultSampleSize = 'Default sample size must be greater than 0'
+      if (Number(quorumBps) < 0 || Number(quorumBps) > 10000) newErrors.quorumBps = 'Quorum must be between 0 and 10000'
+    } else {
+      if (!feedA) newErrors.feedA = 'Parent Feed A address is required'
+      if (!feedB) newErrors.feedB = 'Parent Feed B address is required'
+      if (!defaultSampleSize) newErrors.defaultSampleSize = 'Default sample size is required'
+
+      if (feedA && !feedA.startsWith('0x')) newErrors.feedA = 'Invalid Parent Feed A address'
+      if (feedB && !feedB.startsWith('0x')) newErrors.feedB = 'Invalid Parent Feed B address'
+      if (Number(defaultSampleSize) <= 0) newErrors.defaultSampleSize = 'Default sample size must be greater than 0'
+    }
 
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
@@ -166,20 +190,41 @@ export default function CreateOracleIntegrated() {
 
     try {
       setLoadingCreation(true)
-      const factoryAddress = OracleFactories[activeChainId as keyof typeof OracleFactories]
+      const isComposed = activeTab === 'composed'
+      const factoryAddress = isComposed
+        ? ComposedOracleFactories[activeChainId as keyof typeof ComposedOracleFactories]
+        : OracleFactories[activeChainId as keyof typeof OracleFactories]
 
       if (!factoryAddress || factoryAddress === '0x0000000000000000000000000000000000000000') {
         throw new Error('Oracle Factory not deployed on this network')
       }
 
-      // Simulate the transaction first
-      const { request } = await simulateContract(config, {
-        address: factoryAddress,
-        abi: OracleFactoryAbi,
-        functionName: 'createOracle',
-        args: constructorArgs,
-        account: account.address,
-      })
+      let request: any
+      if (isComposed) {
+        const sim = await simulateContract(config, {
+          address: factoryAddress,
+          abi: ComposedOracleFactoryAbi,
+          functionName: 'createComposedOracle',
+          args: [
+            feedA as `0x${string}`,
+            feedB as `0x${string}`,
+            operation,
+            invertResult,
+            BigInt(defaultSampleSize)
+          ],
+          account: account.address,
+        })
+        request = sim.request
+      } else {
+        const sim = await simulateContract(config, {
+          address: factoryAddress,
+          abi: OracleFactoryAbi,
+          functionName: 'createOracle',
+          args: constructorArgs,
+          account: account.address,
+        })
+        request = sim.request
+      }
 
       // Execute the transaction
       const tx = await writeContract(config, request)
@@ -191,20 +236,32 @@ export default function CreateOracleIntegrated() {
       })
 
       // Wait for transaction and get oracle address
-      // Note: In a real implementation, you'd wait for the transaction receipt
-      // and parse the events to get the oracle address
       setTimeout(async () => {
         try {
-          // Get the latest oracle from the factory
-          const allOracles = await readContract(config, {
-            address: factoryAddress,
-            abi: OracleFactoryAbi,
-            functionName: 'allOracles',
-          }) as Array<{ oracle: string; token: string; creator: string }>
+          if (isComposed) {
+            // Get the latest composed oracle from the factory
+            const allComposed = await readContract(config, {
+              address: factoryAddress,
+              abi: ComposedOracleFactoryAbi,
+              functionName: 'allComposedOracles',
+            }) as Array<{ oracle: string; feedA: string; feedB: string; operation: number; creator: string }>
 
-          if (allOracles.length > 0) {
-            const latestOracle = allOracles[allOracles.length - 1]
-            setOracleAddress(latestOracle.oracle)
+            if (allComposed.length > 0) {
+              const latestComposed = allComposed[allComposed.length - 1]
+              setOracleAddress(latestComposed.oracle)
+            }
+          } else {
+            // Get the latest base oracle from the factory
+            const allOracles = await readContract(config, {
+              address: factoryAddress,
+              abi: OracleFactoryAbi,
+              functionName: 'allOracles',
+            }) as Array<{ oracle: string; token: string; creator: string }>
+
+            if (allOracles.length > 0) {
+              const latestOracle = allOracles[allOracles.length - 1]
+              setOracleAddress(latestOracle.oracle)
+            }
           }
 
           setSubmitted(true)
@@ -286,371 +343,598 @@ export default function CreateOracleIntegrated() {
   }
 
   return (
-    <div className="font-[oblique] tracking-wide text-slate-100" style={{ fontStyle: "oblique 15deg" }}>
+    <div className="font-[oblique] tracking-wide text-slate-100 max-w-4xl mx-auto" style={{ fontStyle: "oblique 15deg" }}>
+      {/* Tab Selector */}
+      <div className="flex gap-4 justify-center mb-8">
+        <Button
+          type="button"
+          onClick={() => setActiveTab('base')}
+          className={`h-11 px-6 rounded-lg transition-all duration-300 font-medium ${
+            activeTab === 'base'
+              ? 'bg-blue-600 hover:bg-blue-700 text-white border-2 border-blue-400'
+              : 'bg-slate-800/40 border border-slate-700 hover:bg-slate-800/60 text-slate-300'
+          }`}
+        >
+          Deploy Base Oracle
+        </Button>
+        <Button
+          type="button"
+          onClick={() => setActiveTab('composed')}
+          className={`h-11 px-6 rounded-lg transition-all duration-300 font-medium ${
+            activeTab === 'composed'
+              ? 'bg-blue-600 hover:bg-blue-700 text-white border-2 border-blue-400'
+              : 'bg-slate-800/40 border border-slate-700 hover:bg-slate-800/60 text-slate-300'
+          }`}
+        >
+          Deploy Composed Oracle
+        </Button>
+      </div>
+
       <form onSubmit={(e) => { e.preventDefault(); createOracle(); }} className="space-y-8">
-        <Card className="border-2 border-blue-200 bg-card shadow-sm max-w-4xl mx-auto">
-          <CardHeader className="border-b border-blue-100">
-            <CardTitle className="text-slate-100 text-xl">
-              Oracle Metadata
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="grid grid-cols-2 gap-4">
-            <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <Label htmlFor="name" className="text-slate-100 text-md">
-                  Name *
-                </Label>
-                <button
-                  type="button"
-                  className="text-slate-300 hover:text-slate-100 transition-colors"
-                  onMouseEnter={() => setShowTooltip('name')}
-                  onMouseLeave={() => setShowTooltip(null)}
-                >
-                  <Info className="h-3 w-3" />
-                </button>
-                {showTooltip === 'name' && (
-                  <div className="absolute z-10 bg-slate-800 text-slate-100 text-xs p-2 rounded shadow-lg">
-                    Display name for your oracle
+        {activeTab === 'base' ? (
+          <>
+            <Card className="border-2 border-blue-200 bg-card shadow-sm max-w-4xl mx-auto">
+              <CardHeader className="border-b border-blue-100">
+                <CardTitle className="text-slate-100 text-xl">
+                  Oracle Metadata
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <Label htmlFor="name" className="text-slate-100 text-md">
+                      Name *
+                    </Label>
+                    <button
+                      type="button"
+                      className="text-slate-300 hover:text-slate-100 transition-colors"
+                      onMouseEnter={() => setShowTooltip('name')}
+                      onMouseLeave={() => setShowTooltip(null)}
+                    >
+                      <Info className="h-3 w-3" />
+                    </button>
+                    {showTooltip === 'name' && (
+                      <div className="absolute z-10 bg-slate-800 text-slate-100 text-xs p-2 rounded shadow-lg">
+                        Display name for your oracle
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
-              <Input
-                id="name"
-                placeholder="ETH/USD Oracle"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className={`border-0 bg-slate-800/50  text-slate-100 placeholder:text-slate-400 border border-blue-100 max-w-full ${errors.name ? 'border-red-500' : ''}`}
-                required
-              />
-              {errors.name && <p className="text-red-400 text-xs">{errors.name}</p>}
-            </div>
-            <div className="space-y-1 col-span-2">
-              <div className="flex items-center gap-2">
-                <Label htmlFor="description" className="text-slate-100 text-md">
-                  Description *
-                </Label>
-                <button
-                  type="button"
-                  className="text-slate-300 hover:text-slate-100 transition-colors"
-                  onMouseEnter={() => setShowTooltip('description')}
-                  onMouseLeave={() => setShowTooltip(null)}
-                >
-                  <Info className="h-3 w-3" />
-                </button>
-                {showTooltip === 'description' && (
-                  <div className="absolute z-10 bg-slate-800 text-slate-100 text-xs p-2 rounded shadow-lg mt-6">
-                    Detailed description of your oracle's purpose
+                  <Input
+                    id="name"
+                    placeholder="ETH/USD Oracle"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    className={`border-0 bg-slate-800/50  text-slate-100 placeholder:text-slate-400 border border-blue-100 max-w-full ${errors.name ? 'border-red-500' : ''}`}
+                    required
+                  />
+                  {errors.name && <p className="text-red-400 text-xs">{errors.name}</p>}
+                </div>
+                <div className="space-y-1 col-span-2">
+                  <div className="flex items-center gap-2">
+                    <Label htmlFor="description" className="text-slate-100 text-md">
+                      Description *
+                    </Label>
+                    <button
+                      type="button"
+                      className="text-slate-300 hover:text-slate-100 transition-colors"
+                      onMouseEnter={() => setShowTooltip('description')}
+                      onMouseLeave={() => setShowTooltip(null)}
+                    >
+                      <Info className="h-3 w-3" />
+                    </button>
+                    {showTooltip === 'description' && (
+                      <div className="absolute z-10 bg-slate-800 text-slate-100 text-xs p-2 rounded shadow-lg mt-6">
+                        Detailed description of your oracle's purpose
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
-              <Textarea
-                id="description"
-                placeholder="Describe your oracle's purpose and data source"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                className={`border-0 bg-slate-800/50 text-slate-100 placeholder:text-slate-400 border border-blue-100 ${errors.description ? 'border-red-500' : ''}`}
-                required
-              />
-              {errors.description && <p className="text-red-400 text-xs">{errors.description}</p>}
-            </div>
-          </CardContent>
-        </Card>
+                  <Textarea
+                    id="description"
+                    placeholder="Describe your oracle's purpose and data source"
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    className={`border-0 bg-slate-800/50 text-slate-100 placeholder:text-slate-400 border border-blue-100 ${errors.description ? 'border-red-500' : ''}`}
+                    required
+                  />
+                  {errors.description && <p className="text-red-400 text-xs">{errors.description}</p>}
+                </div>
+              </CardContent>
+            </Card>
 
-        <Card className="border-2 border-blue-200 bg-card shadow-sm max-w-4xl mx-auto">
-          <CardHeader className="border-b border-blue-100">
-            <CardTitle className="text-xl text-slate-100">
-              Oracle Parameters
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="grid grid-cols-2 gap-4 pt-4">
-            <div className="space-y-1">
-              <div className="flex items-center gap-2 mb-2">
-                <Label htmlFor="owner" className="text-slate-100 text-md">
-                  Owner Address *
-                </Label>
-                <button
-                  type="button"
-                  className="text-slate-300 hover:text-slate-100 transition-colors"
-                  onMouseEnter={() => setShowTooltip('owner')}
-                  onMouseLeave={() => setShowTooltip(null)}
-                >
-                  <Info className="h-3 w-3" />
-                </button>
-                {showTooltip === 'owner' && (
-                  <div className="absolute z-10 bg-slate-800 text-slate-100 text-xs p-2 rounded shadow-lg mt-6">
-                    Address that will own and control the oracle contract
+            <Card className="border-2 border-blue-200 bg-card shadow-sm max-w-4xl mx-auto">
+              <CardHeader className="border-b border-blue-100">
+                <CardTitle className="text-xl text-slate-100">
+                  Oracle Parameters
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="grid grid-cols-2 gap-4 pt-4">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Label htmlFor="owner" className="text-slate-100 text-md">
+                      Owner Address *
+                    </Label>
+                    <button
+                      type="button"
+                      className="text-slate-300 hover:text-slate-100 transition-colors"
+                      onMouseEnter={() => setShowTooltip('owner')}
+                      onMouseLeave={() => setShowTooltip(null)}
+                    >
+                      <Info className="h-3 w-3" />
+                    </button>
+                    {showTooltip === 'owner' && (
+                      <div className="absolute z-10 bg-slate-800 text-slate-100 text-xs p-2 rounded shadow-lg mt-6">
+                        Address that will own and control the oracle contract
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
-              <Input
-                id="owner"
-                placeholder="0x..."
-                value={owner}
-                onChange={(e) => setOwner(e.target.value)}
-                required
-                className={`border-0 bg-slate-800/50 text-slate-100 placeholder:text-slate-400 text-md border border-blue-100 ${errors.owner ? 'border-red-500' : ''}`}
-              />
-              {errors.owner && <p className="text-red-400 text-xs">{errors.owner}</p>}
-            </div>
-            
-            <div className="space-y-1">
-              <div className="flex items-center gap-2 mb-2">
-                <Label htmlFor="weightToken" className="text-slate-100 text-md">
-                  Weight Token (ERC20) *
-                </Label>
-                <button
-                  type="button"
-                  className="text-slate-300 hover:text-slate-100 transition-colors"
-                  onMouseEnter={() => setShowTooltip('weightToken')}
-                  onMouseLeave={() => setShowTooltip(null)}
-                >
-                  <Info className="h-3 w-3" />
-                </button>
-                {showTooltip === 'weightToken' && (
-                  <div className="absolute z-10 bg-slate-800 text-slate-100 text-xs p-2 rounded shadow-lg mt-6">
-                    ERC20 token address used for voting weight calculation. You can select from supported tokens or enter a custom address.
+                  <Input
+                    id="owner"
+                    placeholder="0x..."
+                    value={owner}
+                    onChange={(e) => setOwner(e.target.value)}
+                    required
+                    className={`border-0 bg-slate-800/50 text-slate-100 placeholder:text-slate-400 text-md border border-blue-100 ${errors.owner ? 'border-red-500' : ''}`}
+                  />
+                  {errors.owner && <p className="text-red-400 text-xs">{errors.owner}</p>}
+                </div>
+                
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Label htmlFor="weightToken" className="text-slate-100 text-md">
+                      Weight Token (ERC20) *
+                    </Label>
+                    <button
+                      type="button"
+                      className="text-slate-300 hover:text-slate-100 transition-colors"
+                      onMouseEnter={() => setShowTooltip('weightToken')}
+                      onMouseLeave={() => setShowTooltip(null)}
+                    >
+                      <Info className="h-3 w-3" />
+                    </button>
+                    {showTooltip === 'weightToken' && (
+                      <div className="absolute z-10 bg-slate-800 text-slate-100 text-xs p-2 rounded shadow-lg mt-6">
+                        ERC20 token address used for voting weight calculation. You can select from supported tokens or enter a custom address.
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
-              <TokenSelector
-                value={weightToken}
-                onChange={(address) => setWeightToken(address)}
-                error={errors.weightToken}
-                placeholder="0x..."
-                label=""
-                required={true}
-              />
-            </div>
+                  <TokenSelector
+                    value={weightToken}
+                    onChange={(address) => setWeightToken(address)}
+                    error={errors.weightToken}
+                    placeholder="0x..."
+                    label=""
+                    required={true}
+                  />
+                </div>
 
-            <div className="space-y-1">
-              <div className="flex items-center gap-2 mb-2">
-                <Label htmlFor="reward" className="text-slate-100 text-md">
-                  Reward (out of 1e5) *
-                </Label>
-                <button
-                  type="button"
-                  className="text-slate-300 hover:text-slate-100 transition-colors"
-                  onMouseEnter={() => setShowTooltip('reward')}
-                  onMouseLeave={() => setShowTooltip(null)}
-                >
-                  <Info className="h-3 w-3" />
-                </button>
-                {showTooltip === 'reward' && (
-                  <div className="absolute z-10 bg-slate-800 text-slate-100 text-xs p-2 rounded shadow-lg mt-6">
-                    Example: 1000 = 1.000% of contract balance per reward slice
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Label htmlFor="reward" className="text-slate-100 text-md">
+                      Reward (out of 1e5) *
+                    </Label>
+                    <button
+                      type="button"
+                      className="text-slate-300 hover:text-slate-100 transition-colors"
+                      onMouseEnter={() => setShowTooltip('reward')}
+                      onMouseLeave={() => setShowTooltip(null)}
+                    >
+                      <Info className="h-3 w-3" />
+                    </button>
+                    {showTooltip === 'reward' && (
+                      <div className="absolute z-10 bg-slate-800 text-slate-100 text-xs p-2 rounded shadow-lg mt-6">
+                        Example: 1000 = 1.000% of contract balance per reward slice
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
-              <Input
-                id="reward"
-                type="number"
-                min={0}
-                placeholder="1000"
-                value={reward}
-                onChange={(e) => setReward(e.target.value)}
-                required
-                className={`border-0 bg-slate-800/50 text-slate-100 placeholder:text-slate-400 text-md border border-blue-100 ${errors.reward ? 'border-red-500' : ''}`}
-              />
-              {errors.reward && <p className="text-red-400 text-xs">{errors.reward}</p>}
-            </div>
+                  <Input
+                    id="reward"
+                    type="number"
+                    min={0}
+                    placeholder="1000"
+                    value={reward}
+                    onChange={(e) => setReward(e.target.value)}
+                    required
+                    className={`border-0 bg-slate-800/50 text-slate-100 placeholder:text-slate-400 text-md border border-blue-100 ${errors.reward ? 'border-red-500' : ''}`}
+                  />
+                  {errors.reward && <p className="text-red-400 text-xs">{errors.reward}</p>}
+                </div>
 
-            <div className="space-y-1">
-              <div className="flex items-center gap-2 mb-2">
-                <Label htmlFor="halfLifeSeconds" className="text-slate-100 text-md">
-                  Half Life Seconds *
-                </Label>
-                <button
-                  type="button"
-                  className="text-slate-300 hover:text-slate-100 transition-colors"
-                  onMouseEnter={() => setShowTooltip('halfLifeSeconds')}
-                  onMouseLeave={() => setShowTooltip(null)}
-                >
-                  <Info className="h-3 w-3" />
-                </button>
-                {showTooltip === 'halfLifeSeconds' && (
-                  <div className="absolute z-10 bg-slate-800 text-slate-100 text-xs p-2 rounded shadow-lg mt-6">
-                    Controls time-decay in EWMA (Exponentially Weighted Moving Average)
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Label htmlFor="halfLifeSeconds" className="text-slate-100 text-md">
+                      Half Life Seconds *
+                    </Label>
+                    <button
+                      type="button"
+                      className="text-slate-300 hover:text-slate-100 transition-colors"
+                      onMouseEnter={() => setShowTooltip('halfLifeSeconds')}
+                      onMouseLeave={() => setShowTooltip(null)}
+                    >
+                      <Info className="h-3 w-3" />
+                    </button>
+                    {showTooltip === 'halfLifeSeconds' && (
+                      <div className="absolute z-10 bg-slate-800 text-slate-100 text-xs p-2 rounded shadow-lg mt-6">
+                        Controls time-decay in EWMA (Exponentially Weighted Moving Average)
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
-              <Input
-                id="halfLifeSeconds"
-                type="number"
-                min={0}
-                placeholder="3600"
-                value={halfLifeSeconds}
-                onChange={(e) => setHalfLifeSeconds(e.target.value)}
-                required
-                className={`border-0 bg-slate-800/50 text-slate-100 placeholder:text-slate-400 text-md border border-blue-100 ${errors.halfLifeSeconds ? 'border-red-500' : ''}`}
-              />
-              {errors.halfLifeSeconds && <p className="text-red-400 text-xs">{errors.halfLifeSeconds}</p>}
-            </div>
+                  <Input
+                    id="halfLifeSeconds"
+                    type="number"
+                    min={0}
+                    placeholder="3600"
+                    value={halfLifeSeconds}
+                    onChange={(e) => setHalfLifeSeconds(e.target.value)}
+                    required
+                    className={`border-0 bg-slate-800/50 text-slate-100 placeholder:text-slate-400 text-md border border-blue-100 ${errors.halfLifeSeconds ? 'border-red-500' : ''}`}
+                  />
+                  {errors.halfLifeSeconds && <p className="text-red-400 text-xs">{errors.halfLifeSeconds}</p>}
+                </div>
 
-            <div className="space-y-1">
-              <div className="flex items-center gap-2 mb-2">
-                <Label htmlFor="quorumBps" className="text-slate-100 text-md">
-                  Quorum (basis points) *
-                </Label>
-                <button
-                  type="button"
-                  className="text-slate-300 hover:text-slate-100 transition-colors"
-                  onMouseEnter={() => setShowTooltip('quorumBps')}
-                  onMouseLeave={() => setShowTooltip(null)}
-                >
-                  <Info className="h-3 w-3" />
-                </button>
-                {showTooltip === 'quorumBps' && (
-                  <div className="absolute z-10 bg-slate-800 text-slate-100 text-xs p-2 rounded shadow-lg mt-6">
-                    Minimum participation required (0-10000). 20% = 2000 bps
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Label htmlFor="quorumBps" className="text-slate-100 text-md">
+                      Quorum (basis points) *
+                    </Label>
+                    <button
+                      type="button"
+                      className="text-slate-300 hover:text-slate-100 transition-colors"
+                      onMouseEnter={() => setShowTooltip('quorumBps')}
+                      onMouseLeave={() => setShowTooltip(null)}
+                    >
+                      <Info className="h-3 w-3" />
+                    </button>
+                    {showTooltip === 'quorumBps' && (
+                      <div className="absolute z-10 bg-slate-800 text-slate-100 text-xs p-2 rounded shadow-lg mt-6">
+                        Minimum participation required (0-10000). 20% = 2000 bps
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
-              <Input
-                id="quorumBps"
-                type="number"
-                min={0}
-                max={10000}
-                placeholder="2000"
-                value={quorumBps}
-                onChange={(e) => setQuorumBps(e.target.value)}
-                required
-                className={`border-0 bg-slate-800/50 text-slate-100 placeholder:text-slate-400 text-md border border-blue-100 ${errors.quorumBps ? 'border-red-500' : ''}`}
-              />
-              {errors.quorumBps && <p className="text-red-400 text-xs">{errors.quorumBps}</p>}
-            </div>
+                  <Input
+                    id="quorumBps"
+                    type="number"
+                    min={0}
+                    max={10000}
+                    placeholder="2000"
+                    value={quorumBps}
+                    onChange={(e) => setQuorumBps(e.target.value)}
+                    required
+                    className={`border-0 bg-slate-800/50 text-slate-100 placeholder:text-slate-400 text-md border border-blue-100 ${errors.quorumBps ? 'border-red-500' : ''}`}
+                  />
+                  {errors.quorumBps && <p className="text-red-400 text-xs">{errors.quorumBps}</p>}
+                </div>
 
-            <div className="space-y-1">
-              <div className="flex items-center gap-2 mb-2">
-                <Label htmlFor="depositLock" className="text-slate-100 text-md">
-                  Deposit Lock Period (sec) *
-                </Label>
-                <button
-                  type="button"
-                  className="text-slate-300 hover:text-slate-100 transition-colors"
-                  onMouseEnter={() => setShowTooltip('depositLock')}
-                  onMouseLeave={() => setShowTooltip(null)}
-                >
-                  <Info className="h-3 w-3" />
-                </button>
-                {showTooltip === 'depositLock' && (
-                  <div className="absolute z-10 bg-slate-800 text-slate-100 text-xs p-2 rounded shadow-lg mt-6">
-                    Time period deposits are locked before they can be withdrawn
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Label htmlFor="depositLock" className="text-slate-100 text-md">
+                      Deposit Lock Period (sec) *
+                    </Label>
+                    <button
+                      type="button"
+                      className="text-slate-300 hover:text-slate-100 transition-colors"
+                      onMouseEnter={() => setShowTooltip('depositLock')}
+                      onMouseLeave={() => setShowTooltip(null)}
+                    >
+                      <Info className="h-3 w-3" />
+                    </button>
+                    {showTooltip === 'depositLock' && (
+                      <div className="absolute z-10 bg-slate-800 text-slate-100 text-xs p-2 rounded shadow-lg mt-6">
+                        Time period deposits are locked before they can be withdrawn
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
-              <Input
-                id="depositLock"
-                type="number"
-                min={0}
-                placeholder="3600"
-                value={depositLock}
-                onChange={(e) => setDepositLock(e.target.value)}
-                required
-                className={`border-0 bg-slate-800/50 text-slate-100 placeholder:text-slate-400 text-md border border-blue-100 ${errors.depositLock ? 'border-red-500' : ''}`}
-              />
-              {errors.depositLock && <p className="text-red-400 text-xs">{errors.depositLock}</p>}
-            </div>
+                  <Input
+                    id="depositLock"
+                    type="number"
+                    min={0}
+                    placeholder="3600"
+                    value={depositLock}
+                    onChange={(e) => setDepositLock(e.target.value)}
+                    required
+                    className={`border-0 bg-slate-800/50 text-slate-100 placeholder:text-slate-400 text-md border border-blue-100 ${errors.depositLock ? 'border-red-500' : ''}`}
+                  />
+                  {errors.depositLock && <p className="text-red-400 text-xs">{errors.depositLock}</p>}
+                </div>
 
-            <div className="space-y-1">
-              <div className="flex items-center gap-2 mb-2">
-                <Label htmlFor="withdrawLock" className="text-slate-100 text-md">
-                  Withdrawal Lock Period (sec) *
-                </Label>
-                <button
-                  type="button"
-                  className="text-slate-300 hover:text-slate-100 transition-colors"
-                  onMouseEnter={() => setShowTooltip('withdrawLock')}
-                  onMouseLeave={() => setShowTooltip(null)}
-                >
-                  <Info className="h-3 w-3" />
-                </button>
-                {showTooltip === 'withdrawLock' && (
-                  <div className="absolute z-10 bg-slate-800 text-slate-100 text-xs p-2 rounded shadow-lg mt-6">
-                    Time period before withdrawal requests can be processed
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Label htmlFor="withdrawLock" className="text-slate-100 text-md">
+                      Withdrawal Lock Period (sec) *
+                    </Label>
+                    <button
+                      type="button"
+                      className="text-slate-300 hover:text-slate-100 transition-colors"
+                      onMouseEnter={() => setShowTooltip('withdrawLock')}
+                      onMouseLeave={() => setShowTooltip(null)}
+                    >
+                      <Info className="h-3 w-3" />
+                    </button>
+                    {showTooltip === 'withdrawLock' && (
+                      <div className="absolute z-10 bg-slate-800 text-slate-100 text-xs p-2 rounded shadow-lg mt-6">
+                        Time period before withdrawal requests can be processed
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
-              <Input
-                id="withdrawLock"
-                type="number"
-                min={0}
-                placeholder="3600"
-                value={withdrawLock}
-                onChange={(e) => setWithdrawLock(e.target.value)}
-                required
-                className={`border-0 bg-slate-800/50 text-slate-100 placeholder:text-slate-400 text-md border border-blue-100 ${errors.withdrawLock ? 'border-red-500' : ''}`}
-              />
-              {errors.withdrawLock && <p className="text-red-400 text-xs">{errors.withdrawLock}</p>}
-            </div>
+                  <Input
+                    id="withdrawLock"
+                    type="number"
+                    min={0}
+                    placeholder="3600"
+                    value={withdrawLock}
+                    onChange={(e) => setWithdrawLock(e.target.value)}
+                    required
+                    className={`border-0 bg-slate-800/50 text-slate-100 placeholder:text-slate-400 text-md border border-blue-100 ${errors.withdrawLock ? 'border-red-500' : ''}`}
+                  />
+                  {errors.withdrawLock && <p className="text-red-400 text-xs">{errors.withdrawLock}</p>}
+                </div>
 
-            <div className="space-y-1">
-              <div className="flex items-center gap-2 mb-2">
-                <Label htmlFor="alpha" className="text-slate-100 text-md">
-                  Alpha *
-                </Label>
-                <button
-                  type="button"
-                  className="text-slate-300 hover:text-slate-100 transition-colors"
-                  onMouseEnter={() => setShowTooltip('alpha')}
-                  onMouseLeave={() => setShowTooltip(null)}
-                >
-                  <Info className="h-3 w-3" />
-                </button>
-                {showTooltip === 'alpha' && (
-                  <div className="absolute z-10 bg-slate-800 text-slate-100 text-xs p-2 rounded shadow-lg mt-6">
-                    Scalar in reward formula. Keep small unless you understand the economics
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Label htmlFor="alpha" className="text-slate-100 text-md">
+                      Alpha *
+                    </Label>
+                    <button
+                      type="button"
+                      className="text-slate-300 hover:text-slate-100 transition-colors"
+                      onMouseEnter={() => setShowTooltip('alpha')}
+                      onMouseLeave={() => setShowTooltip(null)}
+                    >
+                      <Info className="h-3 w-3" />
+                    </button>
+                    {showTooltip === 'alpha' && (
+                      <div className="absolute z-10 bg-slate-800 text-slate-100 text-xs p-2 rounded shadow-lg mt-6">
+                        Scalar in reward formula. Keep small unless you understand the economics
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
-              <Input
-                id="alpha"
-                type="number"
-                min={0}
-                placeholder="1"
-                value={alpha}
-                onChange={(e) => setAlpha(e.target.value)}
-                required
-                className={`border-0 bg-slate-800/50 text-slate-100 placeholder:text-slate-400 text-md border border-blue-100 ${errors.alpha ? 'border-red-500' : ''}`}
-              />
-              {errors.alpha && <p className="text-red-400 text-xs">{errors.alpha}</p>}
-            </div>
+                  <Input
+                    id="alpha"
+                    type="number"
+                    min={0}
+                    placeholder="1"
+                    value={alpha}
+                    onChange={(e) => setAlpha(e.target.value)}
+                    required
+                    className={`border-0 bg-slate-800/50 text-slate-100 placeholder:text-slate-400 text-md border border-blue-100 ${errors.alpha ? 'border-red-500' : ''}`}
+                  />
+                  {errors.alpha && <p className="text-red-400 text-xs">{errors.alpha}</p>}
+                </div>
 
-            <div className="space-y-1">
-              <div className="flex items-center gap-2 mb-2">
-                <Label htmlFor="defaultSampleSize" className="text-slate-100 text-md">
-                  Default Lookback Sample Size *
-                </Label>
-                <button
-                  type="button"
-                  className="text-slate-300 hover:text-slate-100 transition-colors"
-                  onMouseEnter={() => setShowTooltip('defaultSampleSize')}
-                  onMouseLeave={() => setShowTooltip(null)}
-                >
-                  <Info className="h-3 w-3" />
-                </button>
-                {showTooltip === 'defaultSampleSize' && (
-                  <div className="absolute z-10 bg-slate-800 text-slate-100 text-xs p-2 rounded shadow-lg mt-6">
-                    The default number of historical price points used for min/max calculations
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Label htmlFor="defaultSampleSize" className="text-slate-100 text-md">
+                      Default Lookback Sample Size *
+                    </Label>
+                    <button
+                      type="button"
+                      className="text-slate-300 hover:text-slate-100 transition-colors"
+                      onMouseEnter={() => setShowTooltip('defaultSampleSize')}
+                      onMouseLeave={() => setShowTooltip(null)}
+                    >
+                      <Info className="h-3 w-3" />
+                    </button>
+                    {showTooltip === 'defaultSampleSize' && (
+                      <div className="absolute z-10 bg-slate-800 text-slate-100 text-xs p-2 rounded shadow-lg mt-6">
+                        The default number of historical price points used for min/max calculations
+                      </div>
+                    )}
                   </div>
-                )}
+                  <Input
+                    id="defaultSampleSize"
+                    type="number"
+                    min={1}
+                    step={1}
+                    placeholder="100"
+                    value={defaultSampleSize}
+                    onChange={(e) => setDefaultSampleSize(e.target.value)}
+                    required
+                    className={`border-0 bg-slate-800/50 text-slate-100 placeholder:text-slate-400 text-md border border-blue-100 ${errors.defaultSampleSize ? 'border-red-500' : ''}`}
+                  />
+                  {errors.defaultSampleSize && <p className="text-red-400 text-xs">{errors.defaultSampleSize}</p>}
+                </div>
+              </CardContent>
+            </Card>
+          </>
+        ) : (
+          <Card className="border-2 border-blue-200 bg-card shadow-sm max-w-4xl mx-auto">
+            <CardHeader className="border-b border-blue-100">
+              <CardTitle className="text-xl text-slate-100">
+                Composed Oracle Parameters
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
+              
+              {/* Parent Feed A */}
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="feedA" className="text-slate-100 text-md">
+                    Parent Feed A *
+                  </Label>
+                  <button
+                    type="button"
+                    className="text-slate-300 hover:text-slate-100 transition-colors"
+                    onMouseEnter={() => setShowTooltip('feedA')}
+                    onMouseLeave={() => setShowTooltip(null)}
+                  >
+                    <Info className="h-3 w-3" />
+                  </button>
+                  {showTooltip === 'feedA' && (
+                    <div className="absolute z-10 bg-slate-800 text-slate-100 text-xs p-2 rounded shadow-lg mt-6">
+                      First parent feed for composed index math
+                    </div>
+                  )}
+                </div>
+                <div className="flex flex-col gap-2">
+                  <select
+                    value={feedA}
+                    onChange={(e) => setFeedA(e.target.value)}
+                    className="h-10 px-3 bg-slate-800 text-slate-100 border border-blue-100 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 font-[oblique]"
+                  >
+                    <option value="">-- Select Deployed Oracle --</option>
+                    {oracles?.map((o) => (
+                      <option key={o.address} value={o.address}>
+                        {o.name || o.address} ({o.address.slice(0, 6)}...{o.address.slice(-4)})
+                      </option>
+                    ))}
+                  </select>
+                  <Input
+                    id="feedA"
+                    placeholder="Or enter custom address (0x...)"
+                    value={feedA}
+                    onChange={(e) => setFeedA(e.target.value)}
+                    required
+                    className={`border-0 bg-slate-800/50 text-slate-100 placeholder:text-slate-400 text-md border border-blue-100 ${errors.feedA ? 'border-red-500' : ''}`}
+                  />
+                </div>
+                {errors.feedA && <p className="text-red-400 text-xs">{errors.feedA}</p>}
               </div>
-              <Input
-                id="defaultSampleSize"
-                type="number"
-                min={1}
-                step={1}
-                placeholder="100"
-                value={defaultSampleSize}
-                onChange={(e) => setDefaultSampleSize(e.target.value)}
-                required
-                className={`border-0 bg-slate-800/50 text-slate-100 placeholder:text-slate-400 text-md border border-blue-100 ${errors.defaultSampleSize ? 'border-red-500' : ''}`}
-              />
-              {errors.defaultSampleSize && <p className="text-red-400 text-xs">{errors.defaultSampleSize}</p>}
-            </div>
-          </CardContent>
-        </Card>
 
-        <div className="justify-center flex  mx-auto">
+              {/* Parent Feed B */}
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="feedB" className="text-slate-100 text-md">
+                    Parent Feed B *
+                  </Label>
+                  <button
+                    type="button"
+                    className="text-slate-300 hover:text-slate-100 transition-colors"
+                    onMouseEnter={() => setShowTooltip('feedB')}
+                    onMouseLeave={() => setShowTooltip(null)}
+                  >
+                    <Info className="h-3 w-3" />
+                  </button>
+                  {showTooltip === 'feedB' && (
+                    <div className="absolute z-10 bg-slate-800 text-slate-100 text-xs p-2 rounded shadow-lg mt-6">
+                      Second parent feed for composed index math
+                    </div>
+                  )}
+                </div>
+                <div className="flex flex-col gap-2">
+                  <select
+                    value={feedB}
+                    onChange={(e) => setFeedB(e.target.value)}
+                    className="h-10 px-3 bg-slate-800 text-slate-100 border border-blue-100 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 font-[oblique]"
+                  >
+                    <option value="">-- Select Deployed Oracle --</option>
+                    {oracles?.map((o) => (
+                      <option key={o.address} value={o.address}>
+                        {o.name || o.address} ({o.address.slice(0, 6)}...{o.address.slice(-4)})
+                      </option>
+                    ))}
+                  </select>
+                  <Input
+                    id="feedB"
+                    placeholder="Or enter custom address (0x...)"
+                    value={feedB}
+                    onChange={(e) => setFeedB(e.target.value)}
+                    required
+                    className={`border-0 bg-slate-800/50 text-slate-100 placeholder:text-slate-400 text-md border border-blue-100 ${errors.feedB ? 'border-red-500' : ''}`}
+                  />
+                </div>
+                {errors.feedB && <p className="text-red-400 text-xs">{errors.feedB}</p>}
+              </div>
+
+              {/* Operation */}
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="operation" className="text-slate-100 text-md">
+                    Mathematical Operation *
+                  </Label>
+                  <button
+                    type="button"
+                    className="text-slate-300 hover:text-slate-100 transition-colors"
+                    onMouseEnter={() => setShowTooltip('operation')}
+                    onMouseLeave={() => setShowTooltip(null)}
+                  >
+                    <Info className="h-3 w-3" />
+                  </button>
+                  {showTooltip === 'operation' && (
+                    <div className="absolute z-10 bg-slate-800 text-slate-100 text-xs p-2 rounded shadow-lg mt-6">
+                      Multiplication (FeedA * FeedB) or Division (FeedA / FeedB)
+                    </div>
+                  )}
+                </div>
+                <select
+                  id="operation"
+                  value={operation}
+                  onChange={(e) => setOperation(Number(e.target.value))}
+                  className="w-full h-12 px-3 bg-slate-800 text-slate-100 border border-blue-100 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 font-[oblique]"
+                >
+                  <option value={0}>Multiplication (FeedA * FeedB)</option>
+                  <option value={1}>Division (FeedA / FeedB)</option>
+                </select>
+              </div>
+
+              {/* Invert Result */}
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="invertResult" className="text-slate-100 text-md">
+                    Invert Result *
+                  </Label>
+                  <button
+                    type="button"
+                    className="text-slate-300 hover:text-slate-100 transition-colors"
+                    onMouseEnter={() => setShowTooltip('invertResult')}
+                    onMouseLeave={() => setShowTooltip(null)}
+                  >
+                    <Info className="h-3 w-3" />
+                  </button>
+                  {showTooltip === 'invertResult' && (
+                    <div className="absolute z-10 bg-slate-800 text-slate-100 text-xs p-2 rounded shadow-lg mt-6">
+                      If true, result is inverted (1 / result) after division/multiplication
+                    </div>
+                  )}
+                </div>
+                <select
+                  id="invertResult"
+                  value={invertResult ? "true" : "false"}
+                  onChange={(e) => setInvertResult(e.target.value === "true")}
+                  className="w-full h-12 px-3 bg-slate-800 text-slate-100 border border-blue-100 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 font-[oblique]"
+                >
+                  <option value="false">No (default)</option>
+                  <option value="true">Yes (Invert)</option>
+                </select>
+              </div>
+
+              {/* Default Lookback Sample Size */}
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="defaultSampleSizeComposed" className="text-slate-100 text-md">
+                    Default Lookback Sample Size *
+                  </Label>
+                  <button
+                    type="button"
+                    className="text-slate-300 hover:text-slate-100 transition-colors"
+                    onMouseEnter={() => setShowTooltip('defaultSampleSizeComposed')}
+                    onMouseLeave={() => setShowTooltip(null)}
+                  >
+                    <Info className="h-3 w-3" />
+                  </button>
+                  {showTooltip === 'defaultSampleSizeComposed' && (
+                    <div className="absolute z-10 bg-slate-800 text-slate-100 text-xs p-2 rounded shadow-lg mt-6">
+                      Lookback sample size used for calculations
+                    </div>
+                  )}
+                </div>
+                <Input
+                  id="defaultSampleSizeComposed"
+                  type="number"
+                  min={1}
+                  step={1}
+                  placeholder="100"
+                  value={defaultSampleSize}
+                  onChange={(e) => setDefaultSampleSize(e.target.value)}
+                  required
+                  className={`border-0 bg-slate-800/50 text-slate-100 placeholder:text-slate-400 text-md border border-blue-100 ${errors.defaultSampleSize ? 'border-red-500' : ''}`}
+                />
+                {errors.defaultSampleSize && <p className="text-red-400 text-xs">{errors.defaultSampleSize}</p>}
+              </div>
+
+            </CardContent>
+          </Card>
+        )}
+
+        <div className="justify-center flex mx-auto">
           <Button
             type="submit"
             size="lg"
