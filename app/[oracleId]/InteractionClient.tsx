@@ -96,10 +96,13 @@ export default function OracleInteractionPage() {
   const [isUpdatingVoteWeights, setIsUpdatingVoteWeights] = useState(false)
   const [isReadingValue, setIsReadingValue] = useState(false)
   const [isReadingLatestValue, setIsReadingLatestValue] = useState(false)
+  const [isReadingInterval, setIsReadingInterval] = useState(false)
 
   // Real-time oracle data
   const [latestValue, setLatestValue] = useState<string>("—")
   const [aggregatedValue, setAggregatedValue] = useState<string>("—")
+  const [minValue, setMinValue] = useState<string>("—")
+  const [maxValue, setMaxValue] = useState<string>("—")
   const [lastUpdated, setLastUpdated] = useState<string>("Loading...")
   const [userDepositedTokens, setUserDepositedTokens] = useState<string>("0")
   const [userTokenBalance, setUserTokenBalance] = useState<string>("0")
@@ -314,6 +317,14 @@ export default function OracleInteractionPage() {
     query: { 
       enabled: !!oracleAddress && !!priceHistoryRangeArgs && !oracle?.isComposed
     }
+  })
+
+  // Read lookback interval (min and max values)
+  const { data: valueIntervalData, refetch: refetchValueInterval } = useReadContract({
+    address: oracleAddress || undefined,
+    abi: (oracle?.isComposed ? ComposedOracleAbi : OracleAbi) as any,
+    functionName: 'readValueInterval',
+    query: { enabled: !!oracleAddress }
   })
 
   // Parent feed A reads
@@ -594,7 +605,14 @@ export default function OracleInteractionPage() {
       }
     }
 
-  }, [lockedTokensData, unlockedTokensData, userTokenBalanceData, tokenAllowanceData, formatTokenAmount, weightTokenDecimals, lastUpdatedData, rewardData, halfLifeSecondsData, quorumData, operationLockingPeriodData, withdrawalLockingPeriodData, alphaData, depositTimestampData, lastOperationTimestampData])
+    // Update interval lookback values
+    if (valueIntervalData && Array.isArray(valueIntervalData) && valueIntervalData.length === 2) {
+      const [minRaw, maxRaw] = valueIntervalData as [bigint, bigint]
+      setMinValue(formatPriceFromWei(minRaw))
+      setMaxValue(formatPriceFromWei(maxRaw))
+    }
+
+  }, [lockedTokensData, unlockedTokensData, userTokenBalanceData, tokenAllowanceData, formatTokenAmount, weightTokenDecimals, lastUpdatedData, rewardData, halfLifeSecondsData, quorumData, operationLockingPeriodData, withdrawalLockingPeriodData, alphaData, depositTimestampData, lastOperationTimestampData, valueIntervalData])
 
   // Early validation before calling the hook
   if (!oracleAddress || !chainIdValid) {
@@ -660,6 +678,7 @@ export default function OracleInteractionPage() {
     setIsUpdatingVoteWeights(false)
     setIsReadingValue(false)
     setIsReadingLatestValue(false)
+    setIsReadingInterval(false)
     // Clear form inputs
     setSubmitValue("")
     setDepositAmount("")
@@ -683,6 +702,7 @@ export default function OracleInteractionPage() {
       setIsUpdatingVoteWeights(false)
       setIsReadingValue(false)
       setIsReadingLatestValue(false)
+      setIsReadingInterval(false)
     }
   }, [contractError, toast])
 
@@ -1036,7 +1056,7 @@ export default function OracleInteractionPage() {
   }
 
   const simulateRead = useCallback(
-    async (fnName: "readValue" | "readLatestValue") => {
+    async (fnName: "readValue" | "readLatestValue" | "readValueInterval") => {
       if (!oracleAddress || !publicClient) {
         throw new Error("Oracle client not ready")
       }
@@ -1049,7 +1069,7 @@ export default function OracleInteractionPage() {
           args: [],
           account,
         })
-        return result as bigint
+        return result as bigint | readonly [bigint, bigint]
       }
 
       let lastError: unknown
@@ -1079,7 +1099,7 @@ export default function OracleInteractionPage() {
         throw new Error("Failed to simulate read call")
       }
     },
-    [oracleAddress, publicClient, userAddress]
+    [oracleAddress, publicClient, userAddress, oracle?.isComposed]
   )
 
   const handleReadValue = async () => {
@@ -1087,7 +1107,7 @@ export default function OracleInteractionPage() {
       setIsReadingValue(true)
 
       const { result, usedFallback } = await simulateRead("readValue")
-      const formatted = formatPriceFromWei(result)
+      const formatted = formatPriceFromWei(result as bigint)
 
       setAggregatedValue(formatted)
       setLastUpdated("Just now")
@@ -1122,7 +1142,7 @@ export default function OracleInteractionPage() {
       setIsReadingLatestValue(true)
 
       const { result, usedFallback } = await simulateRead("readLatestValue")
-      const formatted = formatPriceFromWei(result)
+      const formatted = formatPriceFromWei(result as bigint)
 
       setLatestValue(formatted)
       setLastUpdated("Just now")
@@ -1149,6 +1169,46 @@ export default function OracleInteractionPage() {
       })
     } finally {
       setIsReadingLatestValue(false)
+    }
+  }
+
+  const handleReadValueInterval = async () => {
+    try {
+      setIsReadingInterval(true)
+
+      const { result, usedFallback } = await simulateRead("readValueInterval")
+      if (Array.isArray(result) && result.length === 2) {
+        const [minRaw, maxRaw] = result as [bigint, bigint]
+        const formattedMin = formatPriceFromWei(minRaw)
+        const formattedMax = formatPriceFromWei(maxRaw)
+
+        setMinValue(formattedMin)
+        setMaxValue(formattedMax)
+        setLastUpdated("Just now")
+
+        toast({
+          title: "Lookback Price Interval",
+          description: usedFallback
+            ? `Min: ${formattedMin} | Max: ${formattedMax}. Retrieved via neutral simulation.`
+            : `Min: ${formattedMin} | Max: ${formattedMax}`,
+        })
+      }
+    } catch (err: unknown) {
+      console.error('Error reading price interval:', err)
+      const description =
+        err instanceof BaseError
+          ? err.shortMessage
+          : err instanceof Error
+            ? err.message
+            : "Failed to read price interval. Please try again."
+
+      toast({
+        title: "Read Failed",
+        description,
+        variant: "destructive",
+      })
+    } finally {
+      setIsReadingInterval(false)
     }
   }
 
@@ -1377,14 +1437,13 @@ export default function OracleInteractionPage() {
                   </div>
                 </div>
                 <CardDescription className="text-muted-foreground">
-                  Latest submitted and aggregated oracle values.
+                  Latest submitted, aggregated, and lookback interval oracle values.
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div>
-                  <div className="flex items-center mb-4 justify-between p-3 bg-card/50 border border-primary/30 rounded-xl transition-all duration-300">
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between p-3 bg-card/50 border border-primary/30 rounded-xl transition-all duration-300">
                     <div className="flex items-center gap-3">
-                      <div className="w-2 h-2 bg-primary rounded-full animate-pulse"></div>
                       <span className="text-muted-foreground font-medium text-sm">Latest Value</span>
                       <span className="text-foreground font-light">{latestValue || "—"}</span>
                     </div>
@@ -1401,7 +1460,6 @@ export default function OracleInteractionPage() {
                   
                   <div className="flex items-center justify-between p-3 bg-card/50 border border-primary/30 rounded-xl transition-all duration-300">
                     <div className="flex items-center gap-3">
-                      <div className="w-2 h-2 bg-primary/60 rounded-full"></div>
                       <span className="text-muted-foreground font-medium text-sm">Aggregated</span>
                       <span className="text-foreground font-light">{aggregatedValue || "—"}</span>
                     </div>
@@ -1413,6 +1471,27 @@ export default function OracleInteractionPage() {
                       disabled={isReadingValue || isPending || isConfirming || !isConnected}
                     >
                       {isReadingValue || isPending || isConfirming ? <Loader2 className="h-3 w-3 animate-spin" /> : "Read"}
+                    </Button>
+                  </div>
+
+                  {/* Price Interval */}
+                  <div className="flex items-center justify-between p-3 bg-card/50 border border-primary/30 rounded-xl transition-all duration-300">
+                    <div className="flex items-center gap-3">
+                      <span className="text-muted-foreground font-medium text-sm">Price Interval</span>
+                      <span className="text-foreground font-light">
+                        {minValue !== "—" && maxValue !== "—"
+                          ? `${minValue}(Min) - ${maxValue}(Max)`
+                          : "—"}
+                      </span>
+                    </div>
+                    <Button 
+                      size="sm"
+                      variant="outline"
+                      className="h-8 px-3 text-xs border-primary/30 text-primary hover:bg-primary/10 hover:border-primary/50 transition-all duration-300"
+                      onClick={handleReadValueInterval}
+                      disabled={isReadingInterval || isPending || isConfirming || !isConnected}
+                    >
+                      {isReadingInterval || isPending || isConfirming ? <Loader2 className="h-3 w-3 animate-spin" /> : "Read"}
                     </Button>
                   </div>
                 </div>
