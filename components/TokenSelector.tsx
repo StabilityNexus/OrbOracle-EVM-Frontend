@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { useChainId } from "wagmi";
-import { getChainNameForTokenList } from "@/utils/chainMapping";
+import { useChainId, useChains } from "wagmi";
+import { getTokenListInfo } from "@/utils/chainMapping";
 import { Input } from "@/components/ui/input";
 
 export interface Token {
@@ -31,12 +31,14 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({
   required = false,
 }) => {
   const chainId = useChainId();
+  const chains = useChains();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [tokens, setTokens] = useState<Token[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [isManualInput, setIsManualInput] = useState(false);
   const [manualAddress, setManualAddress] = useState(value);
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
   // Sync manualAddress with value prop
   useEffect(() => {
@@ -53,19 +55,25 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({
   }, [value, tokens]);
 
   // Get chain name for token list URL
-  const chainName = useMemo(() => getChainNameForTokenList(chainId), [chainId]);
+  const tokenListInfo = useMemo(() => getTokenListInfo(chainId), [chainId]);
+  const activeChainName = useMemo(
+    () => chains.find((chain) => chain.id === chainId)?.name ?? `Chain ${chainId}`,
+    [chainId, chains]
+  );
 
   // Fetch tokens from TokenList repository
   useEffect(() => {
     const fetchTokens = async () => {
-      if (!chainName) {
-        console.warn(`No token list available for chain ID ${chainId}`);
+      if (!tokenListInfo) {
+        setTokens([]);
+        setFetchError(null);
         return;
       }
 
       setLoading(true);
+      setFetchError(null);
       try {
-        const url = `https://raw.githubusercontent.com/StabilityNexus/TokenList/main/${chainName}-tokens.json`;
+        const url = `https://raw.githubusercontent.com/StabilityNexus/TokenList/main/${tokenListInfo.tokenListName}-tokens.json`;
         const response = await fetch(url);
         if (!response.ok) {
           throw new Error(`Failed to fetch tokens: ${response.statusText}`);
@@ -77,13 +85,16 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({
       } catch (error) {
         console.error("Error fetching tokens:", error);
         setTokens([]);
+        setFetchError(
+          `Couldn't load the curated token list for ${tokenListInfo.chainLabel}. You can still enter a token address manually.`
+        );
       } finally {
         setLoading(false);
       }
     };
 
     fetchTokens();
-  }, [chainName, chainId]);
+  }, [tokenListInfo]);
 
   // Filter tokens based on search query
   const filteredTokens = useMemo(() => {
@@ -128,6 +139,19 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({
       (token) => token.contract_address.toLowerCase() === value.toLowerCase()
     );
   }, [value, tokens, isManualInput]);
+
+  const emptyStateMessage = useMemo(() => {
+    if (searchQuery) {
+      return "No tokens found matching your search";
+    }
+    if (fetchError) {
+      return fetchError;
+    }
+    if (!tokenListInfo) {
+      return `No curated token list is configured for ${activeChainName}. Enter a token address manually for this network.`;
+    }
+    return `No tokens are currently available in the curated list for ${tokenListInfo.chainLabel}.`;
+  }, [activeChainName, fetchError, searchQuery, tokenListInfo]);
 
   return (
     <div className="w-full space-y-1">
@@ -203,6 +227,11 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({
 
             {/* Search Bar */}
             <div className="p-4 border-b border-blue-100">
+              <p className="mb-3 text-sm text-slate-400">
+                {tokenListInfo
+                  ? `Showing curated tokens for ${tokenListInfo.chainLabel}.`
+                  : `No curated token list is available for ${activeChainName}.`}
+              </p>
               <div className="relative">
                 <Input
                   type="text"
@@ -235,9 +264,7 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({
                 </div>
               ) : filteredTokens.length === 0 ? (
                 <div className="text-center py-8 text-slate-400">
-                  {searchQuery
-                    ? "No tokens found matching your search"
-                    : "No tokens available for this chain"}
+                  {emptyStateMessage}
                 </div>
               ) : (
                 <div className="space-y-2">
@@ -296,4 +323,3 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({
 };
 
 export default TokenSelector;
-

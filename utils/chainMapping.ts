@@ -1,32 +1,32 @@
-/**
- * Maps chain IDs to their corresponding token list names
- * Used to fetch tokens from the Stability Nexus TokenList repository
- */
-export const getChainNameForTokenList = (chainId: number): string | null => {
-  // Map of chain IDs to token list names
-  const chainMapping: Record<number, string> = {
-    // Ethereum Mainnet
-    1: "ethereum",
-    // Ethereum Sepolia
-    11155111: "ethereum",
-    // Ethereum Classic
-    61: "ethereum-classic",
-    // Polygon PoS
-    137: "polygon-pos",
-    // Polygon Mumbai
-    80001: "polygon-pos",
-    // Binance Smart Chain
-    56: "binance-smart-chain",
-    // BSC Testnet
-    97: "binance-smart-chain",
-    // Base
-    8453: "base",
-    // Base Sepolia
-    84532: "base",
-    // Scroll Sepolia
-    534351: "ethereum", // Fallback to ethereum for now
-  };
+export interface TokenListInfo {
+  chainLabel: string;
+  tokenListName: string;
+}
 
-  return chainMapping[chainId] || null;
+// Only expose token lists that match the active chain exactly.
+const TOKEN_LISTS_BY_CHAIN: Record<number, TokenListInfo> = {
+  1: {
+    chainLabel: "Ethereum",
+    tokenListName: "ethereum",
+  },
+  61: {
+    chainLabel: "Ethereum Classic",
+    tokenListName: "ethereum-classic",
+  },
+  137: {
+    chainLabel: "Polygon",
+    tokenListName: "polygon-pos",
+  },
+  56: {
+    chainLabel: "BNB Smart Chain",
+    tokenListName: "binance-smart-chain",
+  },
+  8453: {
+    chainLabel: "Base",
+    tokenListName: "base",
+  },
 };
 
+export const getTokenListInfo = (chainId: number): TokenListInfo | null => {
+  return TOKEN_LISTS_BY_CHAIN[chainId] ?? null;
+};
