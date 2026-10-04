@@ -26,6 +26,8 @@ export interface PillNavProps {
 }
 
 const PillNav: React.FC<PillNavProps> = ({
+  logo,
+  logoAlt = 'Logo',
   items,
   activeHref,
   className = '',
@@ -253,6 +255,28 @@ const PillNav: React.FC<PillNavProps> = ({
         aria-label="Primary"
         style={cssVars}
       >
+
+        {/* Logo */}
+        <Link
+          href="/"
+          ref={logoRef as React.Ref<HTMLAnchorElement>}
+          className="flex items-center justify-center rounded-full mr-2 shrink-0"
+          style={{
+            width: 'var(--nav-h)',
+            height: 'var(--nav-h)',
+            background: 'var(--base, #000)'
+          }}
+          onMouseEnter={handleLogoEnter}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            ref={logoImgRef}
+            src={logo}
+            alt={logoAlt}
+            className="block"
+            style={{ width: 'var(--logo)', height: 'var(--logo)' }}
+          />
+        </Link>
 
         <div
           ref={navItemsRef}
