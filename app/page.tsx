@@ -12,7 +12,7 @@ export default function HomePage() {
       <Navigation />
 
       {/* Hero Section */}
-      <section className="relative h-screen flex items-center justify-center overflow-hidden">
+      <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
         <div className="absolute inset-0 z-0">
           <div style={{ 
             width: '100vw', 
@@ -60,7 +60,7 @@ export default function HomePage() {
       </section>
 
       {/* Features Section */}
-      <section className="h-screen flex items-center justify-center">
+      <section className="min-h-screen flex items-center justify-center">
         <div className="container mx-auto px-4">
           <div className="text-center mb-12 sm:mb-16 px-4">
             <h2 className="text-2xl sm:text-3xl md:text-4xl font-medium mb-4 tracking-wide" style={{ fontStyle: 'oblique 15deg' }}>Why choose OracleNet?</h2>
@@ -110,7 +110,7 @@ export default function HomePage() {
       </section>
 
       {/* Stats Section */}
-      <section className="h-screen flex items-center justify-center">
+      <section className="min-h-screen flex items-center justify-center">
         <div className="container mx-auto px-4">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-8 text-center px-4">
             <div>
@@ -134,7 +134,7 @@ export default function HomePage() {
       </section>
 
       {/* CTA Section */}
-      <section className="h-screen flex items-center justify-center">
+      <section className="min-h-screen flex items-center justify-center">
         <div className="container mx-auto px-4 text-center">
           <div className="max-w-2xl mx-auto px-4">
             <h2 className="text-2xl sm:text-3xl md:text-4xl font-medium mb-4 sm:mb-6 tracking-wide" style={{ fontStyle: 'oblique 15deg' }}>Ready to build the future?</h2>
