@@ -184,7 +184,7 @@ export default function CreateOracleIntegrated() {
   const [quorumPercent, setQuorumPercent] = useState<string>('20')
   const [depositLock, setDepositLock] = useState<string>('3600')
   const [withdrawLock, setWithdrawLock] = useState<string>('3600')
-  const [alpha, setAlpha] = useState<string>('1')
+  const [gamma, setGamma] = useState<string>('1')
   const [defaultSampleSize, setDefaultSampleSize] = useState<string>('100')
 
   // Composed Oracle parameters
@@ -217,7 +217,7 @@ export default function CreateOracleIntegrated() {
     quorumBps?: string
     depositLock?: string
     withdrawLock?: string
-    alpha?: string
+    gamma?: string
     defaultSampleSize?: string
     feedAAddress?: string
     feedBAddress?: string
@@ -241,10 +241,10 @@ export default function CreateOracleIntegrated() {
       BigInt(Math.round(Number(depositLock || 0))),                                           // depositLockingPeriod
       BigInt(Math.round(Number(withdrawLock || 0))),                                          // withdrawalLockingPeriod
       BigInt(Math.round(Number(rewardPercent || 0) * 1000)),                                  // rewardBps (percentage -> 1e5 scale)
-      BigInt(alpha && /^\d+$/.test(alpha) ? alpha : "0"),                         // gamma
+      BigInt(gamma && /^\d+$/.test(gamma) ? gamma : "0"),                         // gamma
       BigInt(defaultSampleSize && /^\d+$/.test(defaultSampleSize) ? defaultSampleSize : "100"), // defaultSampleSize
     ] as const
-  }, [name, description, weightToken, rewardPercent, halfLifeSeconds, quorumPercent, depositLock, withdrawLock, alpha, defaultSampleSize])
+  }, [name, description, weightToken, rewardPercent, halfLifeSeconds, quorumPercent, depositLock, withdrawLock, gamma, defaultSampleSize])
 
   const validateInputs = () => {
     const newErrors: any = {}
@@ -270,7 +270,7 @@ export default function CreateOracleIntegrated() {
       if (!halfLifeSeconds) newErrors.halfLifeSeconds = 'Half life seconds is required'
       if (!depositLock) newErrors.depositLock = 'Deposit lock period is required'
       if (!withdrawLock) newErrors.withdrawLock = 'Withdrawal lock period is required'
-      if (!alpha) newErrors.alpha = 'Alpha is required'
+      if (!gamma) newErrors.gamma = 'Gamma is required'
       if (!defaultSampleSize) newErrors.defaultSampleSize = 'Default sample size is required'
       else if (Number(defaultSampleSize) <= 0) newErrors.defaultSampleSize = 'Default sample size must be greater than 0'
 
@@ -1002,34 +1002,34 @@ export default function CreateOracleIntegrated() {
 
                 <div className="space-y-1">
                   <div className="flex items-center gap-2 mb-2 relative">
-                    <Label htmlFor="alpha" className="font-mono text-[10.5px] tracking-wider text-muted-foreground uppercase">
+                    <Label htmlFor="gamma" className="font-mono text-[10.5px] tracking-wider text-muted-foreground uppercase">
                       Gamma (Sampling Interval) *
                     </Label>
                     <button
                       type="button"
                       className="text-slate-300 hover:text-slate-100 transition-colors"
-                      onMouseEnter={() => setShowTooltip('alpha')}
+                      onMouseEnter={() => setShowTooltip('gamma')}
                       onMouseLeave={() => setShowTooltip(null)}
                     >
                       <Info className="h-3 w-3" />
                     </button>
-                    {showTooltip === 'alpha' && (
+                    {showTooltip === 'gamma' && (
                       <div className="absolute bottom-full mb-2 left-0 z-50 bg-zinc-950 border border-white/10 text-white font-mono text-[9.5px] rounded-lg p-2.5 shadow-xl max-w-xs pointer-events-none">
                         The sampling interval in seconds between historical snapshots used to compute min/max Value Ranges. Ensures the lookback window represents a genuine time spread.
                       </div>
                     )}
                   </div>
                   <Input
-                    id="alpha"
+                    id="gamma"
                     type="number"
                     min={0}
                     placeholder="1"
-                    value={alpha}
-                    onChange={(e) => setAlpha(e.target.value)}
+                    value={gamma}
+                    onChange={(e) => setGamma(e.target.value)}
                     required
-                    className={`bg-white/5 border border-white/10 text-white rounded-xl placeholder:text-zinc-500 focus:border-primary/40 focus:ring-1 focus:ring-primary/40 transition-all duration-300 text-sm h-11 ${errors.alpha ? 'border-red-500 focus:ring-red-500' : ''}`}
+                    className={`bg-white/5 border border-white/10 text-white rounded-xl placeholder:text-zinc-500 focus:border-primary/40 focus:ring-1 focus:ring-primary/40 transition-all duration-300 text-sm h-11 ${errors.gamma ? 'border-red-500 focus:ring-red-500' : ''}`}
                   />
-                  {errors.alpha && <p className="text-red-400 text-xs">{errors.alpha}</p>}
+                  {errors.gamma && <p className="text-red-400 text-xs">{errors.gamma}</p>}
                 </div>
 
                 <div className="space-y-1">
