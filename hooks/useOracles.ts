@@ -9,17 +9,26 @@ import { ComposedOracleFactoryAbi } from '@/utils/abi/ComposedOracleFactory'
 import { ComposedOracleAbi } from '@/utils/abi/ComposedOracle'
 import { OracleFactories, ComposedOracleFactories } from '@/utils/addresses'
 
-const formatTimestamp = (value: bigint | undefined | null) => {
-  if (!value || value === BigInt(0)) {
+export const formatTimestamp = (value: bigint | number | string | undefined | null) => {
+  if (!value || value === BigInt(0) || value === '0') {
     return '—'
   }
 
-  const millis = Number(value) * 1000
-  if (!Number.isFinite(millis)) {
+  const seconds = typeof value === 'bigint' ? Number(value) : Number(value)
+  if (!Number.isFinite(seconds) || seconds <= 0) {
     return '—'
   }
 
-  return new Date(millis).toLocaleString()
+  const date = new Date(seconds * 1000)
+  const pad = (n: number) => n.toString().padStart(2, '0')
+  const YYYY = date.getUTCFullYear()
+  const MM = pad(date.getUTCMonth() + 1)
+  const DD = pad(date.getUTCDate())
+  const HH = pad(date.getUTCHours())
+  const mm = pad(date.getUTCMinutes())
+  const ss = pad(date.getUTCSeconds())
+
+  return `${YYYY}-${MM}-${DD} ${HH}:${mm}:${ss} UTC`
 }
 
 export interface Oracle {
@@ -57,8 +66,9 @@ export function useOracles() {
         setLoading(true)
         setError(null)
 
-        const factoryAddress = OracleFactories[chainId as keyof typeof OracleFactories]
-        const composedFactoryAddress = ComposedOracleFactories[chainId as keyof typeof ComposedOracleFactories]
+        const activeChainId = (chainId && OracleFactories[chainId as keyof typeof OracleFactories]) ? chainId : 11155111
+        const factoryAddress = OracleFactories[activeChainId as keyof typeof OracleFactories]
+        const composedFactoryAddress = ComposedOracleFactories[activeChainId as keyof typeof ComposedOracleFactories]
         
         let oracleInfos: Array<{ oracle: string; token: string; creator: string }> = []
         let composedOracleInfos: Array<{ oracle: string; feedA: string; feedB: string; operation: number; creator: string }> = []
@@ -70,6 +80,7 @@ export function useOracles() {
               address: factoryAddress,
               abi: OracleFactoryAbi,
               functionName: 'allOracles',
+              chainId: activeChainId,
             }) as any
           } catch (e) {
             console.error('Error fetching standard oracles:', e)
@@ -83,6 +94,7 @@ export function useOracles() {
               address: composedFactoryAddress,
               abi: ComposedOracleFactoryAbi,
               functionName: 'allComposedOracles',
+              chainId: activeChainId,
             }) as any
           } catch (e) {
             console.error('Error fetching composed oracles:', e)
@@ -97,21 +109,25 @@ export function useOracles() {
                 address: info.oracle as `0x${string}`,
                 abi: OracleAbi,
                 functionName: 'name',
+                chainId: activeChainId,
               }).catch(() => `Oracle ${index + 1}`),
               readContract(config, {
                 address: info.oracle as `0x${string}`,
                 abi: OracleAbi,
                 functionName: 'description',
+                chainId: activeChainId,
               }).catch(() => 'No description available'),
               readContract(config, {
                 address: info.oracle as `0x${string}`,
                 abi: OracleAbi,
                 functionName: 'lastUpdated',
+                chainId: activeChainId,
               }).catch(() => BigInt(0)),
               readContract(config, {
                 address: info.oracle as `0x${string}`,
                 abi: OracleAbi,
                 functionName: 'lastTimestamp',
+                chainId: activeChainId,
               }).catch(() => BigInt(0)),
             ])
 
@@ -122,7 +138,7 @@ export function useOracles() {
               address: info.oracle,
               token: info.token,
               creator: info.creator,
-              category: 'Price Feed',
+              category: 'Oracle Feed',
               status: 'active' as const,
               updateFrequency: '1min',
               accuracy: '99.9%',
@@ -140,7 +156,7 @@ export function useOracles() {
               address: info.oracle,
               token: info.token,
               creator: info.creator,
-              category: 'Price Feed',
+              category: 'Oracle Feed',
               status: 'inactive' as const,
               updateFrequency: 'Unknown',
               accuracy: 'Unknown',
@@ -159,16 +175,17 @@ export function useOracles() {
               address: info.oracle as `0x${string}`,
               abi: ComposedOracleAbi,
               functionName: 'lastUpdated',
+              chainId: activeChainId,
             }).catch(() => BigInt(0))
 
             return {
               id: info.oracle,
               name: `Composed Oracle ${index + 1}`,
-              description: `Price Feed`,
+              description: `Oracle Feed`,
               address: info.oracle,
               token: '0x0000000000000000000000000000000000000000',
               creator: info.creator,
-              category: 'Price Feed',
+              category: 'Oracle Feed',
               status: 'active' as const,
               updateFrequency: '1min',
               accuracy: '99.9%',
@@ -185,11 +202,11 @@ export function useOracles() {
             return {
               id: info.oracle,
               name: `Composed Oracle ${index + 1}`,
-              description: 'Error loading price feed',
+              description: 'Error loading oracle feed',
               address: info.oracle,
               token: '0x0000000000000000000000000000000000000000',
               creator: info.creator,
-              category: 'Price Feed',
+              category: 'Oracle Feed',
               status: 'inactive' as const,
               updateFrequency: 'Unknown',
               accuracy: 'Unknown',
@@ -253,8 +270,8 @@ export function useOracle(oracleAddress: string, targetChainId?: number) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  // Use provided chainId or fall back to current chain
-  const chainId = targetChainId || currentChainId
+  // Determine effective chain ID: targetChainId, currentChainId, or fallback to Sepolia (11155111)
+  const effectiveChainId = targetChainId || (currentChainId && OracleFactories[currentChainId as keyof typeof OracleFactories] ? currentChainId : 11155111)
 
   useEffect(() => {
     async function fetchOracleDetails() {
@@ -265,13 +282,6 @@ export function useOracle(oracleAddress: string, targetChainId?: number) {
 
       setLoading(true)
       setError(null)
-
-      // If targetChainId is provided and different from current chain, show warning
-      if (targetChainId && targetChainId !== currentChainId) {
-        setError(`Please switch to chain ${targetChainId} to interact with this oracle`)
-        setLoading(false)
-        return
-      }
 
       try {
         // Check if it is a composed oracle first by reading feedA
@@ -341,7 +351,7 @@ export function useOracle(oracleAddress: string, targetChainId?: number) {
           ])
 
           // Retrieve operation and creator from ComposedOracleFactory
-          const composedFactoryAddress = ComposedOracleFactories[chainId as keyof typeof ComposedOracleFactories]
+          const composedFactoryAddress = ComposedOracleFactories[effectiveChainId as keyof typeof ComposedOracleFactories]
           let operation = 0
           let creator = '0x0000000000000000000000000000000000000000'
 
@@ -351,6 +361,7 @@ export function useOracle(oracleAddress: string, targetChainId?: number) {
                 address: composedFactoryAddress,
                 abi: ComposedOracleFactoryAbi,
                 functionName: 'allComposedOracles',
+                chainId: effectiveChainId,
               }) as any[]
 
               const matchingInfo = composedOracleInfos.find(
@@ -455,7 +466,7 @@ export function useOracle(oracleAddress: string, targetChainId?: number) {
     }
 
     fetchOracleDetails()
-  }, [oracleAddress, chainId, targetChainId, currentChainId])
+  }, [oracleAddress, effectiveChainId, targetChainId, currentChainId])
 
   return {
     oracle,

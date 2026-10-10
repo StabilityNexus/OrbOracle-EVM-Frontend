@@ -48,6 +48,19 @@ const formatPriceFromWei = (value: bigint) => {
   return numeric.toFixed(DISPLAY_PRECISION)
 }
 
+const formatUtcDateTimeString = (seconds: number) => {
+  if (!seconds || seconds <= 0) return "Never"
+  const date = new Date(seconds * 1000)
+  const pad = (n: number) => n.toString().padStart(2, "0")
+  const YYYY = date.getUTCFullYear()
+  const MM = pad(date.getUTCMonth() + 1)
+  const DD = pad(date.getUTCDate())
+  const HH = pad(date.getUTCHours())
+  const mm = pad(date.getUTCMinutes())
+  const ss = pad(date.getUTCSeconds())
+  return `${YYYY}-${MM}-${DD} ${HH}:${mm}:${ss} UTC`
+}
+
 const compose = (
   valA: bigint,
   valB: bigint,
@@ -123,7 +136,7 @@ export default function OracleInteractionPage() {
   const [quorumPercentage, setQuorumPercentage] = useState<string>("Loading...")
   const [operationLockPeriod, setOperationLockPeriod] = useState<string>("Loading...")
   const [withdrawalLockPeriod, setWithdrawalLockPeriod] = useState<string>("Loading...")
-  const [alphaValue, setAlphaValue] = useState<string>("Loading...")
+  const [gammaValue, setGammaValue] = useState<string>("Loading...")
 
   // Timestamp display values
   const [depositTimestamp, setDepositTimestamp] = useState<string>("Never")
@@ -283,7 +296,7 @@ export default function OracleInteractionPage() {
     query: { enabled: !!oracleAddress && !oracle?.isComposed }
   })
 
-  const { data: alphaData } = useReadContract({
+  const { data: gammaData } = useReadContract({
     address: oracleAddress || undefined,
     abi: OracleAbi,
     functionName: 'GAMMA',
@@ -594,32 +607,22 @@ export default function OracleInteractionPage() {
       const withdrawalLock = Number(withdrawalLockingPeriodData as bigint)
       setWithdrawalLockPeriod(`${withdrawalLock}s`)
     }
-    if (alphaData) {
-      const alpha = Number(alphaData as bigint)
-      setAlphaValue(alpha.toString())
+    if (gammaData) {
+      const gamma = Number(gammaData as bigint)
+      setGammaValue(`${gamma}s`)
     }
 
     // Update timestamp values
     if (depositTimestampData) {
       const timestamp = Number(depositTimestampData as bigint)
-      if (timestamp === 0) {
-        setDepositTimestamp("Never")
-      } else {
-        const date = new Date(timestamp * 1000)
-        setDepositTimestamp(date.toLocaleString())
-      }
+      setDepositTimestamp(formatUtcDateTimeString(timestamp))
     }
     if (lastOperationTimestampData) {
       const timestamp = Number(lastOperationTimestampData as bigint)
-      if (timestamp === 0) {
-        setLastOperationTimestamp("Never")
-      } else {
-        const date = new Date(timestamp * 1000)
-        setLastOperationTimestamp(date.toLocaleString())
-      }
+      setLastOperationTimestamp(formatUtcDateTimeString(timestamp))
     }
 
-  }, [lockedTokensData, unlockedTokensData, userTokenBalanceData, tokenAllowanceData, formatTokenAmount, weightTokenDecimals, lastUpdatedData, rewardData, halfLifeSecondsData, quorumData, operationLockingPeriodData, withdrawalLockingPeriodData, alphaData, depositTimestampData, lastOperationTimestampData])
+  }, [lockedTokensData, unlockedTokensData, userTokenBalanceData, tokenAllowanceData, formatTokenAmount, weightTokenDecimals, lastUpdatedData, rewardData, halfLifeSecondsData, quorumData, operationLockingPeriodData, withdrawalLockingPeriodData, gammaData, depositTimestampData, lastOperationTimestampData])
 
   // Early validation before calling the hook
   if (!oracleAddress || !chainIdValid) {
@@ -1324,11 +1327,11 @@ export default function OracleInteractionPage() {
         {/* Content Modules Grid */}
         <div className="max-w-7xl mx-auto space-y-8">
           
-          {/* Price Chart Section */}
+          {/* Value Chart Section */}
           <div className="bg-zinc-950/70 border border-white/10 rounded-3xl p-6 sm:p-8 backdrop-blur-md shadow-2xl transition-all duration-300 hover:border-white/20 space-y-4">
             <div className="flex items-center gap-2 pb-2 border-b border-white/5">
               <TrendingUp className="h-4 w-4 text-primary" />
-              <h3 className="font-mono text-xs uppercase tracking-wider text-white">Price Chart & Analytics</h3>
+              <h3 className="font-mono text-xs uppercase tracking-wider text-white">Oracle Value Chart</h3>
             </div>
             <div className="pt-2">
               <PriceChart data={priceHistoryPoints} loading={isFetchingPriceHistory || isReadingValue || isReadingLatestValue} />
@@ -1397,16 +1400,16 @@ export default function OracleInteractionPage() {
                 <div className="space-y-2">
                   <div className="flex items-center gap-2 pb-2 border-b border-white/5">
                     <Send className="h-4 w-4 text-primary" />
-                    <h3 className="font-mono text-xs uppercase tracking-wider text-white">Submit Price Value</h3>
+                    <h3 className="font-mono text-xs uppercase tracking-wider text-white">Submit Value</h3>
                   </div>
                   <p className="text-xs text-zinc-400 pt-1 leading-relaxed">
-                    Publish a new price update. Submitting updates requires a deposited staking balance.
+                    Publish a new observation update. Submitting updates requires a deposited staking balance.
                   </p>
                 </div>
 
                 <div className="space-y-4 pt-2">
                   <div>
-                    <label htmlFor="submitValue" className="text-[10px] font-mono uppercase tracking-wider text-zinc-400 block mb-2">Price Value</label>
+                    <label htmlFor="submitValue" className="text-[10px] font-mono uppercase tracking-wider text-zinc-400 block mb-2">Value</label>
                     <input
                       id="submitValue"
                       type="number"
@@ -1422,7 +1425,7 @@ export default function OracleInteractionPage() {
                     className="w-full h-12 rounded-xl bg-white text-black hover:bg-zinc-200 font-mono text-xs font-semibold tracking-wider active:scale-[0.98] transition-all flex items-center justify-center space-x-2 disabled:opacity-40"
                   >
                     {(isSubmitting || isPending || isConfirming) ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
-                    <span>{isSubmitting || isPending ? "Submitting..." : isConfirming ? "Confirming..." : "Submit Price"}</span>
+                    <span>{isSubmitting || isPending ? "Submitting..." : isConfirming ? "Confirming..." : "Submit Value"}</span>
                   </button>
                 </div>
               </div>
@@ -1656,18 +1659,18 @@ export default function OracleInteractionPage() {
               {/* Weight Refresh Module */}
               <div className="bg-zinc-950/70 border border-white/10 rounded-3xl p-6 sm:p-8 backdrop-blur-md shadow-2xl transition-all duration-300 hover:border-white/20 space-y-5">
                 <div className="flex items-center gap-2 pb-2 border-b border-white/5">
-                  <Settings className="h-4 w-4 text-primary" />
-                  <h3 className="font-mono text-xs uppercase tracking-wider text-white">Staking Weights sync</h3>
+                  <Vote className="h-4 w-4 text-primary" />
+                  <h3 className="font-mono text-xs uppercase tracking-wider text-white">Synchronize Vote Weights</h3>
                 </div>
                 <p className="text-xs text-zinc-400 leading-relaxed">
-                  Update voting snapshots to match your active tokens. Required after making new token deposits.
+                  Updates your previously cast blacklist and whitelist votes to reflect your current unlocked stake. Useful if you deposited additional tokens after voting.
                 </p>
 
                 <div className="space-y-4 pt-2">
                   {isConnected && (
                     <div className="p-3.5 bg-black/40 border border-white/5 rounded-2xl">
                       <div className="flex items-center justify-between">
-                        <span className="text-[10px] font-mono text-zinc-400 uppercase">Active Vote Weight</span>
+                        <span className="text-[10px] font-mono text-zinc-400 uppercase">Current Voting Stake</span>
                         <span className="text-sm font-mono font-medium text-white">{parseFloat(userDepositedTokens).toFixed(4)}</span>
                       </div>
                     </div>
@@ -1678,8 +1681,8 @@ export default function OracleInteractionPage() {
                     disabled={isUpdatingVoteWeights || isPending || isConfirming || !isConnected}
                     className="w-full h-12 rounded-xl bg-white text-black hover:bg-zinc-200 font-mono text-xs font-semibold tracking-wider active:scale-[0.98] transition-all flex items-center justify-center space-x-2 disabled:opacity-40"
                   >
-                    {(isUpdatingVoteWeights || isPending || isConfirming) ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Settings className="h-3.5 w-3.5" />}
-                    <span>REFRESH SNAPSHOT</span>
+                    {(isUpdatingVoteWeights || isPending || isConfirming) ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Vote className="h-3.5 w-3.5" />}
+                    <span>UPDATE VOTE WEIGHTS</span>
                   </button>
                 </div>
               </div>
@@ -1767,8 +1770,8 @@ export default function OracleInteractionPage() {
                     <span className="text-white font-mono text-xs font-medium">{withdrawalLockPeriod}</span>
                   </div>
                   <div className="flex justify-between items-center p-3.5 bg-black/40 border border-white/5 rounded-2xl">
-                    <span className="text-zinc-400 font-mono text-[10px] uppercase tracking-wider">Alpha (Moving Avg)</span>
-                    <span className="text-white font-mono text-xs font-medium">{alphaValue}</span>
+                    <span className="text-zinc-400 font-mono text-[10px] uppercase tracking-wider">Gamma (Sampling Interval)</span>
+                    <span className="text-white font-mono text-xs font-medium">{gammaValue}</span>
                   </div>
                 </div>
               </div>

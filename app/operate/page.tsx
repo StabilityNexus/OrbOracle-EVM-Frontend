@@ -36,15 +36,14 @@ export default function OperatePage() {
   }
 
   const envSample = `# Network & Operator Wallet
-RPC_URL=https://sepolia.infura.io/v3/YOUR_INFURA_KEY
+RPC_URL=https://your-rpc-endpoint.example.com
 PRIVATE_KEY=0xYOUR_OPERATOR_PRIVATE_KEY
 ORACLE_ADDRESS=0xTARGET_BASE_ORACLE_ADDRESS
 
-# Data Sources Configuration
-FEED_URL=https://api.coingecko.com/api/v3/simple/price?ids=cardano&vs_currencies=usd
-CHAINLINK_FEED_ADDRESS=0x...
-CHAINLINK_RPC_URL=https://sepolia.infura.io/v3/YOUR_INFURA_KEY
-PYTH_PRICE_ID=0x2a01deaec9e51a579277b34b122399984d0bbf57e2458a7e42fecd2829867a0d
+# Data Sources Configuration (Customizable to any trusted sources)
+SOURCE_A_URL=https://api.source-a.org/data
+SOURCE_B_URL=https://api.source-b.org/data
+SOURCE_C_URL=https://api.source-c.org/data
 
 # Execution Parameters
 UPDATE_INTERVAL_MS=60000
@@ -107,7 +106,7 @@ MIN_STAKE_REQUIRED=10`
                 Cross-Source Resilience
               </h3>
               <p className="text-zinc-300 text-xs sm:text-sm leading-relaxed">
-                The poster fetches live prices concurrently across CoinGecko, Pyth Network, and Chainlink Aggregators, computing an 18-decimal normalized median before submitting.
+                The oracle operator can modify the oracle poster to fetch data from a variety of sources that he/she trusts (Source A, Source B, Source C, etc.), computing an 18-decimal normalized median or aggregate before submitting.
               </p>
             </div>
             <div className="pt-2 border-t border-white/5 flex items-center gap-2 font-mono text-[11px] text-muted-foreground">
@@ -129,7 +128,7 @@ MIN_STAKE_REQUIRED=10`
                 Automated Reward Yield
               </h3>
               <p className="text-zinc-300 text-xs sm:text-sm leading-relaxed">
-                Every confirmed submission claims a proportional share of the oracle reward reserve. Gas optimization algorithms ensure submissions only execute when net-profitable.
+                Every confirmed submission claims a proportional share of the oracle reward reserve. Operators can configure gas limits and update intervals to optimize operational expenses.
               </p>
             </div>
             <div className="pt-2 border-t border-white/5 flex items-center gap-2 font-mono text-[11px] text-muted-foreground">
@@ -141,21 +140,21 @@ MIN_STAKE_REQUIRED=10`
           {/* Pillar 3 */}
           <div className="bg-zinc-950/70 border border-white/10 rounded-3xl p-6 sm:p-7 backdrop-blur-md shadow-2xl flex flex-col justify-between space-y-4">
             <div className="space-y-3">
-              <div className="w-10 h-10 rounded-2xl bg-sky-500/10 border border-sky-500/20 flex items-center justify-center text-sky-400">
+              <div className="w-10 h-10 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400">
                 <Clock className="h-5 w-5" />
               </div>
-              <span className="text-[10px] font-mono tracking-widest text-sky-400 uppercase font-bold">
+              <span className="text-[10px] font-mono tracking-widest text-blue-400 uppercase font-bold">
                 03 // Time-Decay Weight
               </span>
               <h3 className="text-lg font-medium text-white">
                 Continuous Weight Dominance
               </h3>
               <p className="text-zinc-300 text-xs sm:text-sm leading-relaxed">
-                Reporter voting weight decays continuously based on the half-life. Continuous reporting refreshes weight to 100%, protecting the oracle from flash attacks.
+                The weight of a previously submitted value decays continuously based on the configured half-life. Continuous reporting refreshes submitted value weight, maintaining responsive and accurate on-chain consensus.
               </p>
             </div>
             <div className="pt-2 border-t border-white/5 flex items-center gap-2 font-mono text-[11px] text-muted-foreground">
-              <CheckCircle2 className="h-3.5 w-3.5 text-sky-400" />
+              <CheckCircle2 className="h-3.5 w-3.5 text-blue-400" />
               <span>Decay rate defined by Half-Life parameter</span>
             </div>
           </div>
@@ -205,7 +204,7 @@ MIN_STAKE_REQUIRED=10`
                 EVM RPC Endpoint
               </div>
               <p className="text-xs text-zinc-300 leading-relaxed">
-                Obtain an active JSON-RPC URL from Alchemy, Infura, or a self-hosted node matching the chain ID where the target oracle is deployed.
+                Obtain an active EVM JSON-RPC URL matching the chain ID where the target oracle is deployed.
               </p>
             </div>
           </div>
@@ -363,70 +362,14 @@ MIN_STAKE_REQUIRED=10`
             <div className="text-zinc-600 pt-2">--- Starting submission cycle at 2026-09-27T02:00:00.000Z ---</div>
             <div className="text-emerald-400">[Stake Verifier] Current stake: 250.0 Tokens</div>
             <div className="text-zinc-400">[Smart Trigger] Conditions optimal for submission. Network Gas Price: 14.2 gwei</div>
-            <div className="text-sky-400">[Data Source] CoinGecko: $0.4285</div>
-            <div className="text-sky-400">[Data Source] Chainlink: $0.4281</div>
-            <div className="text-sky-400">[Data Source] Pyth Network: $0.4283</div>
-            <div className="text-purple-400">[Aggregation] Calculated and Normalized Median Price.</div>
-            <div className="text-yellow-400">[Tx Builder] Submitting normalized price: 428300000000000000</div>
+            <div className="text-sky-400">[Data Source] Source A: 0.4285</div>
+            <div className="text-sky-400">[Data Source] Source B: 0.4281</div>
+            <div className="text-sky-400">[Data Source] Source C: 0.4283</div>
+            <div className="text-purple-400">[Aggregation] Calculated and Normalized Median Value.</div>
+            <div className="text-yellow-400">[Tx Builder] Submitting normalized value: 428300000000000000</div>
             <div className="text-yellow-400">[Tx Builder] Transaction submitted. Hash: 0x9f8b...3e12</div>
             <div className="text-green-400">[Tx Success] Block Number: 7129482, Gas Used: 43280</div>
             <div className="text-zinc-600">--- Cycle Complete ---</div>
-          </div>
-        </div>
-
-        {/* Oracle Contract Functions Cheatsheet */}
-        <div className="bg-zinc-950/70 border border-white/10 rounded-3xl p-6 sm:p-10 shadow-2xl backdrop-blur-md space-y-6">
-          <div className="border-b border-white/5 pb-4">
-            <span className="text-[10px] font-mono tracking-widest text-primary uppercase font-bold">
-              CHEATSHEET // SOLIDITY API
-            </span>
-            <h2 className="text-xl sm:text-2xl font-medium text-white mt-1">
-              Base Oracle Reporter Functions
-            </h2>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            
-            <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/5 space-y-2">
-              <div className="flex items-center justify-between">
-                <code className="text-xs font-mono text-primary font-bold">submitValue(uint256 value)</code>
-                <span className="text-[9px] font-mono bg-white/5 border border-white/10 px-2 py-0.5 rounded text-zinc-400">WRITE</span>
-              </div>
-              <p className="text-xs text-zinc-300">
-                Submits a normalized 18-decimal price observation. Refreshes the reporter&apos;s time-decay weight to 100% and triggers reward distribution.
-              </p>
-            </div>
-
-            <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/5 space-y-2">
-              <div className="flex items-center justify-between">
-                <code className="text-xs font-mono text-primary font-bold">depositTokens(uint256 amount)</code>
-                <span className="text-[9px] font-mono bg-white/5 border border-white/10 px-2 py-0.5 rounded text-zinc-400">WRITE</span>
-              </div>
-              <p className="text-xs text-zinc-300">
-                Stakes <code className="text-white text-[11px]">weightToken</code> into the oracle contract, increasing reporter voting power and eligibility.
-              </p>
-            </div>
-
-            <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/5 space-y-2">
-              <div className="flex items-center justify-between">
-                <code className="text-xs font-mono text-primary font-bold">unlockedTokens(address)</code>
-                <span className="text-[9px] font-mono bg-white/5 border border-white/10 px-2 py-0.5 rounded text-zinc-400">VIEW</span>
-              </div>
-              <p className="text-xs text-zinc-300">
-                Queries the unlocked staked token balance for any operator address to verify reporting eligibility.
-              </p>
-            </div>
-
-            <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/5 space-y-2">
-              <div className="flex items-center justify-between">
-                <code className="text-xs font-mono text-primary font-bold">readValue() / readValueInterval()</code>
-                <span className="text-[9px] font-mono bg-white/5 border border-white/10 px-2 py-0.5 rounded text-zinc-400">VIEW</span>
-              </div>
-              <p className="text-xs text-zinc-300">
-                Returns the consensus aggregated price and min/max value bounds computed across historical observations.
-              </p>
-            </div>
-
           </div>
         </div>
 

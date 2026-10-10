@@ -1003,7 +1003,7 @@ export default function CreateOracleIntegrated() {
                 <div className="space-y-1">
                   <div className="flex items-center gap-2 mb-2 relative">
                     <Label htmlFor="alpha" className="font-mono text-[10.5px] tracking-wider text-muted-foreground uppercase">
-                      Alpha *
+                      Gamma (Sampling Interval) *
                     </Label>
                     <button
                       type="button"

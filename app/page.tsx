@@ -17,7 +17,9 @@ import {
   Cpu,
   Boxes,
   Award,
-  BookOpen
+  BookOpen,
+  Database,
+  Terminal
 } from "lucide-react"
 import ParticleBackground from "@/components/ParticleBackground"
 import { StructureFlowBackground } from "@/src/shaders/structure-flow/StructureFlowBackground"
@@ -277,11 +279,11 @@ export default function HomePage() {
                 <div className="flex items-center space-x-2">
                   <Coins className="h-5 w-5 text-primary stroke-[1.5]" />
                   <span className="text-[10px] sm:text-[11px] tracking-widest font-mono text-primary uppercase font-semibold">
-                    STAKED OPERATORS
+                    DECENTRALIZED OPERATION
                   </span>
                 </div>
                 <h3 className="text-lg sm:text-xl font-medium tracking-tight text-white">
-                  Staked Operators & EWMA
+                  EWMA using Staked Balances
                 </h3>
                 <p className="text-zinc-300 text-sm leading-relaxed">
                   Every Orb oracle has an associated ERC20 token. Holders who stake this token become operators of that particular oracle and may submit values to the oracle. The oracle calculates a weighted exponential moving average of the submitted values, taking into account the time of the submissions and the staked balances as weights.
@@ -460,7 +462,7 @@ export default function HomePage() {
                     Scalable Decentralization
                   </h3>
                   <p className="text-zinc-300 text-sm sm:text-base leading-relaxed">
-                    Orb has clever mathematical mechanisms to allow constant-time and constant-gas on-chain updates for any arbitrary number of oracle operators. Staked operators submit values without creating bottlenecks, enabling unbounded decentralization on Ethereum.
+                    Orb has clever mathematical mechanisms to allow constant-time and constant-gas on-chain updates for any arbitrary number of oracle operators. Operators submit values without creating bottlenecks, enabling unbounded decentralization.
                   </p>
                 </div>
 
@@ -621,7 +623,7 @@ export default function HomePage() {
                     Economic Sustainability
                   </h3>
                   <p className="text-zinc-300 text-sm sm:text-base leading-relaxed">
-                    Oracle operators are rewarded for submitting values, providing a reliable source of revenue to cover operational costs. The reward pool can be funded with native cryptocurrency or ERC-20 tokens at any time.
+                    Oracle operators are rewarded for submitting values, providing a reliable source of revenue to cover operational costs. The reward pool can be funded with native cryptocurrency at any time.
                   </p>
                   <p className="text-muted-foreground text-xs sm:text-sm leading-relaxed">
                     The reward formula is mathematically proven (Theorem 4) to preserve its balance, ensuring the reward pool never drains to zero and maintaining permanent operational incentives for operators.
@@ -881,18 +883,41 @@ export default function HomePage() {
               Connect your wallet, configure your weights, and deploy custom oracles in seconds.
             </p>
 
-            <Button 
-              asChild 
-              size="lg" 
-              className="h-13 sm:h-14 rounded-full pl-6 pr-2 bg-white text-black hover:bg-zinc-200 transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98] group flex items-center justify-between space-x-4 shadow-xl font-semibold"
-            >
-              <Link href="/deploy">
-                <span className="font-medium tracking-wide text-xs sm:text-sm">Deploy Your First Oracle</span>
-                <span className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-black/5 flex items-center justify-center group-hover:translate-x-1 group-hover:-translate-y-[1px] transition-transform duration-300">
-                  <ArrowRight className="h-4 w-4 stroke-[1.5]" />
-                </span>
-              </Link>
-            </Button>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3.5 sm:gap-4 w-full pt-2">
+              <Button 
+                asChild 
+                size="lg" 
+                className="w-full sm:w-auto h-12 sm:h-13 px-7 rounded-full bg-white text-black hover:bg-zinc-200 transition-all duration-300 font-semibold text-xs sm:text-sm tracking-wide shadow-xl active:scale-[0.98]"
+              >
+                <Link href="/use" className="flex items-center justify-center gap-2">
+                  <Database className="h-4 w-4" />
+                  <span>Use Oracles</span>
+                </Link>
+              </Button>
+
+              <Button 
+                asChild 
+                size="lg" 
+                className="w-full sm:w-auto h-12 sm:h-13 px-7 rounded-full bg-primary/20 text-white border border-primary/40 hover:bg-primary/30 transition-all duration-300 font-semibold text-xs sm:text-sm tracking-wide shadow-xl active:scale-[0.98]"
+              >
+                <Link href="/deploy" className="flex items-center justify-center gap-2">
+                  <Boxes className="h-4 w-4 text-primary" />
+                  <span>Deploy Oracle</span>
+                </Link>
+              </Button>
+
+              <Button 
+                asChild 
+                size="lg" 
+                variant="outline"
+                className="w-full sm:w-auto h-12 sm:h-13 px-7 rounded-full border-white/10 bg-white/5 hover:bg-white/10 text-white transition-all duration-300 font-semibold text-xs sm:text-sm tracking-wide active:scale-[0.98]"
+              >
+                <Link href="/operate" className="flex items-center justify-center gap-2">
+                  <Terminal className="h-4 w-4 text-zinc-400" />
+                  <span>Operate Poster</span>
+                </Link>
+              </Button>
+            </div>
 
           </div>
         </ScrollReveal>
