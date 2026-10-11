@@ -2,6 +2,7 @@
 
 import { usePathname } from "next/navigation"
 import { ConnectButton } from "@rainbow-me/rainbowkit"
+import Image from "next/image"
 import Link from "next/link"
 import { useState, useEffect } from "react"
 import { Menu, X } from "lucide-react"
@@ -61,9 +62,18 @@ export function Navigation() {
           <div className="flex-1 flex justify-start">
             <Link 
               href="/" 
-              className="font-mono text-xs sm:text-sm font-bold tracking-wider text-white hover:text-primary transition-colors flex items-center select-none"
+              className="font-mono text-xs sm:text-sm font-bold tracking-wider text-white hover:text-primary transition-colors flex items-center gap-2.5 select-none group"
             >
-              ORB ORACLE
+              <div className="relative w-6 h-6 sm:w-7 sm:h-7 shrink-0 transition-transform duration-300 group-hover:scale-110">
+                <Image 
+                  src="/logo.svg" 
+                  alt="Orb Oracle Logo" 
+                  width={28} 
+                  height={28} 
+                  className="w-full h-full object-contain drop-shadow-[0_0_8px_rgba(0,240,255,0.45)]" 
+                />
+              </div>
+              <span>ORB ORACLE</span>
             </Link>
           </div>
 
