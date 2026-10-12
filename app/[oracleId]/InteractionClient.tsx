@@ -1439,7 +1439,7 @@ export default function OracleInteractionPage() {
                   <h3 className="font-mono text-xs uppercase tracking-wider text-white">Aggregated Metrics</h3>
                 </div>
                 <p className="text-xs text-zinc-400 pt-1 leading-relaxed">
-                  Query the on-chain registry state for latest node reports and global updates.
+                  Query the on-chain registry state for latest operator submissions and global updates.
                 </p>
               </div>
 

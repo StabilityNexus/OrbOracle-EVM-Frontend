@@ -64,7 +64,7 @@ MIN_STAKE_REQUIRED=10`
             Operate a Base Oracle
           </h1>
           <p className="text-muted-foreground text-sm sm:text-base md:text-lg max-w-2xl mx-auto leading-relaxed">
-            Run an automated reporter agent using the <span className="text-white font-medium">OrbOracle Poster</span>. Fetch multi-source market rates, compute normalized medians, and submit verified on-chain observations to earn continuous reporter rewards.
+            Run an automated operator agent using the <span className="text-white font-medium">OrbOracle Poster</span>. Fetch multi-source market rates, compute normalized medians, and submit verified on-chain observations to earn continuous operator rewards.
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 pt-4">
@@ -122,7 +122,7 @@ MIN_STAKE_REQUIRED=10`
                 <Coins className="h-5 w-5" />
               </div>
               <span className="text-[10px] font-mono tracking-widest text-primary uppercase font-bold">
-                02 // Reporter Rewards
+                02 // Operator Rewards
               </span>
               <h3 className="text-lg font-medium text-white">
                 Automated Reward Yield
@@ -150,7 +150,7 @@ MIN_STAKE_REQUIRED=10`
                 Continuous Weight Dominance
               </h3>
               <p className="text-zinc-300 text-xs sm:text-sm leading-relaxed">
-                The weight of a previously submitted value decays continuously based on the configured half-life. Continuous reporting refreshes submitted value weight, maintaining responsive and accurate on-chain consensus.
+                The weight of a previously submitted value decays continuously based on the configured half-life. Continuous value submission refreshes submitted value weight, maintaining responsive and accurate on-chain consensus.
               </p>
             </div>
             <div className="pt-2 border-t border-white/5 flex items-center gap-2 font-mono text-[11px] text-muted-foreground">
@@ -286,7 +286,7 @@ MIN_STAKE_REQUIRED=10`
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 text-xs">
                 <div className="p-3 rounded-xl bg-white/[0.02] border border-white/5 space-y-1">
                   <span className="font-mono text-primary font-bold">ORACLE_ADDRESS</span>
-                  <p className="text-zinc-400 text-[11px]">Contract address of the Base Oracle you are reporting to.</p>
+                  <p className="text-zinc-400 text-[11px]">Contract address of the Base Oracle you are operating for.</p>
                 </div>
                 <div className="p-3 rounded-xl bg-white/[0.02] border border-white/5 space-y-1">
                   <span className="font-mono text-primary font-bold">UPDATE_INTERVAL_MS</span>

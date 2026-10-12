@@ -338,7 +338,7 @@ export default function HomePage() {
       </section>
 
       {/* ========================================================= */}
-      {/* SECTION 2: 6 KEY ADVANTAGES OF ORB                       */}
+      {/* SECTION 2: KEY CHARACTERISTICS OF ORB                     */}
       {/* ========================================================= */}
       <section className="py-16 sm:py-24 md:py-32 px-4 sm:px-6 md:px-8 max-w-7xl mx-auto border-t border-white/5">
         
@@ -347,11 +347,11 @@ export default function HomePage() {
           <div className="text-center max-w-3xl mx-auto mb-14 sm:mb-20 space-y-3 sm:space-y-4">
             <div className="inline-flex items-center space-x-2">
               <span className="px-3.5 py-1 text-[10px] sm:text-[11px] tracking-[0.2em] font-mono font-medium uppercase rounded-full bg-white/5 border border-white/10 text-primary">
-                PROTOCOL ADVANTAGES
+                KEY CHARACTERISTICS
               </span>
             </div>
             <h2 className="text-3xl sm:text-4xl md:text-5xl font-medium tracking-tight text-white leading-tight">
-              Six Key Advantages of Orb
+              Key Characteristics of Orb
             </h2>
             <p className="text-muted-foreground text-sm sm:text-base md:text-lg leading-relaxed max-w-2xl mx-auto px-2 sm:px-0">
               Engineered with mathematical rigor to solve the centralization, latency, manipulation, and sustainability limits of existing oracles.
@@ -370,7 +370,7 @@ export default function HomePage() {
                   <div className="flex items-center space-x-2">
                     <Sliders className="h-5 w-5 text-primary stroke-[1.5]" />
                     <span className="text-[10px] sm:text-[11px] tracking-widest font-mono text-primary uppercase font-semibold">
-                      ADVANTAGE 01 // RESILIENCE
+                      1 // RESILIENCE
                     </span>
                   </div>
                   <h3 className="text-2xl sm:text-3xl font-medium tracking-tight text-white">
@@ -455,7 +455,7 @@ export default function HomePage() {
                   <div className="flex items-center space-x-2">
                     <Cpu className="h-5 w-5 text-primary stroke-[1.5]" />
                     <span className="text-[10px] sm:text-[11px] tracking-widest font-mono text-primary uppercase font-semibold">
-                      ADVANTAGE 02 // SCALABILITY
+                      2 // SCALABILITY
                     </span>
                   </div>
                   <h3 className="text-xl sm:text-2xl font-medium tracking-tight text-white">
@@ -490,7 +490,7 @@ export default function HomePage() {
                   <div className="flex items-center space-x-2">
                     <Zap className="h-5 w-5 text-primary stroke-[1.5]" />
                     <span className="text-[10px] sm:text-[11px] tracking-widest font-mono text-primary uppercase font-semibold">
-                      ADVANTAGE 03 // SPEED & LATENCY
+                      3 // SPEED & LATENCY
                     </span>
                   </div>
                   <h3 className="text-xl sm:text-2xl font-medium tracking-tight text-white">
@@ -529,7 +529,7 @@ export default function HomePage() {
                   <div className="flex items-center space-x-2">
                     <Boxes className="h-5 w-5 text-primary stroke-[1.5]" />
                     <span className="text-[10px] sm:text-[11px] tracking-widest font-mono text-primary uppercase font-semibold">
-                      ADVANTAGE 04 // COMPOSABILITY
+                      4 // COMPOSABILITY
                     </span>
                   </div>
                   <h3 className="text-2xl sm:text-3xl font-medium tracking-tight text-white leading-tight">
@@ -616,7 +616,7 @@ export default function HomePage() {
                   <div className="flex items-center space-x-2">
                     <TrendingUp className="h-5 w-5 text-primary stroke-[1.5]" />
                     <span className="text-[10px] sm:text-[11px] tracking-widest font-mono text-primary uppercase font-semibold">
-                      ADVANTAGE 05 // SUSTAINABILITY
+                      5 // SUSTAINABILITY
                     </span>
                   </div>
                   <h3 className="text-2xl sm:text-3xl font-medium tracking-tight text-white">
@@ -647,7 +647,7 @@ export default function HomePage() {
                   <div className="flex items-center space-x-2">
                     <Award className="h-5 w-5 text-primary stroke-[1.5]" />
                     <span className="text-[10px] sm:text-[11px] tracking-widest font-mono text-primary uppercase font-semibold">
-                      ADVANTAGE 06 // FORMAL VERIFICATION
+                      6 // FORMAL VERIFICATION
                     </span>
                   </div>
                   <h3 className="text-2xl sm:text-3xl font-medium tracking-tight text-white">

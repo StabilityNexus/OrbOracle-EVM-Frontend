@@ -37,9 +37,9 @@ export default function RewardFlowVisualizer() {
 
     // Staggered blue light beams
     const beams: StreamBeam[] = [
-      { progress: 0.0, speed: 0.0032, targetIndex: 0 },  // To Reporter A
-      { progress: -0.4, speed: 0.0032, targetIndex: 1 }, // To Reporter B
-      { progress: -0.8, speed: 0.0032, targetIndex: 2 }, // To Reporter C
+      { progress: 0.0, speed: 0.0032, targetIndex: 0 },  // To Operator A
+      { progress: -0.4, speed: 0.0032, targetIndex: 1 }, // To Operator B
+      { progress: -0.8, speed: 0.0032, targetIndex: 2 }, // To Operator C
     ]
 
     // Cubic bezier evaluator
@@ -78,9 +78,9 @@ export default function RewardFlowVisualizer() {
       const targetRadius = 24 * (width / 540)
 
       const targets = [
-        { x: targetCircleX - targetRadius, y: height * 0.18 }, // Reporter A (Top)
-        { x: targetCircleX - targetRadius, y: height * 0.48 }, // Reporter B (Middle)
-        { x: targetCircleX - targetRadius, y: height * 0.78 }, // Reporter C (Bottom)
+        { x: targetCircleX - targetRadius, y: height * 0.18 }, // Operator A (Top)
+        { x: targetCircleX - targetRadius, y: height * 0.48 }, // Operator B (Middle)
+        { x: targetCircleX - targetRadius, y: height * 0.78 }, // Operator C (Bottom)
       ]
 
       // Draw clean subtle conduits
@@ -211,7 +211,7 @@ export default function RewardFlowVisualizer() {
           style={{ left: "calc(68% + 32px)", top: "18%" }}
         >
           <div className="text-xs sm:text-sm font-medium text-white tracking-tight">
-            Reporter A
+            Operator A
           </div>
           <div className="text-[10.5px] text-primary font-mono">
             45% Weight
@@ -232,7 +232,7 @@ export default function RewardFlowVisualizer() {
           style={{ left: "calc(68% + 32px)", top: "48%" }}
         >
           <div className="text-xs sm:text-sm font-medium text-white tracking-tight">
-            Reporter B
+            Operator B
           </div>
           <div className="text-[10.5px] text-primary font-mono">
             35% Weight
@@ -253,7 +253,7 @@ export default function RewardFlowVisualizer() {
           style={{ left: "calc(68% + 32px)", top: "78%" }}
         >
           <div className="text-xs sm:text-sm font-medium text-white tracking-tight">
-            Reporter C
+            Operator C
           </div>
           <div className="text-[10.5px] text-primary font-mono">
             20% Weight
