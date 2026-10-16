@@ -368,15 +368,15 @@ export default function HomePage() {
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-14 items-center">
                 
                 <div className="lg:col-span-6 space-y-4 sm:space-y-5">
-                  <div className="flex items-center space-x-2">
-                    <Sliders className="h-5 w-5 text-primary stroke-[1.5]" />
-                    <span className="text-xs tracking-widest font-mono text-primary font-semibold">
+                  <div className="flex items-center space-x-2.5 sm:space-x-3">
+                    <Sliders className="h-5 w-5 sm:h-6 sm:w-6 text-primary stroke-[1.5] shrink-0" />
+                    <span className="text-xs sm:text-sm tracking-widest font-mono text-primary font-semibold shrink-0">
                       1
                     </span>
+                    <h3 className="text-2xl sm:text-3xl font-medium tracking-tight text-primary">
+                      Resilience
+                    </h3>
                   </div>
-                  <h3 className="text-2xl sm:text-3xl font-medium tracking-tight text-white">
-                    Resilience
-                  </h3>
                   <p className="text-zinc-300 text-sm sm:text-base leading-relaxed">
                     Rather than forcing high-value DeFi applications to rely on a single fragile price point, Orb Oracle exposes a current value together with dynamic minimum and maximum bounds derived from recent sampled history.
                   </p>
@@ -453,15 +453,15 @@ export default function HomePage() {
             <ScrollReveal delay={140}>
               <div className="bg-zinc-950/60 border border-white/10 rounded-2xl sm:rounded-3xl p-6 sm:p-8 lg:p-10 backdrop-blur-md h-full flex flex-col justify-between space-y-6 sm:space-y-8 hover:border-white/20 transition-all duration-300 shadow-xl">
                 <div className="space-y-3 sm:space-y-4">
-                  <div className="flex items-center space-x-2">
-                    <Cpu className="h-5 w-5 text-primary stroke-[1.5]" />
-                    <span className="text-xs tracking-widest font-mono text-primary font-semibold">
+                  <div className="flex items-center space-x-2.5 sm:space-x-3">
+                    <Cpu className="h-5 w-5 sm:h-6 sm:w-6 text-primary stroke-[1.5] shrink-0" />
+                    <span className="text-xs sm:text-sm tracking-widest font-mono text-primary font-semibold shrink-0">
                       2
                     </span>
+                    <h3 className="text-xl sm:text-2xl font-medium tracking-tight text-primary">
+                      Scalable Decentralization
+                    </h3>
                   </div>
-                  <h3 className="text-xl sm:text-2xl font-medium tracking-tight text-white">
-                    Scalable Decentralization
-                  </h3>
                   <p className="text-zinc-300 text-sm sm:text-base leading-relaxed">
                     Orb has clever mathematical mechanisms to allow constant-time and constant-gas on-chain updates for any arbitrary number of oracle operators. Operators submit values without creating bottlenecks, enabling unbounded decentralization.
                   </p>
@@ -488,15 +488,15 @@ export default function HomePage() {
             <ScrollReveal delay={200}>
               <div className="bg-zinc-950/60 border border-white/10 rounded-2xl sm:rounded-3xl p-6 sm:p-8 lg:p-10 backdrop-blur-md h-full flex flex-col justify-between space-y-6 sm:space-y-8 hover:border-white/20 transition-all duration-300 shadow-xl">
                 <div className="space-y-3 sm:space-y-4">
-                  <div className="flex items-center space-x-2">
-                    <Zap className="h-5 w-5 text-primary stroke-[1.5]" />
-                    <span className="text-xs tracking-widest font-mono text-primary font-semibold">
+                  <div className="flex items-center space-x-2.5 sm:space-x-3">
+                    <Zap className="h-5 w-5 sm:h-6 sm:w-6 text-primary stroke-[1.5] shrink-0" />
+                    <span className="text-xs sm:text-sm tracking-widest font-mono text-primary font-semibold shrink-0">
                       3
                     </span>
+                    <h3 className="text-xl sm:text-2xl font-medium tracking-tight text-primary">
+                      Speed
+                    </h3>
                   </div>
-                  <h3 className="text-xl sm:text-2xl font-medium tracking-tight text-white">
-                    Speed
-                  </h3>
                   <p className="text-zinc-300 text-sm sm:text-base leading-relaxed">
                     Fresh submissions immediately dominate the aggregate price with single-block finality. Older submissions smoothly undergo exponential decay based on the oracle&apos;s half-life, and inactive operators&apos; delay asymptotically converges to zero, bounding delay to optimal minimums.
                   </p>
@@ -527,15 +527,15 @@ export default function HomePage() {
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-14 items-center">
                 
                 <div className="lg:col-span-6 space-y-5 sm:space-y-6">
-                  <div className="flex items-center space-x-2">
-                    <Boxes className="h-5 w-5 text-primary stroke-[1.5]" />
-                    <span className="text-xs tracking-widest font-mono text-primary font-semibold">
+                  <div className="flex items-center space-x-2.5 sm:space-x-3">
+                    <Boxes className="h-5 w-5 sm:h-6 sm:w-6 text-primary stroke-[1.5] shrink-0" />
+                    <span className="text-xs sm:text-sm tracking-widest font-mono text-primary font-semibold shrink-0">
                       4
                     </span>
+                    <h3 className="text-2xl sm:text-3xl font-medium tracking-tight text-primary leading-tight">
+                      Composability
+                    </h3>
                   </div>
-                  <h3 className="text-2xl sm:text-3xl font-medium tracking-tight text-white leading-tight">
-                    Composability
-                  </h3>
                   <p className="text-zinc-300 leading-relaxed text-sm sm:text-base">
                     Multiply or divide any two active oracles directly on-chain to create custom currency pairs, cross-asset rates, or synthetic pricing without storing duplicate state or incurring extra gas delay.
                   </p>
@@ -614,15 +614,15 @@ export default function HomePage() {
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-14 items-center">
                 
                 <div className="lg:col-span-6 space-y-4 sm:space-y-5">
-                  <div className="flex items-center space-x-2">
-                    <TrendingUp className="h-5 w-5 text-primary stroke-[1.5]" />
-                    <span className="text-xs tracking-widest font-mono text-primary font-semibold">
+                  <div className="flex items-center space-x-2.5 sm:space-x-3">
+                    <TrendingUp className="h-5 w-5 sm:h-6 sm:w-6 text-primary stroke-[1.5] shrink-0" />
+                    <span className="text-xs sm:text-sm tracking-widest font-mono text-primary font-semibold shrink-0">
                       5
                     </span>
+                    <h3 className="text-2xl sm:text-3xl font-medium tracking-tight text-primary">
+                      Economic Sustainability
+                    </h3>
                   </div>
-                  <h3 className="text-2xl sm:text-3xl font-medium tracking-tight text-white">
-                    Economic Sustainability
-                  </h3>
                   <p className="text-zinc-300 text-sm sm:text-base leading-relaxed">
                     Oracle operators are rewarded for submitting values, providing a reliable source of revenue to cover operational costs. The reward pool can be funded with native cryptocurrency at any time.
                   </p>
@@ -645,15 +645,15 @@ export default function HomePage() {
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-14 items-center">
                 
                 <div className="lg:col-span-7 space-y-4 sm:space-y-5">
-                  <div className="flex items-center space-x-2">
-                    <Award className="h-5 w-5 text-primary stroke-[1.5]" />
-                    <span className="text-xs tracking-widest font-mono text-primary font-semibold">
+                  <div className="flex items-center space-x-2.5 sm:space-x-3">
+                    <Award className="h-5 w-5 sm:h-6 sm:w-6 text-primary stroke-[1.5] shrink-0" />
+                    <span className="text-xs sm:text-sm tracking-widest font-mono text-primary font-semibold shrink-0">
                       6
                     </span>
+                    <h3 className="text-2xl sm:text-3xl font-medium tracking-tight text-primary">
+                      Research and Formal Verification
+                    </h3>
                   </div>
-                  <h3 className="text-2xl sm:text-3xl font-medium tracking-tight text-white">
-                    Research and Formal Verification
-                  </h3>
                   <p className="text-zinc-300 text-sm sm:text-base leading-relaxed">
                     The Orb Oracle Protocol paper (<em>&quot;Orb: Decentralized and Sustainable Oracles&quot;</em>) has been peer-reviewed and accepted for publication at the <strong>Journal of Financial Technology</strong>.
                   </p>
