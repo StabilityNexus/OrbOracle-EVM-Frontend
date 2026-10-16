@@ -3,8 +3,14 @@
 import Link from "next/link"
 import { useSearchParams } from "next/navigation"
 import { useCallback, useEffect, useMemo, useState } from "react"
-import { Navigation } from "@/components/navigation"
-import { PriceChart, type PriceChartPoint } from "@/components/price-chart"
+import dynamic from "next/dynamic"
+import { OracleDetailsSkeleton } from "@/components/OracleDetailsSkeleton"
+import type { PriceChartPoint } from "@/components/price-chart"
+
+const PriceChart = dynamic(
+  () => import("@/components/price-chart").then((mod) => mod.PriceChart),
+  { ssr: false }
+)
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -627,9 +633,8 @@ export default function OracleInteractionPage() {
   // Early validation before calling the hook
   if (!oracleAddress || !chainIdValid) {
     return (
-      <div className="min-h-screen bg-background font-[oblique] tracking-wide" style={{ fontStyle: 'oblique 12deg' }}>
-        <Navigation />
-        <div className="container mx-auto px-6 pt-24 pb-12">
+      <div className="min-h-screen bg-zinc-950 font-sans text-white">
+        <div className="container mx-auto px-6 pt-36 pb-12">
           <div className="text-center py-20">
             <div className="text-red-400 mb-6">
               <TrendingUp className="h-16 w-16 mx-auto mb-4 opacity-50" />
@@ -1191,24 +1196,13 @@ export default function OracleInteractionPage() {
   }
 
   if (oracleLoading) {
-    return (
-      <div className="min-h-screen bg-background font-[oblique] tracking-wide" style={{ fontStyle: 'oblique 12deg' }}>
-        <Navigation />
-        <div className="container mx-auto px-6 pt-24 pb-12">
-          <div className="text-center py-20">
-            <Loader2 className="h-16 w-16 mx-auto mb-6 animate-spin text-primary" />
-            <p className="text-xl text-foreground font-medium">Loading oracle details from blockchain…</p>
-          </div>
-        </div>
-      </div>
-    )
+    return <OracleDetailsSkeleton />
   }
 
   if (oracleError || !oracle) {
     return (
-      <div className="min-h-screen bg-background font-[oblique] tracking-wide" style={{ fontStyle: 'oblique 12deg' }}>
-        <Navigation />
-        <div className="container mx-auto px-6 pt-24 pb-12">
+      <div className="min-h-screen bg-zinc-950 font-sans text-white">
+        <div className="container mx-auto px-6 pt-36 pb-12">
           <div className="text-center py-20">
             <div className="text-red-400 mb-6">
               <TrendingUp className="h-16 w-16 mx-auto mb-4 opacity-50" />
@@ -1228,8 +1222,6 @@ export default function OracleInteractionPage() {
 
   return (
     <div className="min-h-screen bg-zinc-950 text-white relative overflow-x-hidden font-sans">
-      <Navigation />
-
       {/* Cosmic Blueprint Radar Grid Backdrop */}
       <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none opacity-40">
         {/* Radar lines */}
@@ -1240,7 +1232,8 @@ export default function OracleInteractionPage() {
       <div className="container mx-auto px-4 sm:px-6 pt-28 pb-20 relative z-10">
         {/* Header */}
         <div className="mb-12 max-w-6xl mx-auto space-y-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          {/* Top Line: Back to Explorer (Left) & Active Status (Right) */}
+          <div className="flex items-center justify-between">
             <Link
               href="/explorer"
               className="inline-flex items-center text-xs font-mono tracking-widest text-muted-foreground hover:text-white transition-colors uppercase"
@@ -1249,7 +1242,7 @@ export default function OracleInteractionPage() {
               <span>Back to Explorer</span>
             </Link>
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2.5 sm:gap-3">
               <span className={`px-2.5 py-0.5 text-[9px] font-mono tracking-widest uppercase rounded-full border ${
                 oracle.status === 'active' 
                   ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/25' 
@@ -1265,12 +1258,15 @@ export default function OracleInteractionPage() {
             </div>
           </div>
 
-          <div className="space-y-3">
-            <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight text-white">
+          {/* Below that Line: Centered Name & Description with breathing space */}
+          <div className="text-center pt-2 sm:pt-4 pb-4 sm:pb-6 space-y-2">
+            <h1 className="text-3xl sm:text-4xl md:text-5xl font-semibold tracking-tight text-white">
               {oracle.name ?? "Oracle Dashboard"}
             </h1>
             {oracle.description && (
-              <p className="text-sm sm:text-base text-zinc-400 max-w-3xl leading-relaxed font-light">{oracle.description}</p>
+              <p className="text-xs sm:text-sm text-zinc-400 max-w-2xl mx-auto leading-relaxed font-light">
+                {oracle.description}
+              </p>
             )}
           </div>
 

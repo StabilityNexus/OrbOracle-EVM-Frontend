@@ -2,7 +2,6 @@
 
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { Navigation } from "@/components/navigation"
 import { 
   ArrowRight, 
   Shield, 
@@ -21,10 +20,15 @@ import {
   Database,
   Terminal
 } from "lucide-react"
-import ParticleBackground from "@/components/ParticleBackground"
-import { StructureFlowBackground } from "@/src/shaders/structure-flow/StructureFlowBackground"
-import RewardFlowVisualizer from "@/components/RewardFlowVisualizer"
+import dynamic from "next/dynamic"
 import { useState, useEffect, useRef } from "react"
+
+const ParticleBackground = dynamic(() => import("@/components/ParticleBackground"), { ssr: false })
+const StructureFlowBackground = dynamic(
+  () => import("@/src/shaders/structure-flow/StructureFlowBackground").then((mod) => mod.StructureFlowBackground),
+  { ssr: false }
+)
+const RewardFlowVisualizer = dynamic(() => import("@/components/RewardFlowVisualizer"), { ssr: false })
 
 // Subtle Scroll Reveal Animation Wrapper
 function ScrollReveal({
@@ -93,9 +97,6 @@ export default function HomePage() {
     <div className="min-h-screen bg-background font-sans text-foreground overflow-x-hidden selection:bg-primary/30 selection:text-white relative">
       {/* High-End Ambient Particle Backdrop */}
       <ParticleBackground />
-
-      {/* Floating Header Navigation */}
-      <Navigation />
 
       {/* Hero Wrapper (Full Width) */}
       <div className="relative w-full overflow-visible">
@@ -369,8 +370,8 @@ export default function HomePage() {
                 <div className="lg:col-span-6 space-y-4 sm:space-y-5">
                   <div className="flex items-center space-x-2">
                     <Sliders className="h-5 w-5 text-primary stroke-[1.5]" />
-                    <span className="text-[10px] sm:text-[11px] tracking-widest font-mono text-primary uppercase font-semibold">
-                      1 // RESILIENCE
+                    <span className="text-xs tracking-widest font-mono text-primary font-semibold">
+                      1
                     </span>
                   </div>
                   <h3 className="text-2xl sm:text-3xl font-medium tracking-tight text-white">
@@ -454,8 +455,8 @@ export default function HomePage() {
                 <div className="space-y-3 sm:space-y-4">
                   <div className="flex items-center space-x-2">
                     <Cpu className="h-5 w-5 text-primary stroke-[1.5]" />
-                    <span className="text-[10px] sm:text-[11px] tracking-widest font-mono text-primary uppercase font-semibold">
-                      2 // SCALABILITY
+                    <span className="text-xs tracking-widest font-mono text-primary font-semibold">
+                      2
                     </span>
                   </div>
                   <h3 className="text-xl sm:text-2xl font-medium tracking-tight text-white">
@@ -489,8 +490,8 @@ export default function HomePage() {
                 <div className="space-y-3 sm:space-y-4">
                   <div className="flex items-center space-x-2">
                     <Zap className="h-5 w-5 text-primary stroke-[1.5]" />
-                    <span className="text-[10px] sm:text-[11px] tracking-widest font-mono text-primary uppercase font-semibold">
-                      3 // SPEED & LATENCY
+                    <span className="text-xs tracking-widest font-mono text-primary font-semibold">
+                      3
                     </span>
                   </div>
                   <h3 className="text-xl sm:text-2xl font-medium tracking-tight text-white">
@@ -528,8 +529,8 @@ export default function HomePage() {
                 <div className="lg:col-span-6 space-y-5 sm:space-y-6">
                   <div className="flex items-center space-x-2">
                     <Boxes className="h-5 w-5 text-primary stroke-[1.5]" />
-                    <span className="text-[10px] sm:text-[11px] tracking-widest font-mono text-primary uppercase font-semibold">
-                      4 // COMPOSABILITY
+                    <span className="text-xs tracking-widest font-mono text-primary font-semibold">
+                      4
                     </span>
                   </div>
                   <h3 className="text-2xl sm:text-3xl font-medium tracking-tight text-white leading-tight">
@@ -615,8 +616,8 @@ export default function HomePage() {
                 <div className="lg:col-span-6 space-y-4 sm:space-y-5">
                   <div className="flex items-center space-x-2">
                     <TrendingUp className="h-5 w-5 text-primary stroke-[1.5]" />
-                    <span className="text-[10px] sm:text-[11px] tracking-widest font-mono text-primary uppercase font-semibold">
-                      5 // SUSTAINABILITY
+                    <span className="text-xs tracking-widest font-mono text-primary font-semibold">
+                      5
                     </span>
                   </div>
                   <h3 className="text-2xl sm:text-3xl font-medium tracking-tight text-white">
@@ -646,8 +647,8 @@ export default function HomePage() {
                 <div className="lg:col-span-7 space-y-4 sm:space-y-5">
                   <div className="flex items-center space-x-2">
                     <Award className="h-5 w-5 text-primary stroke-[1.5]" />
-                    <span className="text-[10px] sm:text-[11px] tracking-widest font-mono text-primary uppercase font-semibold">
-                      6 // FORMAL VERIFICATION
+                    <span className="text-xs tracking-widest font-mono text-primary font-semibold">
+                      6
                     </span>
                   </div>
                   <h3 className="text-2xl sm:text-3xl font-medium tracking-tight text-white">

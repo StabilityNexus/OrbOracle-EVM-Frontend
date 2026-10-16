@@ -1,12 +1,13 @@
 "use client"
 
 import { useState, useMemo } from "react"
-import { Navigation } from "@/components/navigation"
 import { OracleCard } from "@/components/oracle-card"
 import { Input } from "@/components/ui/input"
 import { useOracles } from "@/hooks/useOracles"
 import { Search, Loader2 } from "lucide-react"
-import ParticleBackground from "@/components/ParticleBackground"
+import dynamic from "next/dynamic"
+
+const ParticleBackground = dynamic(() => import("@/components/ParticleBackground"), { ssr: false })
 
 export default function UsePage() {
   const [searchQuery, setSearchQuery] = useState("")
@@ -32,8 +33,6 @@ export default function UsePage() {
     <div className="min-h-screen bg-background font-sans text-foreground overflow-x-hidden selection:bg-primary/30 selection:text-white relative bg-[radial-gradient(ellipse_60%_50%_at_50%_0%,#8b5cf606,transparent),linear-gradient(to_right,#ffffff03_1px,transparent_1px),linear-gradient(to_bottom,#ffffff03_1px,transparent_1px)] bg-[size:4rem_4rem]">
       {/* High-End Ambient Particle Backdrop */}
       <ParticleBackground />
-
-      <Navigation />
 
       <div className="container mx-auto px-6 pt-36 pb-24 relative z-10">
         {/* Header */}

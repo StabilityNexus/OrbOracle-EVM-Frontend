@@ -5,11 +5,13 @@ import { ConnectButton } from "@rainbow-me/rainbowkit"
 import Link from "next/link"
 import { useState, useEffect } from "react"
 import { Menu, X } from "lucide-react"
+import OrbNavLogo from "./OrbNavLogo"
 
 export function Navigation() {
   const pathname = usePathname()
   const [scrolled, setScrolled] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
+  const [logoHovered, setLogoHovered] = useState(false)
 
   const navItems = [
     { label: 'USE', href: '/use' },
@@ -61,9 +63,19 @@ export function Navigation() {
           <div className="flex-1 flex justify-start">
             <Link 
               href="/" 
-              className="font-mono text-xs sm:text-sm font-bold tracking-wider text-white hover:text-primary transition-colors flex items-center select-none"
+              onMouseEnter={() => setLogoHovered(true)}
+              onMouseLeave={() => setLogoHovered(false)}
+              className="group flex items-center gap-2.5 sm:gap-3 select-none"
             >
-              ORB ORACLE
+              <OrbNavLogo hovered={logoHovered} size={30} className="w-[30px] h-[30px]" />
+              <div className="flex items-center tracking-[0.16em] uppercase text-xs sm:text-[13px] font-sans">
+                <span className="font-bold text-white group-hover:text-primary transition-colors duration-300 drop-shadow-[0_0_12px_rgba(168,138,255,0.45)]">
+                  ORB
+                </span>
+                <span className="ml-1.5 font-light text-zinc-300 group-hover:text-white transition-colors duration-300">
+                  ORACLES
+                </span>
+              </div>
             </Link>
           </div>
 

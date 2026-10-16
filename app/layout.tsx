@@ -8,6 +8,7 @@ import { GeistSans } from 'geist/font/sans'
 import { GeistMono } from 'geist/font/mono'
 import { ThemeProvider } from '@/providers/ThemeProvider'
 import { WalletProvider } from '@/providers/WalletProvider'
+import { Navigation } from '@/components/navigation'
 import ClientFooter from '@/components/ClientFooter'
 
 export const metadata: Metadata = {
@@ -98,6 +99,7 @@ export default function RootLayout({
             disableTransitionOnChange
           >
             <main className="min-h-screen flex flex-col">
+              <Navigation />
               <div className="flex-grow">
                 {children}
               </div>

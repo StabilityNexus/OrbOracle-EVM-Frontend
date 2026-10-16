@@ -1,8 +1,9 @@
 "use client"
 
-import { Navigation } from "@/components/navigation"
 import CreateOracleIntegrated from "@/components/createOracle"
-import ParticleBackground from "@/components/ParticleBackground"
+import dynamic from "next/dynamic"
+
+const ParticleBackground = dynamic(() => import("@/components/ParticleBackground"), { ssr: false })
 
 export default function DeployPage() {
   return (
@@ -10,15 +11,13 @@ export default function DeployPage() {
       {/* High-End Ambient Particle Backdrop */}
       <ParticleBackground />
 
-      <Navigation />
-
       <div className="container mx-auto px-4 pt-36 pb-24 relative z-10">
         <div className="mb-12 text-center space-y-4">
           <h1 className="text-4xl sm:text-5xl font-medium tracking-tight leading-tight text-white">
-            Create Custom Oracle
+            Create Your Own Oracle
           </h1>
           <p className="text-muted-foreground text-sm max-w-xl mx-auto leading-relaxed">
-            Deploy a new on‑chain Oracle contract by providing details for base or composed mathematical oracles.
+            Deploy a new Base Oracle, with its own data stream, or a Composed Oracle, combining the data streams of existing oracles.
           </p>
         </div>
         

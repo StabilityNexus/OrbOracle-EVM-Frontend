@@ -3,6 +3,8 @@ import InteractionClient from './InteractionClient'
 import { Suspense } from 'react'
 import ParticleBackground from "@/components/ParticleBackground"
 
+import { OracleDetailsSkeleton } from "@/components/OracleDetailsSkeleton"
+
 export async function generateStaticParams() {
   return [{ oracleId: 'o' }]
 }
@@ -13,13 +15,7 @@ export default function OraclePage() {
       {/* High-End Ambient Particle Backdrop */}
       <ParticleBackground />
 
-      <Suspense fallback={
-        <div className="min-h-screen flex items-center justify-center">
-          <div className="animate-pulse text-muted-foreground font-mono text-xs uppercase tracking-widest">
-            Loading Contract State...
-          </div>
-        </div>
-      }>
+      <Suspense fallback={<OracleDetailsSkeleton />}>
         <InteractionClient />
       </Suspense>
     </div>
