@@ -35,6 +35,8 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [tokens, setTokens] = useState<Token[]>([]);
   const [loading, setLoading] = useState(false);
+  const [tokenFetchError, setTokenFetchError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
   const [isManualInput, setIsManualInput] = useState(false);
   const [manualAddress, setManualAddress] = useState(value);
@@ -70,6 +72,7 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({
       }
 
       setLoading(true);
+      setTokenFetchError(null);
       try {
         const url = `https://raw.githubusercontent.com/StabilityNexus/TokenList/main/${chainName}-tokens.json`;
         const response = await fetch(url);
@@ -83,13 +86,14 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({
       } catch (error) {
         console.error("Error fetching tokens:", error);
         setTokens([]);
+        setTokenFetchError("Unable to load tokens. Please try again or enter an address manually.");
       } finally {
         setLoading(false);
       }
     };
 
     fetchTokens();
-  }, [chainName, chainId]);
+  }, [chainName, chainId, retryCount]);
 
   // Handle ESC key to close modal
   useEffect(() => {
@@ -250,6 +254,17 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({
               {loading ? (
                 <div className="text-center py-8 text-slate-400 font-mono text-xs">
                   Loading tokens...
+                </div>
+              ) : tokenFetchError ? (
+                <div className="text-center py-8 text-red-400 space-y-3" role="alert">
+                  <p>{tokenFetchError}</p>
+                  <button
+                    type="button"
+                    onClick={() => setRetryCount((count) => count + 1)}
+                    className="px-4 py-2 bg-slate-800/50 hover:bg-slate-700/50 text-slate-100 rounded-md border border-blue-100 hover:border-blue-200 transition-colors text-sm font-medium"
+                  >
+                    Retry
+                  </button>
                 </div>
               ) : filteredTokens.length === 0 ? (
                 <div className="text-center py-8 text-slate-400 font-mono text-xs">
