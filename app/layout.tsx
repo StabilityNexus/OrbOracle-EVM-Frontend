@@ -37,6 +37,11 @@ export const metadata: Metadata = {
   applicationName: 'OrbOracle',
   category: 'Finance',
   metadataBase: new URL('https://orboracle.stability.nexus'),
+  icons: {
+    icon: '/icon.svg',
+    shortcut: '/icon.svg',
+    apple: '/icon.svg',
+  },
   alternates: {
     canonical: '/',
   },
