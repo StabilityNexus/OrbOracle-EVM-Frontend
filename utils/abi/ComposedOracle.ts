@@ -5,7 +5,8 @@ export const ComposedOracleAbi = [
       { "name": "_feedA", "type": "address", "internalType": "address" },
       { "name": "_feedB", "type": "address", "internalType": "address" },
       { "name": "_invertResult", "type": "bool", "internalType": "bool" },
-      { "name": "_defaultSampleSize", "type": "uint256", "internalType": "uint256" }
+      { "name": "_defaultSampleSize", "type": "uint256", "internalType": "uint256" },
+      { "name": "_description", "type": "string", "internalType": "string" }
     ],
     "stateMutability": "nonpayable"
   },
@@ -15,6 +16,7 @@ export const ComposedOracleAbi = [
   { "type": "function", "name": "feedB", "inputs": [], "outputs": [{ "type": "address", "internalType": "address" }], "stateMutability": "view" },
   { "type": "function", "name": "invertResult", "inputs": [], "outputs": [{ "type": "bool", "internalType": "bool" }], "stateMutability": "view" },
   { "type": "function", "name": "defaultSampleSize", "inputs": [], "outputs": [{ "type": "uint256", "internalType": "uint256" }], "stateMutability": "view" },
+  { "type": "function", "name": "description", "inputs": [], "outputs": [{ "type": "string", "internalType": "string" }], "stateMutability": "view" },
 
   // Core view actions
   { "type": "function", "name": "readValue", "inputs": [], "outputs": [{ "type": "uint256", "internalType": "uint256" }], "stateMutability": "view" },

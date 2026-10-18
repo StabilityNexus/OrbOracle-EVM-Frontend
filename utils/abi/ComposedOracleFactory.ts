@@ -35,7 +35,8 @@ const ComposedOracleFactory = {
         { "name": "feedB", "type": "address", "internalType": "address" },
         { "name": "operation", "type": "uint8", "internalType": "uint8" },
         { "name": "invertResult", "type": "bool", "internalType": "bool" },
-        { "name": "defaultSampleSize", "type": "uint256", "internalType": "uint256" }
+        { "name": "defaultSampleSize", "type": "uint256", "internalType": "uint256" },
+        { "name": "description", "type": "string", "internalType": "string" }
       ],
       "outputs": [
         { "name": "oracle", "type": "address", "internalType": "address" }

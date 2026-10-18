@@ -171,17 +171,25 @@ export function useOracles() {
         // Fetch details for composed oracles
         const composedPromises = (composedOracleInfos || []).map(async (info: any, index: number) => {
           try {
-            const lastUpdated = await readContract(config, {
-              address: info.oracle as `0x${string}`,
-              abi: ComposedOracleAbi,
-              functionName: 'lastUpdated',
-              chainId: activeChainId,
-            }).catch(() => BigInt(0))
+            const [lastUpdated, description] = await Promise.all([
+              readContract(config, {
+                address: info.oracle as `0x${string}`,
+                abi: ComposedOracleAbi,
+                functionName: 'lastUpdated',
+                chainId: activeChainId,
+              }).catch(() => BigInt(0)),
+              readContract(config, {
+                address: info.oracle as `0x${string}`,
+                abi: ComposedOracleAbi,
+                functionName: 'description',
+                chainId: activeChainId,
+              }).catch(() => ''),
+            ])
 
             return {
               id: info.oracle,
               name: `Composed Oracle ${index + 1}`,
-              description: `Oracle Feed`,
+              description: description || 'Oracle Feed',
               address: info.oracle,
               token: '0x0000000000000000000000000000000000000000',
               creator: info.creator,
@@ -236,7 +244,7 @@ export function useOracles() {
           return {
             ...co,
             name: combinedName,
-            description: `${combinedName} Price Feed`,
+            description: (co.description && co.description !== 'Oracle Feed') ? co.description : `${combinedName} Price Feed`,
           }
         })
 
@@ -328,11 +336,9 @@ export function useOracle(oracleAddress: string, targetChainId?: number) {
           } catch (e) {
             console.error('Error fetching remaining composed oracle parameters:', e)
           }
-        }
 
-        if (isComposed) {
-          // Query dynamic names for parent feeds
-          const [nameA, nameB, lastUpdated] = await Promise.all([
+          // Query dynamic names for parent feeds and composed description
+          const [nameA, nameB, lastUpdated, description] = await Promise.all([
             readContract(config, {
               address: feedA as `0x${string}`,
               abi: OracleAbi,
@@ -348,6 +354,11 @@ export function useOracle(oracleAddress: string, targetChainId?: number) {
               abi: ComposedOracleAbi,
               functionName: 'lastUpdated',
             }).catch(() => BigInt(0)),
+            readContract(config, {
+              address: oracleAddress as `0x${string}`,
+              abi: ComposedOracleAbi,
+              functionName: 'description',
+            }).catch(() => ''),
           ])
 
           // Retrieve operation and creator from ComposedOracleFactory
@@ -382,7 +393,7 @@ export function useOracle(oracleAddress: string, targetChainId?: number) {
           setOracle({
             id: oracleAddress,
             name: combinedName,
-            description: `${combinedName} Price Feed`,
+            description: (description && String(description).trim()) || `${combinedName} Price Feed`,
             address: oracleAddress,
             token: '0x0000000000000000000000000000000000000000',
             creator: creator,

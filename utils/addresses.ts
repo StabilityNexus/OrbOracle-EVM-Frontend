@@ -7,7 +7,7 @@ export const OracleFactories = {
 }
 
 export const ComposedOracleFactories = {
-  11155111: '0xB790B846221e82373d7d5121F1901DD31B0f6496',
+  11155111: '0x388288658D73202aF9c65a0f89eE3104705dEdE0',
 } as {
   [key: number]: `0x${string}`
 }
