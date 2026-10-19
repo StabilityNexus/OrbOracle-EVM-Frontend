@@ -193,6 +193,7 @@ export default function CreateOracleIntegrated() {
   const [composedOperation, setComposedOperation] = useState<string>('0') // 0 for multiplication, 1 for division
   const [composedInvertResult, setComposedInvertResult] = useState<boolean>(false)
   const [composedSampleSize, setComposedSampleSize] = useState<string>('100')
+  const [composedDescription, setComposedDescription] = useState<string>('')
 
   // Load existing feeds for selector dropdown
   const { oracles: existingOracles } = useOracles()
@@ -222,6 +223,7 @@ export default function CreateOracleIntegrated() {
     feedAAddress?: string
     feedBAddress?: string
     composedSampleSize?: string
+    composedDescription?: string
   }>({})
 
   // Reset form when chain changes
@@ -259,6 +261,9 @@ export default function CreateOracleIntegrated() {
         newErrors.composedSampleSize = 'Default sample size is required'
       } else if (!/^\d+$/.test(composedSampleSize) || BigInt(composedSampleSize) <= BigInt(0)) {
         newErrors.composedSampleSize = 'Default sample size must be a positive integer'
+      }
+      if (!composedDescription.trim()) {
+        newErrors.composedDescription = 'Composed oracle description is required'
       }
     } else {
       if (!name) newErrors.name = 'Oracle name is required'
@@ -355,6 +360,7 @@ export default function CreateOracleIntegrated() {
           Number(composedOperation),
           composedInvertResult,
           BigInt(composedSampleSize),
+          composedDescription.trim() || 'Composed Oracle',
         ] as const
 
         // Simulate the transaction first
@@ -684,6 +690,36 @@ export default function CreateOracleIntegrated() {
                   }`}
                 />
                 {errors.composedSampleSize && <p className="text-red-400 text-xs">{errors.composedSampleSize}</p>}
+              </div>
+
+              <div className="space-y-1 col-span-2">
+                <div className="flex items-center gap-2 relative">
+                  <Label htmlFor="composedDescription" className="font-mono text-[10.5px] tracking-wider text-muted-foreground uppercase">
+                    Description *
+                  </Label>
+                  <button
+                    type="button"
+                    className="text-slate-300 hover:text-slate-100 transition-colors"
+                    onMouseEnter={() => setShowTooltip('composedDescription')}
+                    onMouseLeave={() => setShowTooltip(null)}
+                  >
+                    <Info className="h-3 w-3" />
+                  </button>
+                  {showTooltip === 'composedDescription' && (
+                    <div className="absolute bottom-full mb-2 left-0 z-50 bg-zinc-950 border border-white/10 text-white font-mono text-[9.5px] rounded-lg p-2.5 shadow-xl max-w-xs pointer-events-none">
+                      Description for this composed oracle
+                    </div>
+                  )}
+                </div>
+                <Input
+                  id="composedDescription"
+                  placeholder="Composed Oracle Feed"
+                  value={composedDescription}
+                  onChange={(e) => setComposedDescription(e.target.value)}
+                  className={`bg-zinc-950/50 border border-white/10 focus:border-primary/45 focus:ring-0 text-white rounded-xl h-11 px-4 font-mono text-xs placeholder:text-muted-foreground/60 w-full max-w-full ${errors.composedDescription ? 'border-red-500' : ''}`}
+                  required
+                />
+                {errors.composedDescription && <p className="text-red-400 text-xs">{errors.composedDescription}</p>}
               </div>
 
               <div className="space-y-1 col-span-2 pt-2">
