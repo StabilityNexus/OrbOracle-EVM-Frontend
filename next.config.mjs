@@ -8,6 +8,14 @@ const nextConfig = {
   },
   // Disable font optimization for better consistency
   optimizeFonts: false,
+  webpack: (config, { webpack }) => {
+    config.plugins.push(
+      new webpack.IgnorePlugin({
+        resourceRegExp: /@coinbase\/cdp-sdk|@base-org\/account|@x402/,
+      })
+    );
+    return config;
+  },
 }
 
 export default nextConfig;

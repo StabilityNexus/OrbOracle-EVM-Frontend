@@ -14,36 +14,191 @@ import { writeContract, simulateContract, readContract } from '@wagmi/core'
 import { OracleFactories, ComposedOracleFactories } from '@/utils/addresses'
 import { OracleFactoryAbi } from '@/utils/abi/OracleFactory'
 import { ComposedOracleFactoryAbi } from '@/utils/abi/ComposedOracleFactory'
-import { useOracles } from '@/hooks/useOracles'
 import TokenSelector from '@/components/TokenSelector'
+import { useOracles } from '@/hooks/useOracles'
+
+interface CustomSelectProps {
+  value: string
+  onChange: (val: string) => void
+  options: Array<{ address: string; name: string }>
+  placeholder: string
+  error?: string
+}
+
+function CustomSelect({ value, onChange, options, placeholder, error }: CustomSelectProps) {
+  const [isOpen, setIsOpen] = useState(false)
+  const selectedOption = options.find(opt => opt.address.toLowerCase() === value.toLowerCase())
+
+  useEffect(() => {
+    if (!isOpen) return
+    const handleOutsideClick = () => setIsOpen(false)
+    window.addEventListener('click', handleOutsideClick)
+    return () => window.removeEventListener('click', handleOutsideClick)
+  }, [isOpen])
+
+  return (
+    <div className="relative w-full" onClick={(e) => e.stopPropagation()}>
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className={`flex items-center justify-between w-full h-11 px-4 bg-white/5 border border-white/10 rounded-xl text-left text-white font-mono text-xs cursor-pointer focus:border-primary/40 transition-all outline-none ${
+          error ? 'border-red-500' : ''
+        }`}
+      >
+        <span className={selectedOption ? 'text-white' : 'text-zinc-500'}>
+          {selectedOption ? `${selectedOption.name} (${selectedOption.address.slice(0, 6)}...${selectedOption.address.slice(-4)})` : placeholder}
+        </span>
+        <svg 
+          xmlns="http://www.w3.org/2000/svg" 
+          width="12" 
+          height="12" 
+          viewBox="0 0 24 24" 
+          fill="none" 
+          stroke="rgba(255,255,255,0.6)" 
+          strokeWidth="1.5" 
+          strokeLinecap="round" 
+          strokeLinejoin="round"
+          className={`transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`}
+        >
+          <polyline points="6 9 12 15 18 9" />
+        </svg>
+      </button>
+
+      {isOpen && (
+        <div className="absolute z-50 left-0 right-0 mt-2 bg-zinc-950 border border-white/10 rounded-2xl p-1.5 shadow-2xl backdrop-blur-md max-h-60 overflow-y-auto scrollbar-none animate-fadeIn">
+          {options.length === 0 ? (
+            <div className="px-4 py-3 text-zinc-500 font-mono text-xs">No options available</div>
+          ) : (
+            <div className="flex flex-col space-y-1">
+              {options.map((opt) => (
+                <button
+                  key={opt.address}
+                  type="button"
+                  onClick={() => {
+                    onChange(opt.address)
+                    setIsOpen(false)
+                  }}
+                  className={`w-full text-left px-3 py-2 rounded-xl font-mono text-xs transition-all cursor-pointer flex items-center justify-between ${
+                    value.toLowerCase() === opt.address.toLowerCase()
+                      ? 'bg-primary/20 text-white border border-primary/25'
+                      : 'text-zinc-400 hover:text-white hover:bg-white/5 border border-transparent'
+                  }`}
+                >
+                  <span>{opt.name}</span>
+                  <span className="text-[10px] opacity-60">({opt.address.slice(0, 6)}...{opt.address.slice(-4)})</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+interface CustomOperationSelectProps {
+  value: string
+  onChange: (val: string) => void
+}
+
+function CustomOperationSelect({ value, onChange }: CustomOperationSelectProps) {
+  const [isOpen, setIsOpen] = useState(false)
+  const operations = [
+    { value: '0', label: 'Multiplication (Feed A × Feed B)' },
+    { value: '1', label: 'Division (Feed A / Feed B)' }
+  ]
+  const selectedOp = operations.find(op => op.value === value)
+
+  useEffect(() => {
+    if (!isOpen) return
+    const handleOutsideClick = () => setIsOpen(false)
+    window.addEventListener('click', handleOutsideClick)
+    return () => window.removeEventListener('click', handleOutsideClick)
+  }, [isOpen])
+
+  return (
+    <div className="relative w-full" onClick={(e) => e.stopPropagation()}>
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className="flex items-center justify-between w-full h-11 px-4 bg-white/5 border border-white/10 rounded-xl text-left text-white font-mono text-xs cursor-pointer focus:border-primary/40 transition-all outline-none"
+      >
+        <span className="text-white">{selectedOp ? selectedOp.label : 'Select Operation'}</span>
+        <svg 
+          xmlns="http://www.w3.org/2000/svg" 
+          width="12" 
+          height="12" 
+          viewBox="0 0 24 24" 
+          fill="none" 
+          stroke="rgba(255,255,255,0.6)" 
+          strokeWidth="1.5" 
+          strokeLinecap="round" 
+          strokeLinejoin="round"
+          className={`transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`}
+        >
+          <polyline points="6 9 12 15 18 9" />
+        </svg>
+      </button>
+
+      {isOpen && (
+        <div className="absolute z-50 left-0 right-0 mt-2 bg-zinc-950 border border-white/10 rounded-2xl p-1.5 shadow-2xl backdrop-blur-md animate-fadeIn">
+          <div className="flex flex-col space-y-1">
+            {operations.map((op) => (
+              <button
+                key={op.value}
+                type="button"
+                onClick={() => {
+                  onChange(op.value)
+                  setIsOpen(false)
+                }}
+                className={`w-full text-left px-3 py-2 rounded-xl font-mono text-xs transition-all cursor-pointer ${
+                  value === op.value
+                    ? 'bg-primary/20 text-white border border-primary/25'
+                    : 'text-zinc-400 hover:text-white hover:bg-white/5 border border-transparent'
+                }`}
+              >
+                {op.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
 
 export default function CreateOracleIntegrated() {
   const account = useAccount()
   const activeChainId = useChainId()
   const config = useConfig()
-  const { oracles, loading: loadingOracles } = useOracles()
-
-  // Tab State
-  const [activeTab, setActiveTab] = useState<'base' | 'composed'>('base')
   
-  // Oracle parameters
+  // Tab layout state
+  const [activeTab, setActiveTab] = useState<'base' | 'composed'>('base')
+
+  // Base Oracle parameters
   const [name, setName] = useState<string>('')
   const [description, setDescription] = useState<string>('')
-  const [owner, setOwner] = useState<string>('')
   const [weightToken, setWeightToken] = useState<string>('')
-  const [reward, setReward] = useState<string>('1000')
+  const [rewardPercent, setRewardPercent] = useState<string>('1.0')
   const [halfLifeSeconds, setHalfLifeSeconds] = useState<string>('3600')
-  const [quorumBps, setQuorumBps] = useState<string>('2000')
+  const [quorumPercent, setQuorumPercent] = useState<string>('20')
   const [depositLock, setDepositLock] = useState<string>('3600')
   const [withdrawLock, setWithdrawLock] = useState<string>('3600')
-  const [alpha, setAlpha] = useState<string>('1')
+  const [gamma, setGamma] = useState<string>('1')
   const [defaultSampleSize, setDefaultSampleSize] = useState<string>('100')
 
-  // Composed parameters
-  const [feedA, setFeedA] = useState<string>('')
-  const [feedB, setFeedB] = useState<string>('')
-  const [operation, setOperation] = useState<number>(0)
-  const [invertResult, setInvertResult] = useState<boolean>(false)
+  // Composed Oracle parameters
+  const [feedAAddress, setFeedAAddress] = useState<string>('')
+  const [feedBAddress, setFeedBAddress] = useState<string>('')
+  const [composedOperation, setComposedOperation] = useState<string>('0') // 0 for multiplication, 1 for division
+  const [composedInvertResult, setComposedInvertResult] = useState<boolean>(false)
+  const [composedSampleSize, setComposedSampleSize] = useState<string>('100')
+
+  // Load existing feeds for selector dropdown
+  const { oracles: existingOracles } = useOracles()
+  const baseOracles = useMemo(() => {
+    return existingOracles ? existingOracles.filter((o) => !o.isComposed) : []
+  }, [existingOracles])
 
   // UI state
   const [loadingCreation, setLoadingCreation] = useState<boolean>(false)
@@ -56,25 +211,18 @@ export default function CreateOracleIntegrated() {
   const [errors, setErrors] = useState<{
     name?: string
     description?: string
-    owner?: string
     weightToken?: string
     reward?: string
     halfLifeSeconds?: string
     quorumBps?: string
     depositLock?: string
     withdrawLock?: string
-    alpha?: string
+    gamma?: string
     defaultSampleSize?: string
-    feedA?: string
-    feedB?: string
+    feedAAddress?: string
+    feedBAddress?: string
+    composedSampleSize?: string
   }>({})
-
-  // Pre-fill owner with connected wallet address
-  useEffect(() => {
-    if (account.address && !owner) {
-      setOwner(account.address)
-    }
-  }, [account.address, owner])
 
   // Reset form when chain changes
   useEffect(() => {
@@ -88,43 +236,46 @@ export default function CreateOracleIntegrated() {
       name || "Unnamed Oracle",                                                    // name
       description || "No description provided",                                   // description
       (weightToken || "0x0000000000000000000000000000000000000000") as `0x${string}`, // weightToken
-      BigInt(Number(halfLifeSeconds || 0)),                                       // halfLifeSeconds
-      BigInt(Number(quorumBps || 0)),                                             // q
-      BigInt(Number(depositLock || 0)),                                           // depositLockingPeriod
-      BigInt(Number(withdrawLock || 0)),                                          // withdrawalLockingPeriod
-      BigInt(Number(reward || 0)),                                                // rewardBps
-      BigInt(alpha && /^\d+$/.test(alpha) ? alpha : "0"),                         // gamma
+      BigInt(Math.round(Number(halfLifeSeconds || 0))),                                       // halfLifeSeconds
+      BigInt(Math.round(Number(quorumPercent || 0) * 100)),                                   // q (percentage -> basis points)
+      BigInt(Math.round(Number(depositLock || 0))),                                           // depositLockingPeriod
+      BigInt(Math.round(Number(withdrawLock || 0))),                                          // withdrawalLockingPeriod
+      BigInt(Math.round(Number(rewardPercent || 0) * 1000)),                                  // rewardBps (percentage -> 1e5 scale)
+      BigInt(gamma && /^\d+$/.test(gamma) ? gamma : "0"),                         // gamma
       BigInt(defaultSampleSize && /^\d+$/.test(defaultSampleSize) ? defaultSampleSize : "100"), // defaultSampleSize
     ] as const
-  }, [name, description, weightToken, reward, halfLifeSeconds, quorumBps, depositLock, withdrawLock, alpha, defaultSampleSize])
+  }, [name, description, weightToken, rewardPercent, halfLifeSeconds, quorumPercent, depositLock, withdrawLock, gamma, defaultSampleSize])
 
   const validateInputs = () => {
     const newErrors: any = {}
 
-    if (activeTab === 'base') {
+    if (activeTab === 'composed') {
+      if (!feedAAddress) newErrors.feedAAddress = 'Parent Oracle A is required'
+      if (!feedBAddress) newErrors.feedBAddress = 'Parent Oracle B is required'
+      if (feedAAddress && feedBAddress && feedAAddress.toLowerCase() === feedBAddress.toLowerCase()) {
+        newErrors.feedBAddress = 'Parent Oracle B cannot be the same as Parent Oracle A'
+      }
+      if (!composedSampleSize) {
+        newErrors.composedSampleSize = 'Default sample size is required'
+      } else if (!/^\d+$/.test(composedSampleSize) || BigInt(composedSampleSize) <= BigInt(0)) {
+        newErrors.composedSampleSize = 'Default sample size must be a positive integer'
+      }
+    } else {
       if (!name) newErrors.name = 'Oracle name is required'
       if (!description) newErrors.description = 'Description is required'
-      if (!owner) newErrors.owner = 'Owner address is required'
-      if (!weightToken) newErrors.weightToken = 'Weight token address is required'
-      if (!reward) newErrors.reward = 'Reward is required'
+      if (!weightToken) newErrors.weightToken = 'Oracle operator token address is required'
+      if (!rewardPercent) newErrors.reward = 'Reward percentage is required'
+      else if (Number(rewardPercent) < 0 || Number(rewardPercent) > 100) newErrors.reward = 'Reward must be between 0% and 100%'
+
       if (!halfLifeSeconds) newErrors.halfLifeSeconds = 'Half life seconds is required'
-      if (!quorumBps) newErrors.quorumBps = 'Quorum is required'
       if (!depositLock) newErrors.depositLock = 'Deposit lock period is required'
       if (!withdrawLock) newErrors.withdrawLock = 'Withdrawal lock period is required'
-      if (!alpha) newErrors.alpha = 'Alpha is required'
+      if (!gamma) newErrors.gamma = 'Gamma is required'
       if (!defaultSampleSize) newErrors.defaultSampleSize = 'Default sample size is required'
+      else if (Number(defaultSampleSize) <= 0) newErrors.defaultSampleSize = 'Default sample size must be greater than 0'
 
-      if (Number(reward) < 0) newErrors.reward = 'Reward cannot be negative'
-      if (Number(defaultSampleSize) <= 0) newErrors.defaultSampleSize = 'Default sample size must be greater than 0'
-      if (Number(quorumBps) < 0 || Number(quorumBps) > 10000) newErrors.quorumBps = 'Quorum must be between 0 and 10000'
-    } else {
-      if (!feedA) newErrors.feedA = 'Parent Feed A address is required'
-      if (!feedB) newErrors.feedB = 'Parent Feed B address is required'
-      if (!defaultSampleSize) newErrors.defaultSampleSize = 'Default sample size is required'
-
-      if (feedA && !feedA.startsWith('0x')) newErrors.feedA = 'Invalid Parent Feed A address'
-      if (feedB && !feedB.startsWith('0x')) newErrors.feedB = 'Invalid Parent Feed B address'
-      if (Number(defaultSampleSize) <= 0) newErrors.defaultSampleSize = 'Default sample size must be greater than 0'
+      if (!quorumPercent) newErrors.quorumBps = 'Quorum percentage is required'
+      else if (Number(quorumPercent) < 0 || Number(quorumPercent) > 100) newErrors.quorumBps = 'Quorum must be between 0% and 100%'
     }
 
     setErrors(newErrors)
@@ -190,68 +341,96 @@ export default function CreateOracleIntegrated() {
 
     try {
       setLoadingCreation(true)
-      const isComposed = activeTab === 'composed'
-      const factoryAddress = isComposed
-        ? ComposedOracleFactories[activeChainId as keyof typeof ComposedOracleFactories]
-        : OracleFactories[activeChainId as keyof typeof OracleFactories]
 
-      if (!factoryAddress || factoryAddress === '0x0000000000000000000000000000000000000000') {
-        throw new Error('Oracle Factory not deployed on this network')
-      }
+      if (activeTab === 'composed') {
+        const factoryAddress = ComposedOracleFactories[activeChainId as keyof typeof ComposedOracleFactories]
 
-      let request: any
-      if (isComposed) {
-        const sim = await simulateContract(config, {
+        if (!factoryAddress || factoryAddress === '0x0000000000000000000000000000000000000000') {
+          throw new Error('Composed Oracle Factory not deployed on this network')
+        }
+
+        const composedArgs = [
+          feedAAddress as `0x${string}`,
+          feedBAddress as `0x${string}`,
+          Number(composedOperation),
+          composedInvertResult,
+          BigInt(composedSampleSize),
+        ] as const
+
+        // Simulate the transaction first
+        const { request } = await simulateContract(config, {
           address: factoryAddress,
           abi: ComposedOracleFactoryAbi,
           functionName: 'createComposedOracle',
-          args: [
-            feedA as `0x${string}`,
-            feedB as `0x${string}`,
-            operation,
-            invertResult,
-            BigInt(defaultSampleSize)
-          ],
+          args: composedArgs,
           account: account.address,
         })
-        request = sim.request
+
+        // Execute the transaction
+        const tx = await writeContract(config, request)
+        setHashTx(tx)
+
+        toast({
+          title: 'Transaction Submitted',
+          description: 'Your composed oracle is being created...',
+        })
+
+        // Wait for transaction and get composed oracle address
+        setTimeout(async () => {
+          try {
+            // Get the list of all composed oracles from the factory
+            const allComposed = await readContract(config, {
+              address: factoryAddress,
+              abi: ComposedOracleFactoryAbi,
+              functionName: 'allComposedOracles',
+            }) as any[]
+
+            const matching = allComposed.filter((info: any) => info.creator.toLowerCase() === account.address!.toLowerCase())
+            if (matching.length > 0) {
+              const latestComposed = matching[matching.length - 1]
+              setOracleAddress(latestComposed.oracle)
+            }
+
+            setSubmitted(true)
+            toast({
+              title: 'Composed Oracle Created',
+              description: 'Your composed oracle has been successfully deployed!',
+            })
+          } catch (err) {
+            console.error('Error getting composed oracle address:', err)
+            setSubmitted(true)
+          }
+        }, 5000)
+
       } else {
-        const sim = await simulateContract(config, {
+        const factoryAddress = OracleFactories[activeChainId as keyof typeof OracleFactories]
+
+        if (!factoryAddress || factoryAddress === '0x0000000000000000000000000000000000000000') {
+          throw new Error('Oracle Factory not deployed on this network')
+        }
+
+        // Simulate the transaction first
+        const { request } = await simulateContract(config, {
           address: factoryAddress,
           abi: OracleFactoryAbi,
           functionName: 'createOracle',
           args: constructorArgs,
           account: account.address,
         })
-        request = sim.request
-      }
 
-      // Execute the transaction
-      const tx = await writeContract(config, request)
-      setHashTx(tx)
+        // Execute the transaction
+        const tx = await writeContract(config, request)
+        setHashTx(tx)
 
-      toast({
-        title: 'Transaction Submitted',
-        description: 'Your oracle is being created...',
-      })
+        toast({
+          title: 'Transaction Submitted',
+          description: 'Your oracle is being created...',
+        })
 
-      // Wait for transaction and get oracle address
-      setTimeout(async () => {
-        try {
-          if (isComposed) {
-            // Get the latest composed oracle from the factory
-            const allComposed = await readContract(config, {
-              address: factoryAddress,
-              abi: ComposedOracleFactoryAbi,
-              functionName: 'allComposedOracles',
-            }) as Array<{ oracle: string; feedA: string; feedB: string; operation: number; creator: string }>
-
-            if (allComposed.length > 0) {
-              const latestComposed = allComposed[allComposed.length - 1]
-              setOracleAddress(latestComposed.oracle)
-            }
-          } else {
-            // Get the latest base oracle from the factory
+        // Wait for transaction and get oracle address
+        setTimeout(async () => {
+          try {
+            // Get the latest oracle from the factory
             const allOracles = await readContract(config, {
               address: factoryAddress,
               abi: OracleFactoryAbi,
@@ -262,18 +441,18 @@ export default function CreateOracleIntegrated() {
               const latestOracle = allOracles[allOracles.length - 1]
               setOracleAddress(latestOracle.oracle)
             }
-          }
 
-          setSubmitted(true)
-          toast({
-            title: 'Oracle Created',
-            description: 'Your oracle has been successfully deployed!',
-          })
-        } catch (err) {
-          console.error('Error getting oracle address:', err)
-          setSubmitted(true) // Still show success, but without oracle address
-        }
-      }, 5000) // Wait 5 seconds for transaction to be mined
+            setSubmitted(true)
+            toast({
+              title: 'Oracle Created',
+              description: 'Your oracle has been successfully deployed!',
+            })
+          } catch (err) {
+            console.error('Error getting oracle address:', err)
+            setSubmitted(true)
+          }
+        }, 5000)
+      }
 
     } catch (err: any) {
       console.error(err)
@@ -289,199 +468,324 @@ export default function CreateOracleIntegrated() {
 
   if (submitted) {
     return (
-      <div className="relative min-h-screen flex items-center justify-center bg-background font-[oblique] tracking-wide" style={{ fontStyle: 'oblique 12deg' }}>
-        <Card className="bg-background/95 backdrop-blur-sm border-primary/30 shadow-xl max-w-2xl mx-auto">
-          <CardContent className="text-center space-y-6 py-8">
-            <div className="space-y-3">
-              <h2 className="text-3xl font-medium text-slate-100" style={{ fontStyle: 'oblique 15deg' }}>
-                Oracle Created Successfully!
-              </h2>
-              <p className="text-base text-slate-200">
-                Your oracle has been deployed and is ready to use.
-              </p>
-              {oracleAddress && (
-                <div className="bg-slate-800/50 border border-blue-100 rounded-lg p-3 font-mono text-sm">
-                  <div className="flex items-center justify-between">
-                    <span className="text-blue-300 font-medium">{formatAddress(oracleAddress)}</span>
-                    <button
-                      onClick={() => onCopy(oracleAddress)}
-                      className="text-xs bg-blue-600/20 hover:bg-blue-600/30 px-2 py-1 rounded transition-colors"
-                    >
-                      {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
-                    </button>
-                  </div>
+      <div className="relative min-h-[60vh] flex items-center justify-center">
+        {/* Success Card Single Surface */}
+        <div className="bg-zinc-950/70 border border-white/10 rounded-3xl p-8 shadow-2xl backdrop-blur-md max-w-2xl mx-auto w-full text-center space-y-6">
+          <div className="space-y-3">
+            <h2 className="text-3xl font-medium text-slate-100">
+              Oracle Created Successfully!
+            </h2>
+            <p className="text-base text-slate-200">
+              Your oracle has been deployed and is ready to use.
+            </p>
+            {oracleAddress && (
+              <div className="bg-zinc-950/60 border border-white/10 rounded-xl p-3 font-mono text-xs text-white max-w-sm mx-auto shadow-inner">
+                <div className="flex items-center justify-between">
+                  <span className="text-primary font-semibold">{formatAddress(oracleAddress)}</span>
+                  <button
+                    onClick={() => onCopy(oracleAddress)}
+                    className="text-[10px] bg-white/5 hover:bg-white/10 border border-white/10 px-2.5 py-1 rounded-lg transition-colors text-white"
+                  >
+                    {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+                  </button>
                 </div>
-              )}
-            </div>
-            <div className="flex flex-col sm:flex-row gap-3 justify-center items-center pt-4">
-              {hashTx && (
-                <Link href={getBlockExplorerUrl(activeChainId, hashTx)} target="_blank">
-                  <Button variant="outline" className="h-10 px-4 border-blue-200 hover:bg-blue-600/10">
-                    View Transaction
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </Button>
-                </Link>
-              )}
-              {oracleAddress && (
-                <Link href={`/o?chainId=${activeChainId}&oracle=${oracleAddress}`}>
-                  <Button className="h-10 px-6 bg-blue-600 hover:bg-blue-700">
-                    Go to Oracle
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </Button>
-                </Link>
-              )}
-              <Link href="/explorer">
-                <Button variant="outline" className="h-10 px-4 border-blue-200 hover:bg-blue-600/10">
-                  Browse Oracles
+              </div>
+            )}
+          </div>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center items-center pt-4">
+            {hashTx && (
+              <Link href={getBlockExplorerUrl(activeChainId, hashTx)} target="_blank">
+                <Button variant="outline" className="h-11 px-6 rounded-full border-white/10 hover:bg-white/5 text-white font-mono text-xs font-medium tracking-wide uppercase transition-all">
+                  View Transaction
+                  <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </Link>
-            </div>
-          </CardContent>
-        </Card>
+            )}
+            {oracleAddress && (
+              <Link href={`/o?chainId=${activeChainId}&oracle=${oracleAddress}`}>
+                <Button className="h-11 px-6 rounded-full bg-white hover:bg-zinc-200 text-black font-mono text-xs font-semibold tracking-wide uppercase shadow-md transition-all">
+                  Go to Oracle
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </Link>
+            )}
+            <Link href="/explorer">
+              <Button variant="outline" className="h-11 px-6 rounded-full border-white/10 hover:bg-white/5 text-white font-mono text-xs font-medium tracking-wide uppercase transition-all">
+                Browse Oracles
+              </Button>
+            </Link>
+          </div>
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="font-[oblique] tracking-wide text-slate-100 max-w-4xl mx-auto" style={{ fontStyle: "oblique 15deg" }}>
-      {/* Tab Selector */}
-      <div className="flex gap-4 justify-center mb-8">
-        <Button
-          type="button"
-          onClick={() => setActiveTab('base')}
-          className={`h-11 px-6 rounded-lg transition-all duration-300 font-medium ${
-            activeTab === 'base'
-              ? 'bg-blue-600 hover:bg-blue-700 text-white border-2 border-blue-400'
-              : 'bg-slate-800/40 border border-slate-700 hover:bg-slate-800/60 text-slate-300'
-          }`}
-        >
-          Deploy Base Oracle
-        </Button>
-        <Button
-          type="button"
-          onClick={() => setActiveTab('composed')}
-          className={`h-11 px-6 rounded-lg transition-all duration-300 font-medium ${
-            activeTab === 'composed'
-              ? 'bg-blue-600 hover:bg-blue-700 text-white border-2 border-blue-400'
-              : 'bg-slate-800/40 border border-slate-700 hover:bg-slate-800/60 text-slate-300'
-          }`}
-        >
-          Deploy Composed Oracle
-        </Button>
-      </div>
-
+    <div className="font-sans text-foreground text-slate-100" >
       <form onSubmit={(e) => { e.preventDefault(); createOracle(); }} className="space-y-8">
-        {activeTab === 'base' ? (
-          <>
-            <Card className="border-2 border-blue-200 bg-card shadow-sm max-w-4xl mx-auto">
-              <CardHeader className="border-b border-blue-100">
-                <CardTitle className="text-slate-100 text-xl">
-                  Oracle Metadata
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <Label htmlFor="name" className="text-slate-100 text-md">
-                      Name *
-                    </Label>
-                    <button
-                      type="button"
-                      className="text-slate-300 hover:text-slate-100 transition-colors"
-                      onMouseEnter={() => setShowTooltip('name')}
-                      onMouseLeave={() => setShowTooltip(null)}
-                    >
-                      <Info className="h-3 w-3" />
-                    </button>
-                    {showTooltip === 'name' && (
-                      <div className="absolute z-10 bg-slate-800 text-slate-100 text-xs p-2 rounded shadow-lg">
-                        Display name for your oracle
-                      </div>
-                    )}
-                  </div>
-                  <Input
-                    id="name"
-                    placeholder="ETH/USD Oracle"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    className={`border-0 bg-slate-800/50  text-slate-100 placeholder:text-slate-400 border border-blue-100 max-w-full ${errors.name ? 'border-red-500' : ''}`}
-                    required
-                  />
-                  {errors.name && <p className="text-red-400 text-xs">{errors.name}</p>}
-                </div>
-                <div className="space-y-1 col-span-2">
-                  <div className="flex items-center gap-2">
-                    <Label htmlFor="description" className="text-slate-100 text-md">
-                      Description *
-                    </Label>
-                    <button
-                      type="button"
-                      className="text-slate-300 hover:text-slate-100 transition-colors"
-                      onMouseEnter={() => setShowTooltip('description')}
-                      onMouseLeave={() => setShowTooltip(null)}
-                    >
-                      <Info className="h-3 w-3" />
-                    </button>
-                    {showTooltip === 'description' && (
-                      <div className="absolute z-10 bg-slate-800 text-slate-100 text-xs p-2 rounded shadow-lg mt-6">
-                        Detailed description of your oracle's purpose
-                      </div>
-                    )}
-                  </div>
-                  <Textarea
-                    id="description"
-                    placeholder="Describe your oracle's purpose and data source"
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    className={`border-0 bg-slate-800/50 text-slate-100 placeholder:text-slate-400 border border-blue-100 ${errors.description ? 'border-red-500' : ''}`}
-                    required
-                  />
-                  {errors.description && <p className="text-red-400 text-xs">{errors.description}</p>}
-                </div>
-              </CardContent>
-            </Card>
+        
+        {/* Tab Selector */}
+        <div className="flex justify-center mb-8 max-w-4xl mx-auto gap-3 sm:gap-4">
+          <Button
+            type="button"
+            onClick={() => {
+              setActiveTab('base')
+              setSubmitted(false)
+              setOracleAddress('')
+              setHashTx('')
+            }}
+            className={`h-11 sm:h-12 px-6 sm:px-8 rounded-full border transition-all duration-300 font-mono text-xs sm:text-sm tracking-wide font-medium ${
+              activeTab === 'base'
+                ? 'bg-white text-black border-white shadow-md'
+                : 'bg-white/5 text-muted-foreground border-white/10 hover:bg-white/10 hover:text-white'
+            }`}
+          >
+            Base Oracle
+          </Button>
+          <Button
+            type="button"
+            onClick={() => {
+              setActiveTab('composed')
+              setSubmitted(false)
+              setOracleAddress('')
+              setHashTx('')
+            }}
+            className={`h-11 sm:h-12 px-6 sm:px-8 rounded-full border transition-all duration-300 font-mono text-xs sm:text-sm tracking-wide font-medium ${
+              activeTab === 'composed'
+                ? 'bg-white text-black border-white shadow-md'
+                : 'bg-white/5 text-muted-foreground border-white/10 hover:bg-white/10 hover:text-white'
+            }`}
+          >
+            Composed Oracle
+          </Button>
+        </div>
 
-            <Card className="border-2 border-blue-200 bg-card shadow-sm max-w-4xl mx-auto">
-              <CardHeader className="border-b border-blue-100">
-                <CardTitle className="text-xl text-slate-100">
-                  Oracle Parameters
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="grid grid-cols-2 gap-4 pt-4">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Label htmlFor="owner" className="text-slate-100 text-md">
-                      Owner Address *
-                    </Label>
-                    <button
-                      type="button"
-                      className="text-slate-300 hover:text-slate-100 transition-colors"
-                      onMouseEnter={() => setShowTooltip('owner')}
-                      onMouseLeave={() => setShowTooltip(null)}
-                    >
-                      <Info className="h-3 w-3" />
-                    </button>
-                    {showTooltip === 'owner' && (
-                      <div className="absolute z-10 bg-slate-800 text-slate-100 text-xs p-2 rounded shadow-lg mt-6">
-                        Address that will own and control the oracle contract
-                      </div>
-                    )}
-                  </div>
-                  <Input
-                    id="owner"
-                    placeholder="0x..."
-                    value={owner}
-                    onChange={(e) => setOwner(e.target.value)}
-                    required
-                    className={`border-0 bg-slate-800/50 text-slate-100 placeholder:text-slate-400 text-md border border-blue-100 ${errors.owner ? 'border-red-500' : ''}`}
-                  />
-                  {errors.owner && <p className="text-red-400 text-xs">{errors.owner}</p>}
+        {activeTab === 'composed' ? (
+          <div className="bg-zinc-950/70 border border-white/10 rounded-3xl p-6 sm:p-8 shadow-2xl backdrop-blur-md max-w-4xl mx-auto space-y-6">
+            <div className="border-b border-white/5 pb-4">
+                <h2 className="text-sm font-mono tracking-widest text-primary uppercase font-bold">
+                  Composed Oracle Configuration
+                </h2>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2 mb-2 relative">
+                  <Label htmlFor="feedA" className="font-mono text-[10.5px] tracking-wider text-muted-foreground uppercase">
+                    Parent Oracle A (Base) *
+                  </Label>
+                  <button
+                    type="button"
+                    className="text-slate-300 hover:text-slate-100 transition-colors"
+                    onMouseEnter={() => setShowTooltip('feedA')}
+                    onMouseLeave={() => setShowTooltip(null)}
+                  >
+                    <Info className="h-3 w-3" />
+                  </button>
+                  {showTooltip === 'feedA' && (
+                    <div className="absolute bottom-full mb-2 left-0 z-50 bg-zinc-950 border border-white/10 text-white font-mono text-[9.5px] rounded-lg p-2.5 shadow-xl max-w-xs pointer-events-none">
+                      The first parent oracle contract address to compose.
+                    </div>
+                  )}
                 </div>
-                
+                <CustomSelect
+                  value={feedAAddress}
+                  onChange={(address) => setFeedAAddress(address)}
+                  options={baseOracles}
+                  placeholder="Select Parent Oracle A"
+                  error={errors.feedAAddress}
+                />
+                {errors.feedAAddress && <p className="text-red-400 text-xs">{errors.feedAAddress}</p>}
+              </div>
+
+              <div className="space-y-1">
+                <div className="flex items-center gap-2 mb-2 relative">
+                  <Label htmlFor="feedB" className="font-mono text-[10.5px] tracking-wider text-muted-foreground uppercase">
+                    Parent Oracle B (Base) *
+                  </Label>
+                  <button
+                    type="button"
+                    className="text-slate-300 hover:text-slate-100 transition-colors"
+                    onMouseEnter={() => setShowTooltip('feedB')}
+                    onMouseLeave={() => setShowTooltip(null)}
+                  >
+                    <Info className="h-3 w-3" />
+                  </button>
+                  {showTooltip === 'feedB' && (
+                    <div className="absolute bottom-full mb-2 left-0 z-50 bg-zinc-950 border border-white/10 text-white font-mono text-[9.5px] rounded-lg p-2.5 shadow-xl max-w-xs pointer-events-none">
+                      The second parent oracle contract address to compose.
+                    </div>
+                  )}
+                </div>
+                <CustomSelect
+                  value={feedBAddress}
+                  onChange={(address) => setFeedBAddress(address)}
+                  options={baseOracles}
+                  placeholder="Select Parent Oracle B"
+                  error={errors.feedBAddress}
+                />
+                {errors.feedBAddress && <p className="text-red-400 text-xs">{errors.feedBAddress}</p>}
+              </div>
+
+              <div className="space-y-1">
+                <div className="flex items-center gap-2 mb-2 relative">
+                  <Label htmlFor="operation" className="font-mono text-[10.5px] tracking-wider text-muted-foreground uppercase">
+                    Mathematical Operation *
+                  </Label>
+                  <button
+                    type="button"
+                    className="text-slate-300 hover:text-slate-100 transition-colors"
+                    onMouseEnter={() => setShowTooltip('operation')}
+                    onMouseLeave={() => setShowTooltip(null)}
+                  >
+                    <Info className="h-3 w-3" />
+                  </button>
+                  {showTooltip === 'operation' && (
+                    <div className="absolute bottom-full mb-2 left-0 z-50 bg-zinc-950 border border-white/10 text-white font-mono text-[9.5px] rounded-lg p-2.5 shadow-xl max-w-xs pointer-events-none">
+                      Multiplication (A × B) or Division (A / B) to apply to parent feeds.
+                    </div>
+                  )}
+                </div>
+                <CustomOperationSelect
+                  value={composedOperation}
+                  onChange={(op) => setComposedOperation(op)}
+                />
+              </div>
+
+              <div className="space-y-1">
+                <div className="flex items-center gap-2 mb-2 relative">
+                  <Label htmlFor="composedSampleSize" className="font-mono text-[10.5px] tracking-wider text-muted-foreground uppercase">
+                    Default Lookback Sample Size *
+                  </Label>
+                  <button
+                    type="button"
+                    className="text-slate-300 hover:text-slate-100 transition-colors"
+                    onMouseEnter={() => setShowTooltip('composedSampleSize')}
+                    onMouseLeave={() => setShowTooltip(null)}
+                  >
+                    <Info className="h-3 w-3" />
+                  </button>
+                  {showTooltip === 'composedSampleSize' && (
+                    <div className="absolute bottom-full mb-2 left-0 z-50 bg-zinc-950 border border-white/10 text-white font-mono text-[9.5px] rounded-lg p-2.5 shadow-xl max-w-xs pointer-events-none">
+                      The default number of historical price samples used to evaluate readValueInterval.
+                    </div>
+                  )}
+                </div>
+                <Input
+                  id="composedSampleSize"
+                  type="number"
+                  min={1}
+                  step={1}
+                  placeholder="100"
+                  value={composedSampleSize}
+                  onChange={(e) => setComposedSampleSize(e.target.value)}
+                  required
+                  className={`bg-white/5 border border-white/10 text-white rounded-xl placeholder:text-zinc-500 focus:border-primary/40 focus:ring-1 focus:ring-primary/40 transition-all duration-300 text-sm h-11 ${
+                    errors.composedSampleSize ? 'border-red-500 focus:ring-red-500' : ''
+                  }`}
+                />
+                {errors.composedSampleSize && <p className="text-red-400 text-xs">{errors.composedSampleSize}</p>}
+              </div>
+
+              <div className="space-y-1 col-span-2 pt-2">
+                <div className="flex items-center gap-3">
+                  <input
+                    id="invertResult"
+                    type="checkbox"
+                    checked={composedInvertResult}
+                    onChange={(e) => setComposedInvertResult(e.target.checked)}
+                     className="h-5 w-5 bg-white/5 border border-white/10 text-primary rounded focus:ring-primary/20 accent-primary cursor-pointer"
+                  />
+                  <Label htmlFor="invertResult" className="font-mono text-[10.5px] tracking-wider text-muted-foreground uppercase cursor-pointer select-none">
+                    Invert Final Price Result (1 / price)
+                  </Label>
+                </div>
+                <p className="text-xs text-slate-400 mt-1 pl-8">
+                  Check this if the desired price feed represents the inverse price (e.g. converting asset/USD to USD/asset).
+                </p>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <>
+            <div className="bg-zinc-950/70 border border-white/10 rounded-3xl p-6 sm:p-8 shadow-2xl backdrop-blur-md max-w-4xl mx-auto space-y-6">
+              <div className="border-b border-white/5 pb-4">
+                <h2 className="text-sm font-mono tracking-widest text-primary uppercase font-bold">
+                  Oracle Metadata
+                </h2>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2 relative">
+                  <Label htmlFor="name" className="font-mono text-[10.5px] tracking-wider text-muted-foreground uppercase">
+                    Name *
+                  </Label>
+                  <button
+                    type="button"
+                    className="text-slate-300 hover:text-slate-100 transition-colors"
+                    onMouseEnter={() => setShowTooltip('name')}
+                    onMouseLeave={() => setShowTooltip(null)}
+                  >
+                    <Info className="h-3 w-3" />
+                  </button>
+                  {showTooltip === 'name' && (
+                    <div className="absolute bottom-full mb-2 left-0 z-50 bg-zinc-950 border border-white/10 text-white font-mono text-[9.5px] rounded-lg p-2.5 shadow-xl max-w-xs pointer-events-none">
+                      Display name for your oracle
+                    </div>
+                  )}
+                </div>
+                <Input
+                  id="name"
+                  placeholder="ETH/USD Oracle"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className={`bg-zinc-950/50 border border-white/10 focus:border-primary/45 focus:ring-0 text-white rounded-xl h-11 px-4 font-mono text-xs placeholder:text-muted-foreground/60 w-full max-w-full ${errors.name ? 'border-red-500' : ''}`}
+                  required
+                />
+                {errors.name && <p className="text-red-400 text-xs">{errors.name}</p>}
+              </div>
+              <div className="space-y-1 col-span-2">
+                <div className="flex items-center gap-2 relative">
+                  <Label htmlFor="description" className="font-mono text-[10.5px] tracking-wider text-muted-foreground uppercase">
+                    Description *
+                  </Label>
+                  <button
+                    type="button"
+                    className="text-slate-300 hover:text-slate-100 transition-colors"
+                    onMouseEnter={() => setShowTooltip('description')}
+                    onMouseLeave={() => setShowTooltip(null)}
+                  >
+                    <Info className="h-3 w-3" />
+                  </button>
+                  {showTooltip === 'description' && (
+                    <div className="absolute bottom-full mb-2 left-0 z-50 bg-zinc-950 border border-white/10 text-white font-mono text-[9.5px] rounded-lg p-2.5 shadow-xl max-w-xs pointer-events-none">
+                      Detailed description of your oracle's purpose
+                    </div>
+                  )}
+                </div>
+                <Textarea
+                  id="description"
+                  placeholder="Describe your oracle's purpose and data source"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  required
+                  className={`bg-zinc-950/50 border border-white/10 focus:border-primary/45 focus:ring-0 text-white rounded-xl h-11 px-4 font-mono text-xs placeholder:text-muted-foreground/60 w-full ${errors.description ? 'border-red-500' : ''}`}
+                />
+                {errors.description && <p className="text-red-400 text-xs">{errors.description}</p>}
+              </div>
+            </div>
+          </div>
+
+            <div className="bg-zinc-950/70 border border-white/10 rounded-3xl p-6 sm:p-8 shadow-2xl backdrop-blur-md max-w-4xl mx-auto mt-8 space-y-6">
+              <div className="border-b border-white/5 pb-4">
+                <h2 className="text-sm font-mono tracking-widest text-primary uppercase font-bold">
+                  Oracle Configuration
+                </h2>
+              </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
                 <div className="space-y-1">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Label htmlFor="weightToken" className="text-slate-100 text-md">
-                      Weight Token (ERC20) *
+                  <div className="flex items-center gap-2 mb-2 relative">
+                    <Label htmlFor="weightToken" className="font-mono text-[10.5px] tracking-wider text-muted-foreground uppercase">
+                      Oracle Operator Token (ERC20) *
                     </Label>
                     <button
                       type="button"
@@ -492,8 +796,8 @@ export default function CreateOracleIntegrated() {
                       <Info className="h-3 w-3" />
                     </button>
                     {showTooltip === 'weightToken' && (
-                      <div className="absolute z-10 bg-slate-800 text-slate-100 text-xs p-2 rounded shadow-lg mt-6">
-                        ERC20 token address used for voting weight calculation. You can select from supported tokens or enter a custom address.
+                      <div className="absolute bottom-full mb-2 left-0 z-50 bg-zinc-950 border border-white/10 text-white font-mono text-[9.5px] rounded-lg p-2.5 shadow-xl max-w-xs pointer-events-none">
+                        Enter the address of the ERC20 token that is, or will be, held by oracle operators. Or select it from a list of known tokens. The weight of values submitted by an oracle operator is proportional to the operator's token balance.
                       </div>
                     )}
                   </div>
@@ -508,9 +812,9 @@ export default function CreateOracleIntegrated() {
                 </div>
 
                 <div className="space-y-1">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Label htmlFor="reward" className="text-slate-100 text-md">
-                      Reward (out of 1e5) *
+                  <div className="flex items-center gap-2 mb-2 relative">
+                    <Label htmlFor="reward" className="font-mono text-[10.5px] tracking-wider text-muted-foreground uppercase">
+                      Reward Percentage *
                     </Label>
                     <button
                       type="button"
@@ -521,28 +825,35 @@ export default function CreateOracleIntegrated() {
                       <Info className="h-3 w-3" />
                     </button>
                     {showTooltip === 'reward' && (
-                      <div className="absolute z-10 bg-slate-800 text-slate-100 text-xs p-2 rounded shadow-lg mt-6">
-                        Example: 1000 = 1.000% of contract balance per reward slice
+                      <div className="absolute bottom-full mb-2 left-0 z-50 bg-zinc-950 border border-white/10 text-white font-mono text-[9.5px] rounded-lg p-2.5 shadow-xl max-w-xs pointer-events-none">
+                        Percentage of the oracle balance paid as reward per value submission (e.g., 1.25% = 1,250 / 100,000).
                       </div>
                     )}
                   </div>
-                  <Input
-                    id="reward"
-                    type="number"
-                    min={0}
-                    placeholder="1000"
-                    value={reward}
-                    onChange={(e) => setReward(e.target.value)}
-                    required
-                    className={`border-0 bg-slate-800/50 text-slate-100 placeholder:text-slate-400 text-md border border-blue-100 ${errors.reward ? 'border-red-500' : ''}`}
-                  />
+                  <div className="relative">
+                    <Input
+                      id="reward"
+                      type="number"
+                      step="any"
+                      min={0}
+                      max={100}
+                      placeholder="1.25"
+                      value={rewardPercent}
+                      onChange={(e) => setRewardPercent(e.target.value)}
+                      required
+                      className={`pr-8 bg-white/5 border border-white/10 text-white rounded-xl placeholder:text-zinc-500 focus:border-primary/40 focus:ring-1 focus:ring-primary/40 transition-all duration-300 text-sm h-11 ${errors.reward ? 'border-red-500 focus:ring-red-500' : ''}`}
+                    />
+                    <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-zinc-400 font-mono text-sm pointer-events-none select-none">
+                      %
+                    </span>
+                  </div>
                   {errors.reward && <p className="text-red-400 text-xs">{errors.reward}</p>}
                 </div>
 
                 <div className="space-y-1">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Label htmlFor="halfLifeSeconds" className="text-slate-100 text-md">
-                      Half Life Seconds *
+                  <div className="flex items-center gap-2 mb-2 relative">
+                    <Label htmlFor="halfLifeSeconds" className="font-mono text-[10.5px] tracking-wider text-muted-foreground uppercase">
+                      Half Life *
                     </Label>
                     <button
                       type="button"
@@ -553,28 +864,33 @@ export default function CreateOracleIntegrated() {
                       <Info className="h-3 w-3" />
                     </button>
                     {showTooltip === 'halfLifeSeconds' && (
-                      <div className="absolute z-10 bg-slate-800 text-slate-100 text-xs p-2 rounded shadow-lg mt-6">
+                      <div className="absolute bottom-full mb-2 left-0 z-50 bg-zinc-950 border border-white/10 text-white font-mono text-[9.5px] rounded-lg p-2.5 shadow-xl max-w-xs pointer-events-none">
                         Controls time-decay in EWMA (Exponentially Weighted Moving Average)
                       </div>
                     )}
                   </div>
-                  <Input
-                    id="halfLifeSeconds"
-                    type="number"
-                    min={0}
-                    placeholder="3600"
-                    value={halfLifeSeconds}
-                    onChange={(e) => setHalfLifeSeconds(e.target.value)}
-                    required
-                    className={`border-0 bg-slate-800/50 text-slate-100 placeholder:text-slate-400 text-md border border-blue-100 ${errors.halfLifeSeconds ? 'border-red-500' : ''}`}
-                  />
+                  <div className="relative">
+                    <Input
+                      id="halfLifeSeconds"
+                      type="number"
+                      min={0}
+                      placeholder="3600"
+                      value={halfLifeSeconds}
+                      onChange={(e) => setHalfLifeSeconds(e.target.value)}
+                      required
+                      className={`pr-20 bg-white/5 border border-white/10 text-white rounded-xl placeholder:text-zinc-500 focus:border-primary/40 focus:ring-1 focus:ring-primary/40 transition-all duration-300 text-sm h-11 ${errors.halfLifeSeconds ? 'border-red-500 focus:ring-red-500' : ''}`}
+                    />
+                    <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-zinc-400 font-mono text-xs pointer-events-none select-none">
+                      seconds
+                    </span>
+                  </div>
                   {errors.halfLifeSeconds && <p className="text-red-400 text-xs">{errors.halfLifeSeconds}</p>}
                 </div>
 
                 <div className="space-y-1">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Label htmlFor="quorumBps" className="text-slate-100 text-md">
-                      Quorum (basis points) *
+                  <div className="flex items-center gap-2 mb-2 relative">
+                    <Label htmlFor="quorumBps" className="font-mono text-[10.5px] tracking-wider text-muted-foreground uppercase">
+                      Quorum Percentage *
                     </Label>
                     <button
                       type="button"
@@ -585,29 +901,35 @@ export default function CreateOracleIntegrated() {
                       <Info className="h-3 w-3" />
                     </button>
                     {showTooltip === 'quorumBps' && (
-                      <div className="absolute z-10 bg-slate-800 text-slate-100 text-xs p-2 rounded shadow-lg mt-6">
-                        Minimum participation required (0-10000). 20% = 2000 bps
+                      <div className="absolute bottom-full mb-2 left-0 z-50 bg-zinc-950 border border-white/10 text-white font-mono text-[9.5px] rounded-lg p-2.5 shadow-xl max-w-xs pointer-events-none">
+                        Minimum percentage of staked token participation required for governance actions (e.g., 20% = 2,000 basis points).
                       </div>
                     )}
                   </div>
-                  <Input
-                    id="quorumBps"
-                    type="number"
-                    min={0}
-                    max={10000}
-                    placeholder="2000"
-                    value={quorumBps}
-                    onChange={(e) => setQuorumBps(e.target.value)}
-                    required
-                    className={`border-0 bg-slate-800/50 text-slate-100 placeholder:text-slate-400 text-md border border-blue-100 ${errors.quorumBps ? 'border-red-500' : ''}`}
-                  />
+                  <div className="relative">
+                    <Input
+                      id="quorumBps"
+                      type="number"
+                      step="any"
+                      min={0}
+                      max={100}
+                      placeholder="20"
+                      value={quorumPercent}
+                      onChange={(e) => setQuorumPercent(e.target.value)}
+                      required
+                      className={`pr-8 bg-white/5 border border-white/10 text-white rounded-xl placeholder:text-zinc-500 focus:border-primary/40 focus:ring-1 focus:ring-primary/40 transition-all duration-300 text-sm h-11 ${errors.quorumBps ? 'border-red-500 focus:ring-red-500' : ''}`}
+                    />
+                    <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-zinc-400 font-mono text-sm pointer-events-none select-none">
+                      %
+                    </span>
+                  </div>
                   {errors.quorumBps && <p className="text-red-400 text-xs">{errors.quorumBps}</p>}
                 </div>
 
                 <div className="space-y-1">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Label htmlFor="depositLock" className="text-slate-100 text-md">
-                      Deposit Lock Period (sec) *
+                  <div className="flex items-center gap-2 mb-2 relative">
+                    <Label htmlFor="depositLock" className="font-mono text-[10.5px] tracking-wider text-muted-foreground uppercase">
+                      Deposit Lock Period *
                     </Label>
                     <button
                       type="button"
@@ -618,28 +940,33 @@ export default function CreateOracleIntegrated() {
                       <Info className="h-3 w-3" />
                     </button>
                     {showTooltip === 'depositLock' && (
-                      <div className="absolute z-10 bg-slate-800 text-slate-100 text-xs p-2 rounded shadow-lg mt-6">
+                      <div className="absolute bottom-full mb-2 left-0 z-50 bg-zinc-950 border border-white/10 text-white font-mono text-[9.5px] rounded-lg p-2.5 shadow-xl max-w-xs pointer-events-none">
                         Time period deposits are locked before they can be withdrawn
                       </div>
                     )}
                   </div>
-                  <Input
-                    id="depositLock"
-                    type="number"
-                    min={0}
-                    placeholder="3600"
-                    value={depositLock}
-                    onChange={(e) => setDepositLock(e.target.value)}
-                    required
-                    className={`border-0 bg-slate-800/50 text-slate-100 placeholder:text-slate-400 text-md border border-blue-100 ${errors.depositLock ? 'border-red-500' : ''}`}
-                  />
+                  <div className="relative">
+                    <Input
+                      id="depositLock"
+                      type="number"
+                      min={0}
+                      placeholder="3600"
+                      value={depositLock}
+                      onChange={(e) => setDepositLock(e.target.value)}
+                      required
+                      className={`pr-20 bg-white/5 border border-white/10 text-white rounded-xl placeholder:text-zinc-500 focus:border-primary/40 focus:ring-1 focus:ring-primary/40 transition-all duration-300 text-sm h-11 ${errors.depositLock ? 'border-red-500 focus:ring-red-500' : ''}`}
+                    />
+                    <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-zinc-400 font-mono text-xs pointer-events-none select-none">
+                      seconds
+                    </span>
+                  </div>
                   {errors.depositLock && <p className="text-red-400 text-xs">{errors.depositLock}</p>}
                 </div>
 
                 <div className="space-y-1">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Label htmlFor="withdrawLock" className="text-slate-100 text-md">
-                      Withdrawal Lock Period (sec) *
+                  <div className="flex items-center gap-2 mb-2 relative">
+                    <Label htmlFor="withdrawLock" className="font-mono text-[10.5px] tracking-wider text-muted-foreground uppercase">
+                      Withdrawal Lock Period *
                     </Label>
                     <button
                       type="button"
@@ -650,59 +977,64 @@ export default function CreateOracleIntegrated() {
                       <Info className="h-3 w-3" />
                     </button>
                     {showTooltip === 'withdrawLock' && (
-                      <div className="absolute z-10 bg-slate-800 text-slate-100 text-xs p-2 rounded shadow-lg mt-6">
+                      <div className="absolute bottom-full mb-2 left-0 z-50 bg-zinc-950 border border-white/10 text-white font-mono text-[9.5px] rounded-lg p-2.5 shadow-xl max-w-xs pointer-events-none">
                         Time period before withdrawal requests can be processed
                       </div>
                     )}
                   </div>
-                  <Input
-                    id="withdrawLock"
-                    type="number"
-                    min={0}
-                    placeholder="3600"
-                    value={withdrawLock}
-                    onChange={(e) => setWithdrawLock(e.target.value)}
-                    required
-                    className={`border-0 bg-slate-800/50 text-slate-100 placeholder:text-slate-400 text-md border border-blue-100 ${errors.withdrawLock ? 'border-red-500' : ''}`}
-                  />
+                  <div className="relative">
+                    <Input
+                      id="withdrawLock"
+                      type="number"
+                      min={0}
+                      placeholder="3600"
+                      value={withdrawLock}
+                      onChange={(e) => setWithdrawLock(e.target.value)}
+                      required
+                      className={`pr-20 bg-white/5 border border-white/10 text-white rounded-xl placeholder:text-zinc-500 focus:border-primary/40 focus:ring-1 focus:ring-primary/40 transition-all duration-300 text-sm h-11 ${errors.withdrawLock ? 'border-red-500 focus:ring-red-500' : ''}`}
+                    />
+                    <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-zinc-400 font-mono text-xs pointer-events-none select-none">
+                      seconds
+                    </span>
+                  </div>
                   {errors.withdrawLock && <p className="text-red-400 text-xs">{errors.withdrawLock}</p>}
                 </div>
 
                 <div className="space-y-1">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Label htmlFor="alpha" className="text-slate-100 text-md">
-                      Alpha *
+                  <div className="flex items-center gap-2 mb-2 relative">
+                    <Label htmlFor="gamma" className="font-mono text-[10.5px] tracking-wider text-muted-foreground uppercase">
+                      Gamma (Sampling Interval) *
                     </Label>
                     <button
                       type="button"
                       className="text-slate-300 hover:text-slate-100 transition-colors"
-                      onMouseEnter={() => setShowTooltip('alpha')}
+                      onMouseEnter={() => setShowTooltip('gamma')}
                       onMouseLeave={() => setShowTooltip(null)}
                     >
                       <Info className="h-3 w-3" />
                     </button>
-                    {showTooltip === 'alpha' && (
-                      <div className="absolute z-10 bg-slate-800 text-slate-100 text-xs p-2 rounded shadow-lg mt-6">
-                        Scalar in reward formula. Keep small unless you understand the economics
+                    {showTooltip === 'gamma' && (
+                      <div className="absolute bottom-full mb-2 left-0 z-50 bg-zinc-950 border border-white/10 text-white font-mono text-[9.5px] rounded-lg p-2.5 shadow-xl max-w-xs pointer-events-none">
+                        The sampling interval in seconds between historical snapshots used to compute min/max Value Ranges. Ensures the lookback window represents a genuine time spread.
                       </div>
                     )}
                   </div>
                   <Input
-                    id="alpha"
+                    id="gamma"
                     type="number"
                     min={0}
                     placeholder="1"
-                    value={alpha}
-                    onChange={(e) => setAlpha(e.target.value)}
+                    value={gamma}
+                    onChange={(e) => setGamma(e.target.value)}
                     required
-                    className={`border-0 bg-slate-800/50 text-slate-100 placeholder:text-slate-400 text-md border border-blue-100 ${errors.alpha ? 'border-red-500' : ''}`}
+                    className={`bg-white/5 border border-white/10 text-white rounded-xl placeholder:text-zinc-500 focus:border-primary/40 focus:ring-1 focus:ring-primary/40 transition-all duration-300 text-sm h-11 ${errors.gamma ? 'border-red-500 focus:ring-red-500' : ''}`}
                   />
-                  {errors.alpha && <p className="text-red-400 text-xs">{errors.alpha}</p>}
+                  {errors.gamma && <p className="text-red-400 text-xs">{errors.gamma}</p>}
                 </div>
 
                 <div className="space-y-1">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Label htmlFor="defaultSampleSize" className="text-slate-100 text-md">
+                  <div className="flex items-center gap-2 mb-2 relative">
+                    <Label htmlFor="defaultSampleSize" className="font-mono text-[10.5px] tracking-wider text-muted-foreground uppercase">
                       Default Lookback Sample Size *
                     </Label>
                     <button
@@ -714,7 +1046,7 @@ export default function CreateOracleIntegrated() {
                       <Info className="h-3 w-3" />
                     </button>
                     {showTooltip === 'defaultSampleSize' && (
-                      <div className="absolute z-10 bg-slate-800 text-slate-100 text-xs p-2 rounded shadow-lg mt-6">
+                      <div className="absolute bottom-full mb-2 left-0 z-50 bg-zinc-950 border border-white/10 text-white font-mono text-[9.5px] rounded-lg p-2.5 shadow-xl max-w-xs pointer-events-none">
                         The default number of historical price points used for min/max calculations
                       </div>
                     )}
@@ -728,232 +1060,31 @@ export default function CreateOracleIntegrated() {
                     value={defaultSampleSize}
                     onChange={(e) => setDefaultSampleSize(e.target.value)}
                     required
-                    className={`border-0 bg-slate-800/50 text-slate-100 placeholder:text-slate-400 text-md border border-blue-100 ${errors.defaultSampleSize ? 'border-red-500' : ''}`}
+                    className={`bg-white/5 border border-white/10 text-white rounded-xl placeholder:text-zinc-500 focus:border-primary/40 focus:ring-1 focus:ring-primary/40 transition-all duration-300 text-sm h-11 ${errors.defaultSampleSize ? 'border-red-500 focus:ring-red-500' : ''}`}
                   />
                   {errors.defaultSampleSize && <p className="text-red-400 text-xs">{errors.defaultSampleSize}</p>}
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           </>
-        ) : (
-          <Card className="border-2 border-blue-200 bg-card shadow-sm max-w-4xl mx-auto">
-            <CardHeader className="border-b border-blue-100">
-              <CardTitle className="text-xl text-slate-100">
-                Composed Oracle Parameters
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
-              
-              {/* Parent Feed A */}
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <Label htmlFor="feedA" className="text-slate-100 text-md">
-                    Parent Feed A *
-                  </Label>
-                  <button
-                    type="button"
-                    className="text-slate-300 hover:text-slate-100 transition-colors"
-                    onMouseEnter={() => setShowTooltip('feedA')}
-                    onMouseLeave={() => setShowTooltip(null)}
-                  >
-                    <Info className="h-3 w-3" />
-                  </button>
-                  {showTooltip === 'feedA' && (
-                    <div className="absolute z-10 bg-slate-800 text-slate-100 text-xs p-2 rounded shadow-lg mt-6">
-                      First parent feed for composed index math
-                    </div>
-                  )}
-                </div>
-                <div className="flex flex-col gap-2">
-                  <select
-                    value={feedA}
-                    onChange={(e) => setFeedA(e.target.value)}
-                    className="h-10 px-3 bg-slate-800 text-slate-100 border border-blue-100 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 font-[oblique]"
-                  >
-                    <option value="">-- Select Deployed Oracle --</option>
-                    {oracles?.map((o) => (
-                      <option key={o.address} value={o.address}>
-                        {o.name || o.address} ({o.address.slice(0, 6)}...{o.address.slice(-4)})
-                      </option>
-                    ))}
-                  </select>
-                  <Input
-                    id="feedA"
-                    placeholder="Or enter custom address (0x...)"
-                    value={feedA}
-                    onChange={(e) => setFeedA(e.target.value)}
-                    required
-                    className={`border-0 bg-slate-800/50 text-slate-100 placeholder:text-slate-400 text-md border border-blue-100 ${errors.feedA ? 'border-red-500' : ''}`}
-                  />
-                </div>
-                {errors.feedA && <p className="text-red-400 text-xs">{errors.feedA}</p>}
-              </div>
-
-              {/* Parent Feed B */}
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <Label htmlFor="feedB" className="text-slate-100 text-md">
-                    Parent Feed B *
-                  </Label>
-                  <button
-                    type="button"
-                    className="text-slate-300 hover:text-slate-100 transition-colors"
-                    onMouseEnter={() => setShowTooltip('feedB')}
-                    onMouseLeave={() => setShowTooltip(null)}
-                  >
-                    <Info className="h-3 w-3" />
-                  </button>
-                  {showTooltip === 'feedB' && (
-                    <div className="absolute z-10 bg-slate-800 text-slate-100 text-xs p-2 rounded shadow-lg mt-6">
-                      Second parent feed for composed index math
-                    </div>
-                  )}
-                </div>
-                <div className="flex flex-col gap-2">
-                  <select
-                    value={feedB}
-                    onChange={(e) => setFeedB(e.target.value)}
-                    className="h-10 px-3 bg-slate-800 text-slate-100 border border-blue-100 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 font-[oblique]"
-                  >
-                    <option value="">-- Select Deployed Oracle --</option>
-                    {oracles?.map((o) => (
-                      <option key={o.address} value={o.address}>
-                        {o.name || o.address} ({o.address.slice(0, 6)}...{o.address.slice(-4)})
-                      </option>
-                    ))}
-                  </select>
-                  <Input
-                    id="feedB"
-                    placeholder="Or enter custom address (0x...)"
-                    value={feedB}
-                    onChange={(e) => setFeedB(e.target.value)}
-                    required
-                    className={`border-0 bg-slate-800/50 text-slate-100 placeholder:text-slate-400 text-md border border-blue-100 ${errors.feedB ? 'border-red-500' : ''}`}
-                  />
-                </div>
-                {errors.feedB && <p className="text-red-400 text-xs">{errors.feedB}</p>}
-              </div>
-
-              {/* Operation */}
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <Label htmlFor="operation" className="text-slate-100 text-md">
-                    Mathematical Operation *
-                  </Label>
-                  <button
-                    type="button"
-                    className="text-slate-300 hover:text-slate-100 transition-colors"
-                    onMouseEnter={() => setShowTooltip('operation')}
-                    onMouseLeave={() => setShowTooltip(null)}
-                  >
-                    <Info className="h-3 w-3" />
-                  </button>
-                  {showTooltip === 'operation' && (
-                    <div className="absolute z-10 bg-slate-800 text-slate-100 text-xs p-2 rounded shadow-lg mt-6">
-                      Multiplication (FeedA * FeedB) or Division (FeedA / FeedB)
-                    </div>
-                  )}
-                </div>
-                <select
-                  id="operation"
-                  value={operation}
-                  onChange={(e) => setOperation(Number(e.target.value))}
-                  className="w-full h-12 px-3 bg-slate-800 text-slate-100 border border-blue-100 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 font-[oblique]"
-                >
-                  <option value={0}>Multiplication (FeedA * FeedB)</option>
-                  <option value={1}>Division (FeedA / FeedB)</option>
-                </select>
-              </div>
-
-              {/* Invert Result */}
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <Label htmlFor="invertResult" className="text-slate-100 text-md">
-                    Invert Result *
-                  </Label>
-                  <button
-                    type="button"
-                    className="text-slate-300 hover:text-slate-100 transition-colors"
-                    onMouseEnter={() => setShowTooltip('invertResult')}
-                    onMouseLeave={() => setShowTooltip(null)}
-                  >
-                    <Info className="h-3 w-3" />
-                  </button>
-                  {showTooltip === 'invertResult' && (
-                    <div className="absolute z-10 bg-slate-800 text-slate-100 text-xs p-2 rounded shadow-lg mt-6">
-                      If true, result is inverted (1 / result) after division/multiplication
-                    </div>
-                  )}
-                </div>
-                <select
-                  id="invertResult"
-                  value={invertResult ? "true" : "false"}
-                  onChange={(e) => setInvertResult(e.target.value === "true")}
-                  className="w-full h-12 px-3 bg-slate-800 text-slate-100 border border-blue-100 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 font-[oblique]"
-                >
-                  <option value="false">No (default)</option>
-                  <option value="true">Yes (Invert)</option>
-                </select>
-              </div>
-
-              {/* Default Lookback Sample Size */}
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <Label htmlFor="defaultSampleSizeComposed" className="text-slate-100 text-md">
-                    Default Lookback Sample Size *
-                  </Label>
-                  <button
-                    type="button"
-                    className="text-slate-300 hover:text-slate-100 transition-colors"
-                    onMouseEnter={() => setShowTooltip('defaultSampleSizeComposed')}
-                    onMouseLeave={() => setShowTooltip(null)}
-                  >
-                    <Info className="h-3 w-3" />
-                  </button>
-                  {showTooltip === 'defaultSampleSizeComposed' && (
-                    <div className="absolute z-10 bg-slate-800 text-slate-100 text-xs p-2 rounded shadow-lg mt-6">
-                      Lookback sample size used for calculations
-                    </div>
-                  )}
-                </div>
-                <Input
-                  id="defaultSampleSizeComposed"
-                  type="number"
-                  min={1}
-                  step={1}
-                  placeholder="100"
-                  value={defaultSampleSize}
-                  onChange={(e) => setDefaultSampleSize(e.target.value)}
-                  required
-                  className={`border-0 bg-slate-800/50 text-slate-100 placeholder:text-slate-400 text-md border border-blue-100 ${errors.defaultSampleSize ? 'border-red-500' : ''}`}
-                />
-                {errors.defaultSampleSize && <p className="text-red-400 text-xs">{errors.defaultSampleSize}</p>}
-              </div>
-
-            </CardContent>
-          </Card>
         )}
 
-        <div className="justify-center flex mx-auto">
+        <div className="justify-center flex pt-8">
           <Button
             type="submit"
-            size="lg"
-            className="bg-black border border-white hover:bg-primary max-w-4xl mx-auto border-slate-400 text-white"
             disabled={loadingCreation || !account.address}
+            className="h-12 sm:h-14 rounded-full pl-7 pr-3 bg-white text-black hover:bg-zinc-200 transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] active:scale-[0.98] group flex items-center justify-between space-x-4 min-w-[260px] shadow-2xl disabled:opacity-50 disabled:cursor-not-allowed border border-white/20"
           >
-            {loadingCreation ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Creating Oracle...
-              </>
-            ) : !account.address ? (
-              'Connect Wallet to Create Oracle'
-            ) : (
-              <>
-                Create Oracle
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </>
-            )}
+            <span className="font-mono text-xs sm:text-sm font-bold tracking-wider uppercase">
+              {loadingCreation ? 'Creating Oracle...' : !account.address ? 'Connect Wallet' : 'Create Oracle'}
+            </span>
+            <span className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-black/10 flex items-center justify-center group-hover:translate-x-1 transition-transform duration-300 shrink-0">
+              {loadingCreation ? (
+                <Loader2 className="h-4 w-4 animate-spin text-black" />
+              ) : (
+                <ArrowRight className="h-4 w-4 stroke-[2] text-black" />
+              )}
+            </span>
           </Button>
         </div>
       </form>

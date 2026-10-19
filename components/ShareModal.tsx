@@ -66,9 +66,6 @@ const ShareModal: FC<ShareModalProps> = ({ isOpen, onClose }) => {
         </div>
 
         <div className="p-6">
-          <p className="text-center text-slate-300 mb-6">
-            Share OrbOracle with your network:
-          </p>
 
           <div className="space-y-3">
             <button

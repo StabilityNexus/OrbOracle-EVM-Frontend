@@ -24,29 +24,22 @@ type PriceChartProps = {
   loading?: boolean
 }
 
-const dateFormatter = new Intl.DateTimeFormat(undefined, {
-  year: "numeric",
-  month: "short",
-  day: "2-digit",
-})
-
-const timeFormatter = new Intl.DateTimeFormat(undefined, {
-  hour: "2-digit",
-  minute: "2-digit",
-})
-
 const formatDateLabel = (timestamp: number) => {
   if (!timestamp) {
     return "—"
   }
-  return dateFormatter.format(new Date(timestamp * 1000))
+  const d = new Date(timestamp * 1000)
+  const pad = (n: number) => n.toString().padStart(2, "0")
+  return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}`
 }
 
 const formatTimeLabel = (timestamp: number) => {
   if (!timestamp) {
     return "—"
   }
-  return timeFormatter.format(new Date(timestamp * 1000))
+  const d = new Date(timestamp * 1000)
+  const pad = (n: number) => n.toString().padStart(2, "0")
+  return `${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}:${pad(d.getUTCSeconds())} UTC`
 }
 
 const numberFormatter = new Intl.NumberFormat(undefined, {
@@ -122,7 +115,7 @@ export function PriceChart({ data, loading = false }: PriceChartProps) {
   return (
     <Card className="border-0 bg-transparent">
       <CardHeader className="text-center pb-6">
-        <CardTitle className="text-3xl font-light text-primary">Price History</CardTitle>
+        <CardTitle className="text-3xl font-light text-primary">Value History</CardTitle>
         <CardDescription className="text-muted-foreground/80 font-light">
           Latest oracle submissions and aggregated values
         </CardDescription>
@@ -131,7 +124,7 @@ export function PriceChart({ data, loading = false }: PriceChartProps) {
         <div className="h-80 flex items-center justify-center">
           {showEmptyState ? (
             <div className="text-center space-y-2 text-muted-foreground/80">
-              <p className="text-sm">No price history yet.</p>
+              <p className="text-sm">No value history yet.</p>
               <p className="text-xs">Submit a value or refresh after on-chain activity to see the chart.</p>
             </div>
           ) : (

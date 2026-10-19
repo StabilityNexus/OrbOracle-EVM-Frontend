@@ -2,13 +2,14 @@
 
 import '@rainbow-me/rainbowkit/styles.css'
 import './globals.css'
+import '../src/shaders/threeui.css'
 import { Metadata } from 'next'
-import { Inter } from 'next/font/google'
+import { GeistSans } from 'geist/font/sans'
+import { GeistMono } from 'geist/font/mono'
 import { ThemeProvider } from '@/providers/ThemeProvider'
 import { WalletProvider } from '@/providers/WalletProvider'
+import { Navigation } from '@/components/navigation'
 import ClientFooter from '@/components/ClientFooter'
-
-const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
   title: 'OrbOracle | Decentralized Oracle Network for DeFi',
@@ -36,6 +37,11 @@ export const metadata: Metadata = {
   applicationName: 'OrbOracle',
   category: 'Finance',
   metadataBase: new URL('https://orboracle.stability.nexus'),
+  icons: {
+    icon: '/icon.svg',
+    shortcut: '/icon.svg',
+    apple: '/icon.svg',
+  },
   alternates: {
     canonical: '/',
   },
@@ -88,8 +94,8 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang='en'>
-      <body className={inter.className}>
+    <html lang='en' className={`${GeistSans.variable} ${GeistMono.variable}`}>
+      <body className="font-sans antialiased">
         <WalletProvider>
           <ThemeProvider
             attribute='class'
@@ -98,6 +104,7 @@ export default function RootLayout({
             disableTransitionOnChange
           >
             <main className="min-h-screen flex flex-col">
+              <Navigation />
               <div className="flex-grow">
                 {children}
               </div>

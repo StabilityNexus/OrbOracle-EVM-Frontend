@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
+import { createPortal } from "react-dom";
 import { useChainId } from "wagmi";
 import { getChainNameForTokenList } from "@/utils/chainMapping";
 import { Input } from "@/components/ui/input";
@@ -39,6 +40,11 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({
   const [searchQuery, setSearchQuery] = useState("");
   const [isManualInput, setIsManualInput] = useState(false);
   const [manualAddress, setManualAddress] = useState(value);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Sync manualAddress with value prop
   useEffect(() => {
@@ -88,6 +94,18 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({
 
     fetchTokens();
   }, [chainName, chainId, retryCount]);
+
+  // Handle ESC key to close modal
+  useEffect(() => {
+    if (!isModalOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setIsModalOpen(false);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isModalOpen]);
 
   // Filter tokens based on search query
   const filteredTokens = useMemo(() => {
@@ -141,21 +159,21 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({
             <button
               type="button"
               onClick={() => setIsModalOpen(true)}
-              className={`w-full p-2.5 text-md outline-none border rounded-md transition-all focus:ring-2 focus:ring-ring/50 focus:ring-[3px] border-blue-100 bg-slate-800/50 text-slate-100 hover:border-blue-200 flex items-center gap-2 font-mono ${
+              className={`w-full h-11 px-4 text-sm outline-none border rounded-xl transition-all bg-white/5 border-white/10 text-white hover:bg-white/10 hover:border-primary/40 flex items-center gap-2 font-mono cursor-pointer ${
                 error ? "border-red-500" : ""
               }`}
             >
               <img
                 src={selectedToken.image || "/stability.svg"}
                 alt={selectedToken.symbol}
-                className="w-6 h-6 rounded-full"
+                className="w-5 h-5 rounded-full"
                 onError={(e) => {
                   (e.target as HTMLImageElement).src = "/stability.svg";
                 }}
               />
               <span className="font-medium">{selectedToken.symbol}</span>
-              <span className="text-slate-400">({selectedToken.name})</span>
-              <span className="text-slate-500 ml-auto text-xs">
+              <span className="text-zinc-400">({selectedToken.name})</span>
+              <span className="text-zinc-500 ml-auto text-xs">
                 {truncateAddress(selectedToken.contract_address)}
               </span>
             </button>
@@ -165,8 +183,8 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({
               value={manualAddress}
               onChange={handleManualInputChange}
               placeholder={placeholder}
-              className={`border-0 bg-slate-800/50 text-slate-100 placeholder:text-slate-400 font-mono text-md border border-blue-100 ${
-                error ? "border-red-500" : ""
+              className={`bg-white/5 border border-white/10 text-white rounded-xl placeholder:text-zinc-500 focus:border-primary/40 focus:ring-1 focus:ring-primary/40 transition-all duration-300 text-sm h-11 font-mono ${
+                error ? "border-red-500 focus:ring-red-500" : ""
               }`}
             />
           )}
@@ -174,7 +192,7 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({
         <button
           type="button"
           onClick={() => setIsModalOpen(true)}
-          className="px-4 py-2.5 bg-slate-800/50 hover:bg-slate-700/50 text-slate-100 rounded-md border border-blue-100 hover:border-blue-200 transition-colors text-sm whitespace-nowrap font-medium"
+          className="px-5 h-11 bg-white/5 hover:bg-white/10 text-white rounded-xl border border-white/10 hover:border-primary/30 transition-all duration-300 text-xs font-semibold uppercase font-mono tracking-wider cursor-pointer"
         >
           {selectedToken && !isManualInput ? "Change" : "Select Token"}
         </button>
@@ -184,39 +202,39 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({
         <p className="text-red-400 text-xs">{error}</p>
       )}
 
-      {/* Token Selection Modal */}
-      {isModalOpen && (
+      {/* Token Selection Modal (Single-Surface Glass Modal) */}
+      {isModalOpen && mounted && createPortal(
         <div
-          className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-[1000] p-4"
+          className="fixed inset-0 bg-black/85 flex items-center justify-center z-[1000] p-4 backdrop-blur-[12px] transition-all duration-200"
           onClick={() => setIsModalOpen(false)}
         >
           <div
-            className="bg-slate-900 border-2 border-blue-200 rounded-lg max-w-2xl w-full max-h-[80vh] flex flex-col shadow-xl"
+            className="bg-zinc-950/95 border border-white/10 rounded-3xl shadow-2xl backdrop-blur-md max-w-2xl w-full max-h-[80vh] flex flex-col overflow-hidden animate-fadeInScale"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Modal Header */}
-            <div className="flex justify-between items-center p-6 border-b border-blue-100">
-              <h2 className="text-xl font-bold text-slate-100">Select Token</h2>
+            <div className="flex justify-between items-center p-6 border-b border-white/5">
+              <h2 className="text-lg font-medium text-slate-100">Select Token</h2>
               <button
                 onClick={() => setIsModalOpen(false)}
-                className="text-slate-300 hover:text-slate-100 text-2xl leading-none w-8 h-8 flex items-center justify-center transition-colors"
+                className="text-slate-400 hover:text-slate-100 text-2xl leading-none w-8 h-8 flex items-center justify-center transition-colors cursor-pointer"
               >
-                ×
+                &times;
               </button>
             </div>
 
             {/* Search Bar */}
-            <div className="p-4 border-b border-blue-100">
+            <div className="p-4 border-b border-white/5">
               <div className="relative">
                 <Input
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search tokens"
-                  className="w-full pl-10 border-blue-100 text-slate-100 bg-slate-800/50"
+                  placeholder="Search tokens..."
+                  className="w-full pl-10 h-11 border-white/10 text-white bg-white/5 rounded-xl placeholder:text-zinc-500 focus:border-primary/40 focus:ring-1 focus:ring-primary/40 transition-all"
                 />
                 <svg
-                  className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400"
+                  className="absolute left-3.5 top-1/2 transform -translate-y-1/2 w-4 h-4 text-zinc-500"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -232,9 +250,9 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({
             </div>
 
             {/* Token List */}
-            <div className="flex-1 overflow-y-auto p-4">
+            <div className="flex-1 overflow-y-auto p-4 space-y-1">
               {loading ? (
-                <div className="text-center py-8 text-slate-400">
+                <div className="text-center py-8 text-slate-400 font-mono text-xs">
                   Loading tokens...
                 </div>
               ) : tokenFetchError ? (
@@ -249,38 +267,38 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({
                   </button>
                 </div>
               ) : filteredTokens.length === 0 ? (
-                <div className="text-center py-8 text-slate-400">
+                <div className="text-center py-8 text-slate-400 font-mono text-xs">
                   {searchQuery
                     ? "No tokens found matching your search"
                     : "No tokens available for this chain"}
                 </div>
               ) : (
-                <div className="space-y-2">
+                <div className="space-y-1">
                   {filteredTokens.map((token) => (
                     <button
                       key={token.id}
                       type="button"
                       onClick={() => handleTokenSelect(token)}
-                      className="w-full flex items-center gap-3 p-3 rounded-md hover:bg-slate-800/50 transition-colors text-left border border-transparent hover:border-blue-100"
+                      className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-white/5 transition-all duration-300 text-left border border-transparent hover:border-white/10 cursor-pointer"
                     >
                       <img
                         src={token.image || "/stability.svg"}
                         alt={token.symbol}
-                        className="w-10 h-10 rounded-full flex-shrink-0"
+                        className="w-8 h-8 rounded-full flex-shrink-0"
                         onError={(e) => {
                           (e.target as HTMLImageElement).src = "/stability.svg";
                         }}
                       />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
-                          <span className="font-semibold text-slate-100">
+                          <span className="font-medium text-slate-100">
                             {token.symbol}
                           </span>
-                          <span className="text-slate-400 text-sm truncate">
+                          <span className="text-slate-400 text-xs truncate">
                             {token.name}
                           </span>
                         </div>
-                        <div className="text-slate-500 text-xs font-mono mt-1">
+                        <div className="text-slate-500 text-[10px] font-mono mt-0.5">
                           {truncateAddress(token.contract_address)}
                         </div>
                       </div>
@@ -291,20 +309,21 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({
             </div>
 
             {/* Manual Input Option */}
-            <div className="p-4 border-t border-blue-100">
+            <div className="p-4 border-t border-white/5">
               <button
                 type="button"
                 onClick={() => {
                   setIsManualInput(true);
                   setIsModalOpen(false);
                 }}
-                className="w-full py-2 px-4 bg-slate-800/50 hover:bg-slate-700/50 text-slate-100 rounded-md transition-colors text-sm font-medium border border-blue-100 hover:border-blue-200"
+                className="w-full py-2.5 px-4 bg-white/5 hover:bg-white/10 text-white rounded-xl transition-all duration-300 text-xs font-semibold uppercase font-mono tracking-wider border border-white/10 hover:border-primary/30 cursor-pointer"
               >
                 Enter Custom Address
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
