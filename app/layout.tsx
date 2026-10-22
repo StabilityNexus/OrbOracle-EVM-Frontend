@@ -10,6 +10,7 @@ import { ThemeProvider } from '@/providers/ThemeProvider'
 import { WalletProvider } from '@/providers/WalletProvider'
 import { Navigation } from '@/components/navigation'
 import ClientFooter from '@/components/ClientFooter'
+import { Toaster } from '@/components/ui/toaster'
 
 export const metadata: Metadata = {
   title: 'OrbOracle | Decentralized Oracle Network for DeFi',
@@ -109,6 +110,7 @@ export default function RootLayout({
                 {children}
               </div>
               <ClientFooter />
+              <Toaster />
             </main>
           </ThemeProvider>
         </WalletProvider>
