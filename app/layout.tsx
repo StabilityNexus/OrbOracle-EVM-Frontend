@@ -37,7 +37,7 @@ export const metadata: Metadata = {
   publisher: 'The Stable Order',
   applicationName: 'OrbOracle',
   category: 'Finance',
-  metadataBase: new URL('https://orboracle.stability.nexus'),
+  metadataBase: new URL('https://orb-oracle.stability.nexus'),
   icons: {
     icon: '/icon.svg',
     shortcut: '/icon.svg',
@@ -49,11 +49,11 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'OrbOracle | Decentralized Oracle Network',
     description: 'OrbOracle is a decentralized oracle network providing reliable price feeds and data for DeFi applications. Create custom oracles and access real-time blockchain data.',
-    url: 'https://orboracle.stability.nexus',
+    url: 'https://orb-oracle.stability.nexus',
     siteName: 'OrbOracle',
     images: [
       {
-        url: 'https://orboracle.stability.nexus/og-image.png',
+        url: 'https://orb-oracle.stability.nexus/og-image.png',
         width: 1200,
         height: 630,
         alt: 'OrbOracle - Decentralized Oracle Network',
@@ -67,7 +67,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'OrbOracle | Decentralized Oracle Network',
     description: 'OrbOracle is a decentralized oracle network providing reliable price feeds and data for DeFi applications.',
-    images: ['https://orboracle.stability.nexus/og-image.png'],
+    images: ['https://orb-oracle.stability.nexus/og-image.png'],
     creator: '@StabilityNexus',
     site: '@StabilityNexus',
   },
