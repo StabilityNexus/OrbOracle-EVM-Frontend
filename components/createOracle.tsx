@@ -10,7 +10,8 @@ import { toast } from '@/hooks/use-toast'
 import Link from 'next/link'
 import { useState, useEffect, useMemo } from 'react'
 import { useAccount, useChainId, useConfig } from 'wagmi'
-import { writeContract, simulateContract, readContract } from '@wagmi/core'
+import { writeContract, simulateContract, readContract, waitForTransactionReceipt } from '@wagmi/core'
+import { parseEventLogs } from 'viem'
 import { OracleFactories, ComposedOracleFactories } from '@/utils/addresses'
 import { OracleFactoryAbi } from '@/utils/abi/OracleFactory'
 import { ComposedOracleFactoryAbi } from '@/utils/abi/ComposedOracleFactory'
@@ -381,10 +382,38 @@ export default function CreateOracleIntegrated() {
           description: 'Your composed oracle is being created...',
         })
 
-        // Wait for transaction and get composed oracle address
-        setTimeout(async () => {
+        // Wait for transaction confirmation
+        const receipt = await waitForTransactionReceipt(config, { hash: tx })
+
+        let deployedAddress: string | undefined
+
+        // Try extracting oracle address directly from receipt event logs
+        try {
+          const logs = parseEventLogs({
+            abi: ComposedOracleFactoryAbi,
+            eventName: 'ComposedOracleCreated',
+            logs: receipt.logs,
+          })
+          if (logs.length > 0 && (logs[0].args as any)?.oracle) {
+            deployedAddress = (logs[0].args as any).oracle as string
+          }
+        } catch (parseErr) {
+          console.warn('Failed to parse ComposedOracleCreated log:', parseErr)
+        }
+
+        // Fallback: query creator's composed oracles from the factory
+        if (!deployedAddress) {
           try {
-            // Get the list of all composed oracles from the factory
+            const creatorOracles = await readContract(config, {
+              address: factoryAddress,
+              abi: ComposedOracleFactoryAbi,
+              functionName: 'creatorComposedOracleList',
+              args: [account.address],
+            }) as string[]
+            if (creatorOracles && creatorOracles.length > 0) {
+              deployedAddress = creatorOracles[creatorOracles.length - 1]
+            }
+          } catch {
             const allComposed = await readContract(config, {
               address: factoryAddress,
               abi: ComposedOracleFactoryAbi,
@@ -393,20 +422,20 @@ export default function CreateOracleIntegrated() {
 
             const matching = allComposed.filter((info: any) => info.creator.toLowerCase() === account.address!.toLowerCase())
             if (matching.length > 0) {
-              const latestComposed = matching[matching.length - 1]
-              setOracleAddress(latestComposed.oracle)
+              deployedAddress = matching[matching.length - 1].oracle
             }
-
-            setSubmitted(true)
-            toast({
-              title: 'Composed Oracle Created',
-              description: 'Your composed oracle has been successfully deployed!',
-            })
-          } catch (err) {
-            console.error('Error getting composed oracle address:', err)
-            setSubmitted(true)
           }
-        }, 5000)
+        }
+
+        if (deployedAddress) {
+          setOracleAddress(deployedAddress)
+        }
+
+        setSubmitted(true)
+        toast({
+          title: 'Composed Oracle Created',
+          description: 'Your composed oracle has been successfully deployed!',
+        })
 
       } else {
         const factoryAddress = OracleFactories[activeChainId as keyof typeof OracleFactories]
@@ -433,31 +462,60 @@ export default function CreateOracleIntegrated() {
           description: 'Your oracle is being created...',
         })
 
-        // Wait for transaction and get oracle address
-        setTimeout(async () => {
+        // Wait for transaction confirmation
+        const receipt = await waitForTransactionReceipt(config, { hash: tx })
+
+        let deployedAddress: string | undefined
+
+        // Try extracting oracle address directly from receipt event logs
+        try {
+          const logs = parseEventLogs({
+            abi: OracleFactoryAbi,
+            eventName: 'OracleCreated',
+            logs: receipt.logs,
+          })
+          if (logs.length > 0 && (logs[0].args as any)?.oracle) {
+            deployedAddress = (logs[0].args as any).oracle as string
+          }
+        } catch (parseErr) {
+          console.warn('Failed to parse OracleCreated log:', parseErr)
+        }
+
+        // Fallback: query creator's oracles from the factory
+        if (!deployedAddress) {
           try {
-            // Get the latest oracle from the factory
+            const creatorOracles = await readContract(config, {
+              address: factoryAddress,
+              abi: OracleFactoryAbi,
+              functionName: 'creatorOracleList',
+              args: [account.address],
+            }) as string[]
+            if (creatorOracles && creatorOracles.length > 0) {
+              deployedAddress = creatorOracles[creatorOracles.length - 1]
+            }
+          } catch {
             const allOracles = await readContract(config, {
               address: factoryAddress,
               abi: OracleFactoryAbi,
               functionName: 'allOracles',
             }) as Array<{ oracle: string; token: string; creator: string }>
 
-            if (allOracles.length > 0) {
-              const latestOracle = allOracles[allOracles.length - 1]
-              setOracleAddress(latestOracle.oracle)
+            const matching = allOracles.filter((o) => o.creator.toLowerCase() === account.address!.toLowerCase())
+            if (matching.length > 0) {
+              deployedAddress = matching[matching.length - 1].oracle
             }
-
-            setSubmitted(true)
-            toast({
-              title: 'Oracle Created',
-              description: 'Your oracle has been successfully deployed!',
-            })
-          } catch (err) {
-            console.error('Error getting oracle address:', err)
-            setSubmitted(true)
           }
-        }, 5000)
+        }
+
+        if (deployedAddress) {
+          setOracleAddress(deployedAddress)
+        }
+
+        setSubmitted(true)
+        toast({
+          title: 'Oracle Created',
+          description: 'Your oracle has been successfully deployed!',
+        })
       }
 
     } catch (err: any) {
