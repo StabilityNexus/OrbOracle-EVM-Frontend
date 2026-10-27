@@ -4,44 +4,44 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  /* Updated theme to black and purple Oracle platform design */
-  --background: oklch(0.05 0 0); /* Deep black */
-  --foreground: oklch(0.95 0 0); /* Near white */
-  --card: oklch(0.08 0 0); /* Dark card background */
-  --card-foreground: oklch(0.95 0 0);
-  --popover: oklch(0.08 0 0);
-  --popover-foreground: oklch(0.95 0 0);
-  --primary: oklch(0.7 0.18 270); /* Refined violet-purple */
+  color-scheme: light;
+  --background: oklch(0.985 0.004 285);
+  --foreground: oklch(0.16 0.012 285);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.16 0.012 285);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.16 0.012 285);
+  --primary: oklch(0.55 0.22 285);
   --primary-foreground: oklch(0.95 0 0);
-  --secondary: oklch(0.12 0 0); /* Dark secondary */
-  --secondary-foreground: oklch(0.85 0 0);
-  --muted: oklch(0.15 0 0);
-  --muted-foreground: oklch(0.65 0 0);
-  --accent: oklch(0.6 0.15 270); /* Softer purple accent */
-  --accent-foreground: oklch(0.95 0 0);
+  --secondary: oklch(0.95 0.008 285);
+  --secondary-foreground: oklch(0.24 0.015 285);
+  --muted: oklch(0.95 0.008 285);
+  --muted-foreground: oklch(0.48 0.02 285);
+  --accent: oklch(0.93 0.025 285);
+  --accent-foreground: oklch(0.24 0.015 285);
   --destructive: oklch(0.577 0.245 27.325);
   --destructive-foreground: oklch(0.95 0 0);
-  --border: oklch(0.2 0 0);
-  --input: oklch(0.12 0 0);
-  --ring: oklch(0.7 0.18 270);
+  --border: oklch(0.88 0.012 285);
+  --input: oklch(0.9 0.01 285);
+  --ring: oklch(0.55 0.22 285);
   --chart-1: oklch(0.7 0.18 270);
   --chart-2: oklch(0.6 0.15 270);
   --chart-3: oklch(0.5 0.12 270);
   --chart-4: oklch(0.8 0.2 270);
   --chart-5: oklch(0.4 0.1 270);
   --radius: 0.5rem;
-  --sidebar: oklch(0.08 0 0);
-  --sidebar-foreground: oklch(0.95 0 0);
-  --sidebar-primary: oklch(0.7 0.18 270);
+  --sidebar: oklch(0.97 0.006 285);
+  --sidebar-foreground: oklch(0.16 0.012 285);
+  --sidebar-primary: oklch(0.55 0.22 285);
   --sidebar-primary-foreground: oklch(0.95 0 0);
-  --sidebar-accent: oklch(0.12 0 0);
-  --sidebar-accent-foreground: oklch(0.85 0 0);
-  --sidebar-border: oklch(0.2 0 0);
-  --sidebar-ring: oklch(0.7 0.18 270);
+  --sidebar-accent: oklch(0.93 0.025 285);
+  --sidebar-accent-foreground: oklch(0.24 0.015 285);
+  --sidebar-border: oklch(0.88 0.012 285);
+  --sidebar-ring: oklch(0.55 0.22 285);
 }
 
 .dark {
-  /* Dark mode uses same colors since we're already dark themed */
+  color-scheme: dark;
   --background: oklch(0.05 0 0);
   --foreground: oklch(0.95 0 0);
   --card: oklch(0.08 0 0);
@@ -126,6 +126,61 @@
   }
 }
 
+/* Keep the existing dark-designed components readable in light mode. */
+@layer base {
+  html:not(.dark) [class*="bg-zinc-950"] {
+    background-color: var(--card) !important;
+  }
+
+  html:not(.dark) [class*="bg-zinc-900"] {
+    background-color: var(--secondary) !important;
+  }
+
+  html:not(.dark) [class*="bg-zinc-800"] {
+    background-color: var(--accent) !important;
+  }
+
+  html:not(.dark) [class~="bg-black"] {
+    background-color: var(--background) !important;
+  }
+
+  html:not(.dark) [class*="bg-white/"] {
+    background-color: color-mix(in oklab, var(--foreground) 6%, transparent) !important;
+  }
+
+  html:not(.dark) [class*="bg-black/"] {
+    background-color: color-mix(in oklab, var(--foreground) 8%, transparent) !important;
+  }
+
+  html:not(.dark) [class~="text-white"],
+  html:not(.dark) [class*="hover:text-white"],
+  html:not(.dark) [class*="group-hover:text-white"],
+  html:not(.dark) [class~="text-zinc-100"],
+  html:not(.dark) [class~="text-zinc-200"],
+  html:not(.dark) [class~="text-zinc-300"] {
+    color: var(--foreground) !important;
+  }
+
+  html:not(.dark) [class~="text-zinc-400"],
+  html:not(.dark) [class~="text-zinc-500"],
+  html:not(.dark) [class~="text-zinc-600"] {
+    color: var(--muted-foreground) !important;
+  }
+
+  html:not(.dark) [class*="border-white/"],
+  html:not(.dark) [class*="border-zinc-"] {
+    border-color: var(--border) !important;
+  }
+
+  html:not(.dark) [class~="bg-primary"][class~="text-white"],
+  html:not(.dark) [class*="bg-red-"][class~="text-white"],
+  html:not(.dark) [class*="bg-blue-"][class~="text-white"],
+  html:not(.dark) [class*="bg-sky-"][class~="text-white"],
+  html:not(.dark) [class*="bg-[#"][class~="text-white"] {
+    color: white !important;
+  }
+}
+
 /* Remove default number input spinner controls */
 input::-webkit-outer-spin-button,
 input::-webkit-inner-spin-button {
@@ -155,8 +210,7 @@ input[type=number] {
 
 /* Custom Sleek Dark Scrollbar */
 html {
-  color-scheme: dark;
-  scrollbar-color: #27272a #000000;
+  scrollbar-color: var(--muted) var(--background);
 }
 
 ::-webkit-scrollbar {
@@ -165,15 +219,15 @@ html {
 }
 
 ::-webkit-scrollbar-track {
-  background: #000000;
+  background: var(--background);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #27272a;
+  background: var(--muted);
   border-radius: 9999px;
-  border: 2px solid #000000;
+  border: 2px solid var(--background);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #3f3f46;
+  background: var(--muted-foreground);
 }

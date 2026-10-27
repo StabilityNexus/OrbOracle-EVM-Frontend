@@ -1,13 +1,16 @@
 "use client"
 
 import { useEffect, useRef } from "react";
+import { useTheme } from "next-themes";
 import { createStructureFlowRenderer, STRUCTURE_FLOW_DEFAULTS, type StructureFlowOptions } from "./structureFlowRenderer";
 import "../threeui.css";
 
 export type StructureFlowBackgroundProps = Partial<StructureFlowOptions> & { className?: string };
 export function StructureFlowBackground({ className = "", ...props }: StructureFlowBackgroundProps) {
+  const { resolvedTheme } = useTheme();
   const hostRef = useRef<HTMLDivElement>(null); const canvasRef = useRef<HTMLCanvasElement>(null);
-  const optionsRef = useRef({ ...STRUCTURE_FLOW_DEFAULTS, ...props }); optionsRef.current = { ...STRUCTURE_FLOW_DEFAULTS, ...props };
+  const optionsRef = useRef({ ...STRUCTURE_FLOW_DEFAULTS, ...props, lightMode: resolvedTheme === "light" });
+  optionsRef.current = { ...STRUCTURE_FLOW_DEFAULTS, ...props, lightMode: resolvedTheme === "light" };
   useEffect(() => {
     const host = hostRef.current, canvas = canvasRef.current; if (!host || !canvas) return undefined;
     const renderer = createStructureFlowRenderer(canvas, () => optionsRef.current); let frame = 0, visible = true;

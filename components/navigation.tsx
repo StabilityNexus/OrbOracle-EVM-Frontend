@@ -6,13 +6,13 @@ import Link from "next/link"
 import { useState, useEffect } from "react"
 import { Menu, X } from "lucide-react"
 import OrbNavLogo from "./OrbNavLogo"
+import { ThemeToggle } from "./theme-toggle"
 
 export function Navigation() {
   const pathname = usePathname()
   const [scrolled, setScrolled] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const [logoHovered, setLogoHovered] = useState(false)
-
   const navItems = [
     { label: 'USE', href: '/use' },
     { label: 'DEPLOY', href: '/deploy' },
@@ -101,6 +101,7 @@ export function Navigation() {
 
           {/* Right Connect Wallet (Desktop) / Hamburger Trigger (Mobile) */}
           <div className="flex-1 flex justify-end items-center space-x-2">
+            <ThemeToggle className="hidden md:inline-flex" />
             {/* Desktop Connect Wallet button - hidden on mobile < md */}
             <div className="hidden md:block">
               <ConnectButton.Custom>
@@ -303,6 +304,7 @@ export function Navigation() {
                 }}
               </ConnectButton.Custom>
             </div>
+            <ThemeToggle />
           </div>
         )}
 
