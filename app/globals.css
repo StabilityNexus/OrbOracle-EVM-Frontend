@@ -136,7 +136,7 @@
     background-color: var(--secondary) !important;
   }
 
-  html:not(.dark) [class*="bg-zinc-800"] {
+  html:not(.dark) [class~="bg-zinc-800"] {
     background-color: var(--accent) !important;
   }
 

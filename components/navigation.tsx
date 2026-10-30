@@ -52,7 +52,7 @@ export function Navigation() {
       {/* Dynamic Morphing Header Capsule (Expands height dynamically for mobile menu) */}
       <div className={`pointer-events-auto flex flex-col justify-start transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] border overflow-hidden h-auto ${
         scrolled 
-          ? `w-full max-w-[640px] md:max-w-[800px] ${menuOpen ? "max-h-[350px] rounded-[26px] pb-4" : "max-h-[52px] rounded-[26px]"} bg-zinc-950/45 border-white/10 backdrop-blur-lg px-4 sm:px-6 shadow-2xl` 
+          ? `w-full max-w-[640px] md:max-w-[800px] ${menuOpen ? "max-h-[420px] rounded-[26px] pb-4" : "max-h-[52px] rounded-[26px]"} bg-zinc-950/45 border-white/10 backdrop-blur-lg px-4 sm:px-6 shadow-2xl`
           : `w-full max-w-full ${menuOpen ? "max-h-[380px] pb-4" : "max-h-[68px]"} bg-zinc-950/10 border-white/5 backdrop-blur-md rounded-none px-6 sm:px-12 shadow-none`
       }`}>
         

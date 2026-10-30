@@ -9,8 +9,8 @@ export type StructureFlowBackgroundProps = Partial<StructureFlowOptions> & { cla
 export function StructureFlowBackground({ className = "", ...props }: StructureFlowBackgroundProps) {
   const { resolvedTheme } = useTheme();
   const hostRef = useRef<HTMLDivElement>(null); const canvasRef = useRef<HTMLCanvasElement>(null);
-  const optionsRef = useRef({ ...STRUCTURE_FLOW_DEFAULTS, ...props, lightMode: resolvedTheme === "light" });
-  optionsRef.current = { ...STRUCTURE_FLOW_DEFAULTS, ...props, lightMode: resolvedTheme === "light" };
+  const optionsRef = useRef({ ...STRUCTURE_FLOW_DEFAULTS, ...props, lightMode: props.lightMode ?? (resolvedTheme === "light") });
+  optionsRef.current = { ...STRUCTURE_FLOW_DEFAULTS, ...props, lightMode: props.lightMode ?? (resolvedTheme === "light") };
   useEffect(() => {
     const host = hostRef.current, canvas = canvasRef.current; if (!host || !canvas) return undefined;
     const renderer = createStructureFlowRenderer(canvas, () => optionsRef.current); let frame = 0, visible = true;
