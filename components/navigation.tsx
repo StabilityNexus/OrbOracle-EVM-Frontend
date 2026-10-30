@@ -6,13 +6,13 @@ import Link from "next/link"
 import { useState, useEffect } from "react"
 import { Menu, X } from "lucide-react"
 import OrbNavLogo from "./OrbNavLogo"
+import { ThemeToggle } from "./theme-toggle"
 
 export function Navigation() {
   const pathname = usePathname()
   const [scrolled, setScrolled] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const [logoHovered, setLogoHovered] = useState(false)
-
   const navItems = [
     { label: 'USE', href: '/use' },
     { label: 'DEPLOY', href: '/deploy' },
@@ -52,7 +52,7 @@ export function Navigation() {
       {/* Dynamic Morphing Header Capsule (Expands height dynamically for mobile menu) */}
       <div className={`pointer-events-auto flex flex-col justify-start transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] border overflow-hidden h-auto ${
         scrolled 
-          ? `w-full max-w-[640px] md:max-w-[800px] ${menuOpen ? "max-h-[350px] rounded-[26px] pb-4" : "max-h-[52px] rounded-[26px]"} bg-zinc-950/45 border-white/10 backdrop-blur-lg px-4 sm:px-6 shadow-2xl` 
+          ? `w-full max-w-[640px] md:max-w-[800px] ${menuOpen ? "max-h-[420px] rounded-[26px] pb-4" : "max-h-[52px] rounded-[26px]"} bg-zinc-950/45 border-white/10 backdrop-blur-lg px-4 sm:px-6 shadow-2xl`
           : `w-full max-w-full ${menuOpen ? "max-h-[380px] pb-4" : "max-h-[68px]"} bg-zinc-950/10 border-white/5 backdrop-blur-md rounded-none px-6 sm:px-12 shadow-none`
       }`}>
         
@@ -101,6 +101,7 @@ export function Navigation() {
 
           {/* Right Connect Wallet (Desktop) / Hamburger Trigger (Mobile) */}
           <div className="flex-1 flex justify-end items-center space-x-2">
+            <ThemeToggle className="hidden md:inline-flex" />
             {/* Desktop Connect Wallet button - hidden on mobile < md */}
             <div className="hidden md:block">
               <ConnectButton.Custom>
@@ -303,6 +304,7 @@ export function Navigation() {
                 }}
               </ConnectButton.Custom>
             </div>
+            <ThemeToggle />
           </div>
         )}
 
