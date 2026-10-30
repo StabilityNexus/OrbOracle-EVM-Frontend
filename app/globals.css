@@ -128,7 +128,7 @@
 
 /* Keep the existing dark-designed components readable in light mode. */
 @layer base {
-  html:not(.dark) [class*="bg-zinc-950"] {
+  html:not(.dark) [class~="bg-zinc-950"] {
     background-color: var(--card) !important;
   }
 
