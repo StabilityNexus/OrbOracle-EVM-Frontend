@@ -1,7 +1,7 @@
 import * as THREE from "three";
 
-export type StructureFlowOptions = { speed: number; pointSize: number; opacity: number; maskStart: number; maskSolid: number };
-export const STRUCTURE_FLOW_DEFAULTS: StructureFlowOptions = { speed: 1, pointSize: 0.08, opacity: 0.4, maskStart: 0.2, maskSolid: 0.5 };
+export type StructureFlowOptions = { speed: number; pointSize: number; opacity: number; maskStart: number; maskSolid: number; lightMode?: boolean };
+export const STRUCTURE_FLOW_DEFAULTS: StructureFlowOptions = { speed: 1, pointSize: 0.08, opacity: 0.4, maskStart: 0.2, maskSolid: 0.5, lightMode: false };
 
 export function createStructureFlowRenderer(canvas: HTMLCanvasElement, getOptions: () => StructureFlowOptions) {
   const scene = new THREE.Scene();
@@ -36,7 +36,10 @@ export function createStructureFlowRenderer(canvas: HTMLCanvasElement, getOption
       const options = getOptions();
       particles.rotation.y += 0.0008 * options.speed;
       material.size = options.pointSize;
-      material.opacity = options.opacity;
+      const lightMode = options.lightMode ?? false;
+      material.color.setHex(lightMode ? 0x5b35b5 : 0xffffff);
+      material.blending = lightMode ? THREE.NormalBlending : THREE.AdditiveBlending;
+      material.opacity = lightMode ? Math.min(options.opacity, 0.55) : options.opacity;
       renderer.render(scene, camera);
     },
     dispose() { geometry.dispose(); material.dispose(); renderer.dispose(); },
