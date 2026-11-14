@@ -48,6 +48,8 @@ export interface Oracle {
   isComposed?: boolean
   feedA?: string
   feedB?: string
+  feedAName?: string
+  feedBName?: string
   operation?: number
   invertResult?: boolean
   defaultSampleSize?: bigint
@@ -244,6 +246,8 @@ export function useOracles() {
           return {
             ...co,
             name: combinedName,
+            feedAName: nameA,
+            feedBName: nameB,
             description: (co.description && co.description !== 'Oracle Feed') ? co.description : `${combinedName} Price Feed`,
           }
         })
@@ -407,6 +411,8 @@ export function useOracle(oracleAddress: string, targetChainId?: number) {
             isComposed: true,
             feedA,
             feedB,
+            feedAName: String(nameA),
+            feedBName: String(nameB),
             operation,
             invertResult,
             defaultSampleSize,
