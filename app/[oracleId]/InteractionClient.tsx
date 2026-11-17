@@ -1358,14 +1358,14 @@ export default function OracleInteractionPage() {
                         href={`/o?chainId=${chainId}&oracle=${oracle.feedA}`}
                         className="text-primary hover:underline font-mono font-medium"
                       >
-                        {oracle.name?.split(' ')[0] || (oracle.feedA ? `${oracle.feedA.slice(0, 6)}...${oracle.feedA.slice(-4)}` : "")}
+                        {oracle.feedAName || (oracle.feedA ? `${oracle.feedA.slice(0, 6)}...${oracle.feedA.slice(-4)}` : "")}
                       </Link>
                       <span className="font-bold text-primary font-mono text-lg">{oracle.operation === 0 ? "×" : "/"}</span>
                       <Link
                         href={`/o?chainId=${chainId}&oracle=${oracle.feedB}`}
                         className="text-primary hover:underline font-mono font-medium"
                       >
-                        {oracle.name?.split(' ')[2] || (oracle.feedB ? `${oracle.feedB.slice(0, 6)}...${oracle.feedB.slice(-4)}` : "")}
+                        {oracle.feedBName || (oracle.feedB ? `${oracle.feedB.slice(0, 6)}...${oracle.feedB.slice(-4)}` : "")}
                       </Link>
                       {oracle.invertResult && (
                         <span className="text-[10px] font-mono bg-primary/10 text-primary px-2.5 py-0.5 rounded-full border border-primary/20 ml-2 uppercase tracking-wider">
