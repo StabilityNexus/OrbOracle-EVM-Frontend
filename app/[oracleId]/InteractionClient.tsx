@@ -33,7 +33,14 @@ import {
   Database,
   CheckCircle,
 } from "lucide-react"
-import { useAccount, useWriteContract, useReadContract, useWaitForTransactionReceipt, usePublicClient } from "wagmi"
+import {
+  useAccount,
+  useWriteContract,
+  useReadContract,
+  useWaitForTransactionReceipt,
+  usePublicClient,
+  useSwitchChain,
+} from "wagmi"
 import { parseUnits, formatUnits, erc20Abi, BaseError } from "viem"
 
 function isHexAddress(value: string | null): value is `0x${string}` {
@@ -106,7 +113,8 @@ export default function OracleInteractionPage() {
   const oracleParam = search.get("oracle")
   const chainIdParam = search.get("chainId")
   const { toast } = useToast()
-  const { address: userAddress, isConnected } = useAccount()
+  const { address: userAddress, isConnected, chainId: connectedChainId } = useAccount()
+  const { chains, switchChain, isPending: isSwitchingChain, error: switchChainError } = useSwitchChain()
 
   // Form states
   const [submitValue, setSubmitValue] = useState("")
@@ -192,6 +200,8 @@ export default function OracleInteractionPage() {
   const chainId = chainIdParam ? Number(chainIdParam) : undefined
   const chainIdValid = chainId !== undefined && Number.isFinite(chainId) && chainId > 0
   const publicClient = usePublicClient({ chainId })
+  const targetChain = chains.find((chain) => chain.id === chainId)
+  const isWrongNetwork = isConnected && chainIdValid && connectedChainId !== chainId
 
   const { oracle, loading: oracleLoading, error: oracleError } = useOracle(oracleAddress || "", chainId)
 
@@ -1193,6 +1203,48 @@ export default function OracleInteractionPage() {
     } finally {
       setIsReadingInterval(false)
     }
+  }
+
+  if (isWrongNetwork) {
+    const targetChainName = targetChain?.name ?? `chain ${chainId}`
+
+    return (
+      <div className="min-h-screen bg-zinc-950 font-sans text-white">
+        <div className="container mx-auto px-6 pt-36 pb-12">
+          <div className="text-center py-20">
+            <div className="text-amber-400 mb-6">
+              <Wallet className="h-16 w-16 mx-auto mb-4 opacity-70" />
+            </div>
+            <p className="text-xl text-red-400 mb-2 font-medium">Wrong network connected</p>
+            <p className="text-sm text-muted-foreground mb-8">
+              This oracle is on {targetChainName} (chain {chainId}), but your wallet is connected to chain {connectedChainId}.
+            </p>
+            {targetChain ? (
+              <Button
+                type="button"
+                onClick={() => switchChain({ chainId: targetChain.id })}
+                disabled={isSwitchingChain}
+                className="mb-4"
+              >
+                {isSwitchingChain ? "Switching network..." : `Switch to ${targetChainName}`}
+              </Button>
+            ) : (
+              <p className="text-sm text-muted-foreground mb-4">
+                This network is not configured for automatic switching. Please select chain {chainId} in your wallet.
+              </p>
+            )}
+            {switchChainError && (
+              <p role="alert" className="text-sm text-red-400 mb-4">{switchChainError.message}</p>
+            )}
+            <div>
+              <Link href="/explorer" className="text-primary hover:text-primary/80 font-medium hover:underline transition-colors">
+                Back to Explorer
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   if (oracleLoading) {
